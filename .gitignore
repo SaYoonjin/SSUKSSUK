@@ -1,0 +1,5 @@
+# Jetson 관련 제외
+**/__pycache__/
+*.pyc
+build/
+devel/
