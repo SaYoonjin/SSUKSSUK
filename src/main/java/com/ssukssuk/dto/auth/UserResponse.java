@@ -4,6 +4,5 @@ public record UserResponse(
         Long userId,
         String email,
         String nickname,
-        String mode,
         boolean isAdmin
 ) {}

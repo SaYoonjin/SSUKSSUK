@@ -46,7 +46,6 @@ public class UserService {
                 saved.getId(),
                 saved.getEmail(),
                 saved.getNickname(),
-                saved.getMode().name(),
                 saved.isAdmin()
         );
     }
@@ -76,8 +75,6 @@ public class UserService {
         return new LoginResponse(
                 user.getId(),
                 user.getEmail(),
-                user.getNickname(),
-                user.getMode().name(),
                 user.isAdmin(),
                 accessToken,
                 refreshToken
