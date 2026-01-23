@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "claim": {
+    "claim_state": "UNCLAIMED",
+    "user_id": null
+  },
+  "binding": {
+    "plant_id": null,
+    "binding_state": "UNBOUND",
+    "species": null,
+    "ideal_ranges": {
+      "water_level": {
+        "min": null,
+        "max": null
+      },
+      "nutrient_conc": {
+        "min": null,
+        "max": null
+      },
+      "temperature": {
+        "min": null,
+        "max": null
+      },
+      "humidity": {
+        "min": null,
+        "max": null
+      }
+    }
+  },
+  "mode": {
+    "mode": "AUTO",
+    "effective_from": null
+  },
+  "seq": {
+    "SENSOR_UPLINK": 0,
+    "ACTION_RESULT": 0
+  },
+  "anomaly_state": {
+    "open": {
+      "WATER_LEVEL": false,
+      "NUTRIENT_CONC": false,
+      "TEMPERATURE": false,
+      "HUMIDITY": false
+    }
+  },
+  "outbox": {
+    "enabled": true,
+    "max_items": 200,
+    "items": []
+  }
+}
