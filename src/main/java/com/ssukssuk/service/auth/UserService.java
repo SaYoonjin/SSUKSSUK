@@ -56,7 +56,7 @@ public class UserService {
                 .orElseThrow(() -> new CustomException(ErrorCode.LOGIN_FAILED));
 
         if (user.getRemovedAt() != null) {
-            throw new CustomException(ErrorCode.USER_DELETED); // 너 enum에 맞게
+            throw new CustomException(ErrorCode.USER_DELETED);
         }
 
         if (!passwordEncoder.matches(req.password(), user.getPassword())) {
@@ -69,7 +69,6 @@ public class UserService {
                 user.isAdmin()
         );
 
-        // refreshToken은 지금 단계에서 선택
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
         return new LoginResponse(

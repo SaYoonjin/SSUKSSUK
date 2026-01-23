@@ -29,7 +29,7 @@ public class JwtTokenProvider {
         this.issuer = issuer;
     }
 
-    /** ✅ AccessToken 발급 */
+    /** AccessToken 발급 */
     public String createAccessToken(Long userId, String email, boolean isAdmin) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenExpirationMs);
@@ -46,7 +46,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    /** ✅ RefreshToken 발급 */
+    /** RefreshToken 발급 */
     public String createRefreshToken(Long userId) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + refreshTokenExpirationMs);

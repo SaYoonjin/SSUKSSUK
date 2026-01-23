@@ -54,11 +54,6 @@ public enum ErrorCode {
             "EMAIL_DUPLICATE",
             "이미 사용 중인 이메일입니다"
     ),
-    NICKNAME_DUPLICATE(
-            HttpStatus.CONFLICT,
-            "NICKNAME_DUPLICATE",
-            "이미 사용 중인 닉네임입니다"
-    ),
 
     // 500
     INTERNAL_SERVER_ERROR(
