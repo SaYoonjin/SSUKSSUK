@@ -28,9 +28,6 @@ public class UserService {
         if (userRepository.existsByEmail(req.email())) {
             throw new CustomException(ErrorCode.EMAIL_DUPLICATE);
         }
-        if (userRepository.existsByNickname(req.nickname())) {
-            throw new CustomException(ErrorCode.NICKNAME_DUPLICATE);
-        }
 
         User user = User.builder()
                 .email(req.email())

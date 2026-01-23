@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 public enum ErrorCode {
+
     // 400
     VALIDATION_ERROR(
             HttpStatus.BAD_REQUEST,
@@ -48,11 +49,41 @@ public enum ErrorCode {
             "사용자를 찾을 수 없습니다"
     ),
 
+    SPECIES_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "SPECIES_NOT_FOUND",
+            "존재하지 않는 식물 종입니다"
+    ),
+
+    DEVICE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "DEVICE_NOT_FOUND",
+            "존재하지 않는 디바이스입니다"
+    ),
+
+    DEVICE_ALREADY_CLAIMED(
+            HttpStatus.CONFLICT,
+            "CONFLICT",
+            "이미 다른 사용자에게 연결된 디바이스입니다."
+    ),
+
     // 409
     EMAIL_DUPLICATE(
             HttpStatus.CONFLICT,
             "EMAIL_DUPLICATE",
             "이미 사용 중인 이메일입니다"
+    ),
+
+    NICKNAME_DUPLICATE(
+            HttpStatus.CONFLICT,
+            "NICKNAME_DUPLICATE",
+            "이미 사용 중인 닉네임입니다"
+    ),
+
+    PLANT_ALREADY_MAIN(
+            HttpStatus.CONFLICT,
+            "PLANT_ALREADY_MAIN",
+            "이미 대표 식물이 존재합니다"
     ),
 
     // 500
