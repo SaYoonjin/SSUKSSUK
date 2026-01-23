@@ -30,7 +30,7 @@ export default function LaunchScreen({ navigation }: Props) {
             {/* 하단 START 영역 */}
             {showStart && (
                 <Pressable
-                    onPress={() => navigation.replace("Main")}
+                    onPress={() => navigation.replace("Login")}
                     style={styles.startBox}
                 >
                     <Text style={styles.startText}>start!</Text>
