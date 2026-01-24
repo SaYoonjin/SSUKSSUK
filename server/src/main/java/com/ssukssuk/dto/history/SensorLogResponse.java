@@ -9,8 +9,10 @@ import java.time.LocalDateTime;
 @Builder
 public class SensorLogResponse {
 
-    private Integer sensorTypeCode;
-    private Float value;
     private LocalDateTime measuredAt;
-}
 
+    private Float temperature;
+    private Float humidity;
+    private Float waterLevel;
+    private Float nutrientConc;
+}

@@ -14,9 +14,10 @@ import java.time.LocalDateTime;
 public class SensorLogRequest {
 
     private Long plantId;
-    private Integer sensorTypeCode;
-    private Float value;
     private LocalDateTime measuredAt;
+
+    private Float temperature;
+    private Float humidity;
+    private Float waterLevel;
+    private Float nutrientConc;
 }
-
-

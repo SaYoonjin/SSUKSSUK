@@ -22,16 +22,13 @@ public class HistoryController {
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * 최신 센서 데이터 조회
-     */
     @GetMapping("/plants/{plantId}/sensor/latest")
     public ResponseEntity<SensorLogResponse> getLatestSensor(
-            @PathVariable Long plantId,
-            @RequestParam Integer sensorTypeCode
+            @PathVariable Long plantId
     ) {
         return ResponseEntity.ok(
-                sensorLogService.getLatestSensor(plantId, sensorTypeCode)
+                sensorLogService.getLatestSensor(plantId)
         );
     }
+
 }

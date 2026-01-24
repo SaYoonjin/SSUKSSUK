@@ -20,16 +20,17 @@ public class SensorLog {
     @Column(name = "plant_id", nullable = false)
     private Long plantId;
 
-    @Column(name = "sensor_type_code", nullable = false)
-    private Integer sensorTypeCode;
-
-    @Column(nullable = false)
-    private Float value;
-
     @Column(name = "measured_at", nullable = false)
     private LocalDateTime measuredAt;
+
+    private Float temperature;
+
+    private Float humidity;
+
+    private Float waterLevel;
+
+    private Float nutrientConc;
 
     @Column(name = "received_at")
     private LocalDateTime receivedAt;
 }
-

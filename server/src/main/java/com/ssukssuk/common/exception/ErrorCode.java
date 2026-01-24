@@ -61,10 +61,22 @@ public enum ErrorCode {
             "존재하지 않는 디바이스입니다"
     ),
 
+    PLANT_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "PLANT_NOT_FOUND",
+            "존재하지 않는 식물입니다"
+    ),
+
     DEVICE_ALREADY_CLAIMED(
             HttpStatus.CONFLICT,
             "CONFLICT",
             "이미 다른 사용자에게 연결된 디바이스입니다."
+    ),
+
+    SENSOR_LOG_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "SENSOR_LOG_NOT_FOUND",
+            "센서 데이터가 존재하지 않습니다."
     ),
 
     // 409

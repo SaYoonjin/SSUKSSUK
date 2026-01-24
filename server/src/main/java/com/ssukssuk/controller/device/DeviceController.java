@@ -16,9 +16,6 @@ public class DeviceController {
 
     private final DeviceService deviceService;
 
-    /**
-     * 디바이스 클레임 (연결)
-     */
     @PostMapping("/claim")
     public ApiResponse<DeviceClaimResponse> claimDevice(
             Authentication authentication,

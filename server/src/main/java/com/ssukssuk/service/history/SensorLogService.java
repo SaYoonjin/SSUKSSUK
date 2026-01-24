@@ -1,9 +1,12 @@
 package com.ssukssuk.service.history;
 
+import com.ssukssuk.common.exception.CustomException;
+import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.history.SensorLog;
 import com.ssukssuk.dto.history.SensorLogRequest;
 import com.ssukssuk.dto.history.SensorLogResponse;
 import com.ssukssuk.repository.history.SensorLogRepository;
+import com.ssukssuk.repository.plant.UserPlantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,42 +19,47 @@ import java.time.LocalDateTime;
 public class SensorLogService {
 
     private final SensorLogRepository sensorLogRepository;
+    private final UserPlantRepository userPlantRepository;
 
-    /**
-     * 센서 로그 저장 (MQTT or API)
-     */
     public void saveSensorLog(SensorLogRequest request) {
+
+        if (!userPlantRepository.existsById(request.getPlantId())) {
+            throw new CustomException(ErrorCode.PLANT_NOT_FOUND);
+        }
+
         SensorLog log = SensorLog.builder()
                 .plantId(request.getPlantId())
-                .sensorTypeCode(request.getSensorTypeCode())
-                .value(request.getValue())
-                .measuredAt(request.getMeasuredAt())
+                .measuredAt(
+                        request.getMeasuredAt() != null
+                                ? request.getMeasuredAt()
+                                : LocalDateTime.now()
+                )
+                .temperature(request.getTemperature())
+                .humidity(request.getHumidity())
+                .waterLevel(request.getWaterLevel())
+                .nutrientConc(request.getNutrientConc())
                 .receivedAt(LocalDateTime.now())
                 .build();
 
         sensorLogRepository.save(log);
     }
 
-    /**
-     * 최신 센서 값 조회
-     */
     @Transactional(readOnly = true)
-    public SensorLogResponse getLatestSensor(
-            Long plantId,
-            Integer sensorTypeCode
-    ) {
+    public SensorLogResponse getLatestSensor(Long plantId) {
+
         SensorLog log = sensorLogRepository
-                .findTopByPlantIdAndSensorTypeCodeOrderByMeasuredAtDesc(
-                        plantId, sensorTypeCode)
+                .findTopByPlantIdOrderByMeasuredAtDesc(plantId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("센서 데이터가 존재하지 않습니다.")
+                        new CustomException(ErrorCode.SENSOR_LOG_NOT_FOUND)
                 );
 
         return SensorLogResponse.builder()
-                .sensorTypeCode(log.getSensorTypeCode())
-                .value(log.getValue())
                 .measuredAt(log.getMeasuredAt())
+                .temperature(log.getTemperature())
+                .humidity(log.getHumidity())
+                .waterLevel(log.getWaterLevel())
+                .nutrientConc(log.getNutrientConc())
                 .build();
     }
-}
 
+}
