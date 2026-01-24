@@ -42,3 +42,7 @@ temp/
 
 # Claude 지시서 파일
 infra_cicd_brief_for_claude_v2.txt
+
+# Claude가 생성한 분석/트러블슈팅 문서
+INFRA-ANALYSIS.md
+JENKINS-TROUBLESHOOTING.md
