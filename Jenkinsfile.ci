@@ -73,7 +73,16 @@ pipeline {
         script {
           def target = (env.TARGET_BRANCH ?: env.DEFAULT_TARGET).trim()
 
-          sh "git fetch origin ${target} --prune"
+          withCredentials([usernamePassword(
+            credentialsId: env.GIT_CRED,
+            usernameVariable: 'GIT_USER',
+            passwordVariable: 'GIT_PASS'
+          )]) {
+            sh """
+              git config credential.helper '!f() { echo "username=\$GIT_USER"; echo "password=\$GIT_PASS"; }; f'
+              git fetch origin ${target} --prune
+            """
+          }
 
           def diff = sh(
             script: "git diff --name-only origin/${target}...HEAD",
