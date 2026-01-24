@@ -26,6 +26,7 @@ from mqtt.binding_handler import handle_binding_update
 from mqtt.mode_handler import handle_mode_update
 
 from telemetry.sensor_uplink import build_sensor_uplink
+from led_scheduler import LEDScheduler
 
 from config_loader import load_json
 
@@ -73,7 +74,8 @@ def main():
         port=config["uart"]["port"],
         baudrate=config["uart"]["baudrate"]
     )
-
+    led_scheduler = LEDScheduler(uart) 
+    
     # 3. MQTT 클라이언트 초기화
     client = mqtt.Client(
         client_id=client_id,
@@ -179,7 +181,8 @@ def main():
       
               # 🔄 최신 setting 반영
               setting = load_json(SETTING_PATH)
-      
+              led_scheduler.apply(setting)
+          
           except Exception as e:
               print(f"[ERROR] binding handling failed: {e}")
                 
@@ -232,12 +235,17 @@ def main():
     last_hour_sent = None
     
     client.loop_start()
+    last_led_min = None
 
     try:
         while True:
+            now = datetime.now()
 
+            if last_led_min != now.minute:
+                led_scheduler.apply(setting, now)
+                last_led_min = now.minute
             # =========================
-            # 1️UART 수신 처리
+            # UART 수신 처리
             # =========================
             packets = uart.poll()
             ideal_ranges = (
@@ -253,7 +261,7 @@ def main():
                 raw = pkt["payload"]
             
                 # =========================
-                # 1️SENSOR DATA (정기)
+                # SENSOR DATA (정기)
                 # =========================
                 if pkt_type == 0x02 and pkt_sub == 0x01:
                     temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
@@ -284,7 +292,7 @@ def main():
                     print("[MQTT] SENSOR_UPLINK PERIODIC sent", values)
             
                 # =========================
-                # 2️EVENT 처리
+                # EVENT 처리
                 # =========================
                 elif pkt_type == TYPE_EVENT:
                     temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
@@ -337,7 +345,7 @@ def main():
                     print("[MQTT] SENSOR_UPLINK EVENT sent")
             
                     # =========================
-                    # 3️AUTO / MANUAL 분기
+                    # AUTO / MANUAL 분기
                     # =========================
                     mode = get_control_mode(setting)
                     print(f"[MODE] current mode = {mode} (raw={setting.get('mode')})")
@@ -366,9 +374,8 @@ def main():
 
                     
             # =========================
-            # 2️정각 스케줄러
+            # 정각 스케줄러
             # =========================
-            now = datetime.now()
 
             if (
                 setting["binding"]["binding_state"] == "BOUND"
@@ -381,7 +388,7 @@ def main():
                 print(f"[SCHED] CMD_REQ_SENSOR sent at {now.strftime('%H:%M')}")
     
             # =========================
-            # 3️루프 속도 제한
+            # 루프 속도 제한
             # =========================
             time.sleep(0.2)
     
