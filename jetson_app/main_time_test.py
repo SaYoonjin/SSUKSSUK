@@ -13,8 +13,6 @@ from uart.packet import CMD_READY
 from uart.packet import CMD_REQ_SENSOR
 from mqtt.claim_handler import handle_claim_update
 from mqtt.binding_handler import handle_binding_update
-from mqtt.mode_handler import handle_mode_update
-
 from telemetry.sensor_uplink import build_sensor_uplink
 
 from config_loader import load_json
@@ -24,6 +22,14 @@ BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 SETTING_PATH = BASE_DIR / "setting.json"
 
+# ===== 시간 테스트용 설정 =====
+TEST_TIME_MODE = True
+TEST_TIME = datetime(2026, 1, 24, 13, 59, 50)
+
+def get_now():
+    if TEST_TIME_MODE and TEST_TIME is not None:
+        return TEST_TIME
+    return datetime.now()
 
 def is_new_hour(now, last_hour):
     if last_hour is None:
@@ -32,6 +38,7 @@ def is_new_hour(now, last_hour):
 
 
 def main():
+    global TEST_TIME
     # 1. 설정 로드
     config = load_json(CONFIG_PATH)
     setting = load_json(SETTING_PATH)
@@ -126,8 +133,8 @@ def main():
             except Exception as e:
                 print(f"[ERROR] claim handling failed: {e}")
 
-        # ( upload-url 핸들러는 이후 단계에서 추가)
-        elif msg.topic == f"{base}/binding":
+        # ( mode / upload-url 핸들러는 이후 단계에서 추가)
+        if msg.topic == f"{base}/binding":
           try:
               ack = handle_binding_update(payload, uart)
       
@@ -147,28 +154,6 @@ def main():
       
           except Exception as e:
               print(f"[ERROR] binding handling failed: {e}")
-                
-        # =====================
-        # ✅ MODE_UPDATE 처리
-        # =====================
-        elif msg.topic == f"{base}/mode":
-            try:
-                ack = handle_mode_update(payload)
-    
-                client.publish(
-                    f"{base}/ack",
-                    json.dumps(ack),
-                    qos=1,
-                    retain=False
-                )
-    
-                print(f"[MQTT] MODE_UPDATE ACK sent ({payload.get('mode')})")
-    
-                # 🔄 최신 setting 반영
-                setting = load_json(SETTING_PATH)
-    
-            except Exception as e:
-                print(f"[ERROR] mode handling failed: {e}")
 
 
     client.on_connect = on_connect
@@ -187,6 +172,10 @@ def main():
 
     try:
         while True:
+        # ===== 테스트 시간 흐르게 하기 =====
+            if TEST_TIME_MODE:
+                print(f"[TEST TIME] now = {TEST_TIME.strftime('%Y-%m-%d %H:%M:%S')}")
+                TEST_TIME += timedelta(seconds=1)
 
             # =========================
             # 1️⃣ UART 수신 처리
@@ -226,7 +215,8 @@ def main():
             # =========================
             # 2️⃣ 정각 스케줄러
             # =========================
-            now = datetime.now()
+            # now = datetime.now()
+            now = get_now()
 
             if (
                 setting["binding"]["binding_state"] == "BOUND"
@@ -249,3 +239,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
