@@ -80,6 +80,9 @@ void auto_recovery_fsm(void)
 
     switch (ar_state)
     {
+        // =======================
+        // WATER
+        // =======================
         case AR_WATER_PUMP_ON:
             if (now - ar_tick >= 10000) {
                 HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_SET);
@@ -112,6 +115,54 @@ void auto_recovery_fsm(void)
             auto_recovery_finish();
             break;
         }
+
+        // =======================
+        // EC (NUTRIENT)
+        // =======================
+        case AR_EC_PUMP_ON:
+            // 1초 ON
+            if (now - ar_tick >= 1000) {
+                HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_SET); // OFF
+                ar_state = AR_EC_WAIT_AFTER_ON;
+                ar_tick = now;
+            }
+            break;
+
+        case AR_EC_WAIT_AFTER_ON:
+            // 30초 대기 후 재측정
+            if (now - ar_tick >= 30000) {
+                ar_state = AR_EC_CHECK;
+            }
+            break;
+
+        case AR_EC_CHECK:
+            // 재측정(여기서 한 번 더 읽고 판단)
+            sensor_read_all();
+
+            if (g_sensor.ec >= g_threshold.ec_min) {
+                proto_send_event_sensor(EVENT_NUTRI_ACTION_SUCCESS,
+                    (uint16_t)(g_sensor.temperature * 10),
+                    (uint16_t)(g_sensor.humidity * 10),
+                    (uint16_t)(g_sensor.ec),
+                    (uint16_t)(g_sensor.water_level));
+                auto_recovery_finish();
+            } else {
+                ar_ec_retry++;
+                if (ar_ec_retry >= 5) {
+                    proto_send_event_sensor(EVENT_NUTRI_PUMP_FAIL,
+                        (uint16_t)(g_sensor.temperature * 10),
+                        (uint16_t)(g_sensor.humidity * 10),
+                        (uint16_t)(g_sensor.ec),
+                        (uint16_t)(g_sensor.water_level));
+                    auto_recovery_finish();
+                } else {
+                    // 다시 1초 ON 반복
+                    HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_RESET); // ON
+                    ar_state = AR_EC_PUMP_ON;
+                    ar_tick = now;
+                }
+            }
+            break;
 
         default:
             auto_recovery_finish();
