@@ -1,17 +1,3 @@
-// ===============================
-// CI Verify Pipeline (.ci)
-// - Triggered by GitLab MR webhook (Generic Webhook Trigger)
-// - Only for MR: (BE|FE) -> master and action (open|update|reopen)
-// - Checkout SOURCE_BRANCH (NOT master)
-// - Detect changed files vs target branch(master) and run only relevant CI
-// Repo structure:
-//   server/
-//   frontend/
-//   infra/
-//   device/
-//   AI/
-// ===============================
-
 pipeline {
   agent any
 
@@ -19,12 +5,11 @@ pipeline {
     timeout(time: 30, unit: 'MINUTES')
     disableConcurrentBuilds()
     buildDiscarder(logRotator(numToKeepStr: '20'))
-    ansiColor('xterm')
   }
 
   environment {
     REPO_URL = 'https://lab.ssafy.com/s14-webmobile3-sub1/S14P11A103.git'
-    GIT_CRED = 'gitlab-token'  // Jenkins Credentials ID
+    GIT_CRED = 'gitlab-token'
     DEFAULT_TARGET = 'master'
   }
 
@@ -33,7 +18,6 @@ pipeline {
     stage('Validate Webhook Variables') {
       steps {
         script {
-          // Generic Webhook Trigger로 들어오는 값들
           def src = (env.SOURCE_BRANCH ?: '').trim()
           def tgt = (env.TARGET_BRANCH ?: env.DEFAULT_TARGET).trim()
           def act = (env.MR_ACTION ?: '').trim()
@@ -42,20 +26,16 @@ pipeline {
           echo "TARGET_BRANCH=${tgt}"
           echo "MR_ACTION=${act}"
 
-          // 방어적으로 기본값/필수값 체크
-          if (!src)  { error("Missing SOURCE_BRANCH from webhook") }
-          if (!tgt)  { error("Missing TARGET_BRANCH from webhook") }
-          if (!act)  { error("Missing MR_ACTION from webhook") }
+          if (!src) { error("Missing SOURCE_BRANCH from webhook") }
+          if (!tgt) { error("Missing TARGET_BRANCH from webhook") }
+          if (!act) { error("Missing MR_ACTION from webhook") }
 
-          // 원하는 정책: BE/FE -> master, action open/update/reopen 만 CI
           def okTarget = (tgt == 'master')
           def okSource = (src == 'BE' || src == 'FE')
           def okAction = (act == 'open' || act == 'update' || act == 'reopen')
 
           if (!(okTarget && okSource && okAction)) {
             echo "Skip CI by policy (target/source/action not matched)."
-            // 여기서 error로 실패시키면 GitLab에서 "실패"로 보이니까,
-            // 그냥 현재 빌드 자체를 '성공'으로 끝내고 아무것도 안 하게 처리.
             currentBuild.description = "Skipped: ${src} -> ${tgt} (${act})"
             env.SKIP_ALL = 'true'
           } else {
@@ -68,7 +48,6 @@ pipeline {
     stage('Checkout SOURCE branch') {
       when { expression { env.SKIP_ALL != 'true' } }
       steps {
-        // IMPORTANT: master가 아니라 SOURCE_BRANCH를 체크아웃해야 함
         checkout([
           $class: 'GitSCM',
           branches: [[name: "*/${env.SOURCE_BRANCH}"]],
@@ -94,11 +73,8 @@ pipeline {
         script {
           def target = (env.TARGET_BRANCH ?: env.DEFAULT_TARGET).trim()
 
-          // target 최신 ref 받아오기
           sh "git fetch origin ${target} --prune"
 
-          // MR 소스브랜치(HEAD)와 target(master) 사이 변경 파일 목록
-          // merge-base 기반 비교를 위해 ... 사용
           def diff = sh(
             script: "git diff --name-only origin/${target}...HEAD",
             returnStdout: true
@@ -107,7 +83,6 @@ pipeline {
           echo "== Changed files (origin/${target}...HEAD) =="
           echo (diff ? diff : "(none)")
 
-          // server/ 또는 frontend/ 변경 여부
           def changed = diff ? diff.split("\\r?\\n") : []
           def runBackend = changed.any { it.startsWith("server/") }
           def runFrontend = changed.any { it.startsWith("frontend/") }
@@ -119,7 +94,6 @@ pipeline {
           echo "RUN_BACKEND=${env.RUN_BACKEND}"
           echo "RUN_FRONTEND=${env.RUN_FRONTEND}"
 
-          // 둘 다 false면 할 일이 없으니 여기서 종료
           if (!runBackend && !runFrontend) {
             currentBuild.description = "No server/frontend changes"
             env.SKIP_ALL = 'true'
@@ -151,7 +125,6 @@ pipeline {
       }
       post {
         always {
-          // 리포트가 있으면 보관
           archiveArtifacts artifacts: 'server/build/reports/**/*', allowEmptyArchive: true
           archiveArtifacts artifacts: 'server/build/test-results/**/*', allowEmptyArchive: true
         }
@@ -187,15 +160,8 @@ pipeline {
   }
 
   post {
-    success {
-      echo "CI pipeline completed successfully."
-    }
-    failure {
-      echo "CI pipeline failed."
-    }
-    always {
-      // 워크스페이스 정리
-      cleanWs()
-    }
+    success { echo "CI pipeline completed successfully." }
+    failure { echo "CI pipeline failed." }
+    always  { cleanWs() }
   }
 }
