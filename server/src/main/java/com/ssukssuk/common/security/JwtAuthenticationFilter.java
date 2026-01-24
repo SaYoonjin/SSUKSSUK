@@ -23,6 +23,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+
+        return path.startsWith("/test/")
+                || path.startsWith("/auth/")
+                || path.startsWith("/swagger-ui/")
+                || path.startsWith("/v3/api-docs/");
+    }
+
+    @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
@@ -31,17 +41,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = resolveBearerToken(request);
 
+        // 토큰이 있고 + 유효할 때만 인증 처리
         if (token != null && tokenProvider.validate(token)) {
             Long userId = tokenProvider.getUserId(token);
             boolean isAdmin = tokenProvider.isAdmin(token);
 
-            // 권한 부여 (ADMIN이면 ROLE_ADMIN, 아니면 ROLE_USER)
             List<SimpleGrantedAuthority> authorities =
                     isAdmin
                             ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
                             : List.of(new SimpleGrantedAuthority("ROLE_USER"));
 
-            // principal에 userId를 넣어두면 컨트롤러/서비스에서 꺼내쓰기 쉬움
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userId, null, authorities);
 
@@ -55,7 +64,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (!StringUtils.hasText(header)) return null;
 
-        // "Bearer {token}"
         if (header.startsWith("Bearer ")) {
             String token = header.substring(7);
             return StringUtils.hasText(token) ? token : null;
