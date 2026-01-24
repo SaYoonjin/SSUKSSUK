@@ -1,0 +1,64 @@
+pipeline {
+  agent any
+
+  environment {
+    PROJECT_ROOT = '/home/ubuntu/S14P11A103'
+    COMPOSE_FILE = "${PROJECT_ROOT}/docker-compose.yml"
+  }
+
+  options {
+    timeout(time: 30, unit: 'MINUTES')
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+  }
+
+  stages {
+    stage('Guard') {
+      steps {
+        echo "REF=${env.REF}"
+      }
+    }
+
+    stage('Deploy (master only)') {
+      when {
+        expression {
+          // GitLab push hook 기준: master면 보통 "refs/heads/master"
+          env.REF == 'refs/heads/master'
+        }
+      }
+      steps {
+        sh '''
+          set -eux
+
+          cd ${PROJECT_ROOT}
+          git fetch origin master
+          git checkout master
+          git pull origin master
+
+          docker compose -f ${COMPOSE_FILE} stop backend || true
+          docker compose -f ${COMPOSE_FILE} build --no-cache backend
+          docker compose -f ${COMPOSE_FILE} up -d backend
+
+          sleep 15
+
+          for i in $(seq 1 20); do
+            if docker exec backend wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health 2>/dev/null; then
+              echo "Backend is healthy!"
+              exit 0
+            fi
+            echo "Health check attempt $i/20..."
+            sleep 3
+          done
+
+          echo "Health check failed!"
+          docker logs backend --tail 50
+          exit 1
+        '''
+      }
+    }
+  }
+
+  post {
+    always { cleanWs() }
+  }
+}

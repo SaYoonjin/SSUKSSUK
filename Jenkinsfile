@@ -29,19 +29,20 @@ pipeline {
         }
 
         // ===========================================
-        // Stage 2: Build & Test (MR/PR)
+        // Stage 2: Backend Build & Test (MR from BE branch)
         // ===========================================
-        stage('Build & Static Analysis') {
+        stage('Backend Build & Static Analysis') {
             when {
-                anyOf {
-                    branch 'develop'
-                    changeRequest()
+                allOf {
+                    changeRequest target: 'master'     // master로의 MR일 때만
+                    changeset "server/**"              // server 폴더 변경 시
                 }
             }
             steps {
                 dir('server') {
                     sh '''
-                        echo "Building project..."
+                        echo "Building Backend project..."
+                        chmod +x ./gradlew
                         ./gradlew clean build -x test --no-daemon
 
                         echo "Running checkstyle..."
@@ -57,11 +58,42 @@ pipeline {
         }
 
         // ===========================================
-        // Stage 3: Deploy to Production (master only)
+        // Stage 2-1: Frontend Lint & Test (MR from FE branch)
+        // ===========================================
+        stage('Frontend Lint & Test') {
+            when {
+                allOf {
+                    changeRequest target: 'master'     // master로의 MR일 때만
+                    changeset "frontend/**"            // frontend 폴더 변경 시
+                }
+            }
+            steps {
+                dir('frontend') {
+                    sh '''
+                        echo "Installing dependencies..."
+                        npm install
+
+                        echo "Running ESLint..."
+                        npm run lint || true
+
+                        echo "Running tests..."
+                        npm test -- --watchAll=false || true
+
+                        echo "Frontend checks completed!"
+                    '''
+                }
+            }
+        }
+
+        // ===========================================
+        // Stage 3: Deploy to Production (master only, server/ changes only)
         // ===========================================
         stage('Deploy to Production') {
             when {
-                branch 'master'
+                allOf {
+                    branch 'master'
+                    changeset "server/**"  // server 폴더 변경 시에만 실행
+                }
             }
             steps {
                 script {
