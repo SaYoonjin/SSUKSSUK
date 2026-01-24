@@ -1,0 +1,89 @@
+pipeline {
+  agent any
+
+  options {
+    timeout(time: 30, unit: 'MINUTES')
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+  }
+
+  stages {
+    stage('Guard') {
+      steps {
+        echo "SOURCE_BRANCH=${env.SOURCE_BRANCH}"
+        echo "TARGET_BRANCH=${env.TARGET_BRANCH}"
+        echo "MR_ACTION=${env.MR_ACTION}"
+      }
+    }
+
+    stage('Checkout (MR source branch)') {
+      when {
+        expression {
+          env.TARGET_BRANCH == 'master' &&
+          (env.SOURCE_BRANCH == 'BE' || env.SOURCE_BRANCH == 'FE') &&
+          (env.MR_ACTION == 'open' || env.MR_ACTION == 'reopen' || env.MR_ACTION == 'update')
+        }
+      }
+      steps {
+        // webhook으로 받은 source branch를 강제로 checkout
+        sh '''
+          set -eux
+          git fetch --all
+          git checkout -B "${SOURCE_BRANCH}" "origin/${SOURCE_BRANCH}"
+          git log -1 --pretty=format:"%h - %s (%ci)" || true
+        '''
+      }
+    }
+
+    stage('Backend CI') {
+      when {
+        expression {
+          env.TARGET_BRANCH == 'master' &&
+          env.SOURCE_BRANCH == 'BE' &&
+          (env.MR_ACTION == 'open' || env.MR_ACTION == 'reopen' || env.MR_ACTION == 'update')
+        }
+      }
+      steps {
+        dir('server') {
+          sh '''
+            set -eux
+            chmod +x ./gradlew
+            ./gradlew clean build -x test --no-daemon
+            ./gradlew checkstyleMain --no-daemon || true
+          '''
+        }
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'server/build/reports/**/*', allowEmptyArchive: true
+        }
+      }
+    }
+
+    stage('Frontend CI') {
+      when {
+        expression {
+          env.TARGET_BRANCH == 'master' &&
+          env.SOURCE_BRANCH == 'FE' &&
+          (env.MR_ACTION == 'open' || env.MR_ACTION == 'reopen' || env.MR_ACTION == 'update')
+        }
+      }
+      steps {
+        dir('frontend') {
+          sh '''
+            set -eux
+            npm ci || npm install
+            npm run lint || true
+            npm test -- --watchAll=false || true
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      cleanWs()
+    }
+  }
+}
