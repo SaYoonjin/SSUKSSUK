@@ -1,89 +1,163 @@
+// =====================================================
+// Jenkinsfile.ci
+// 목적: GitLab Merge Request 이벤트(웹훅)로 CI 검증만 수행
+// 방식: Generic Webhook Trigger에서 받은 변수로 브랜치 직접 checkout
+//
+// 트리거 조건(젠킨스 Job에서 필터로 거는 걸 추천):
+//   TARGET_BRANCH == "master"
+//   SOURCE_BRANCH in ["BE","FE"]
+//   MR_ACTION in ["open","reopen","update"]
+//
+// 주의: 이 파일은 "Pipeline Job"에서 "Pipeline script from SCM"로 로드
+// =====================================================
+
 pipeline {
-  agent any
+    agent any
 
-  options {
-    timeout(time: 30, unit: 'MINUTES')
-    disableConcurrentBuilds()
-    buildDiscarder(logRotator(numToKeepStr: '20'))
-  }
-
-  stages {
-    stage('Guard') {
-      steps {
-        echo "SOURCE_BRANCH=${env.SOURCE_BRANCH}"
-        echo "TARGET_BRANCH=${env.TARGET_BRANCH}"
-        echo "MR_ACTION=${env.MR_ACTION}"
-      }
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '30'))
+        timestamps()
     }
 
-    stage('Checkout (MR source branch)') {
-      when {
-        expression {
-          env.TARGET_BRANCH == 'master' &&
-          (env.SOURCE_BRANCH == 'BE' || env.SOURCE_BRANCH == 'FE') &&
-          (env.MR_ACTION == 'open' || env.MR_ACTION == 'reopen' || env.MR_ACTION == 'update')
-        }
-      }
-      steps {
-        // webhook으로 받은 source branch를 강제로 checkout
-        sh '''
-          set -eux
-          git fetch --all
-          git checkout -B "${SOURCE_BRANCH}" "origin/${SOURCE_BRANCH}"
-          git log -1 --pretty=format:"%h - %s (%ci)" || true
-        '''
-      }
+    environment {
+        REPO_URL = 'https://lab.ssafy.com/s14-webmobile3-sub1/S14P11A103.git'
+        GIT_CRED = 'gitlab-token'
     }
 
-    stage('Backend CI') {
-      when {
-        expression {
-          env.TARGET_BRANCH == 'master' &&
-          env.SOURCE_BRANCH == 'BE' &&
-          (env.MR_ACTION == 'open' || env.MR_ACTION == 'reopen' || env.MR_ACTION == 'update')
+    stages {
+
+        stage('Show Webhook Variables') {
+            steps {
+                echo "MR_ACTION     = ${env.MR_ACTION}"
+                echo "SOURCE_BRANCH = ${env.SOURCE_BRANCH}"
+                echo "TARGET_BRANCH = ${env.TARGET_BRANCH}"
+            }
         }
-      }
-      steps {
-        dir('server') {
-          sh '''
-            set -eux
-            chmod +x ./gradlew
-            ./gradlew clean build -x test --no-daemon
-            ./gradlew checkstyleMain --no-daemon || true
-          '''
+
+        stage('Guard (Fail Fast)') {
+            steps {
+                script {
+                    // 변수 누락 방지
+                    if (!env.SOURCE_BRANCH?.trim()) {
+                        error("SOURCE_BRANCH is empty. Check Generic Webhook Trigger 변수 추출 설정.")
+                    }
+                    if (!env.TARGET_BRANCH?.trim()) {
+                        error("TARGET_BRANCH is empty. Check Generic Webhook Trigger 변수 추출 설정.")
+                    }
+                    if (!env.MR_ACTION?.trim()) {
+                        error("MR_ACTION is empty. Check Generic Webhook Trigger 변수 추출 설정.")
+                    }
+
+                    // CI 대상 조건 강제
+                    def allowedSource = ['BE', 'FE']
+                    def allowedAction = ['open', 'reopen', 'update']
+
+                    if (env.TARGET_BRANCH != 'master') {
+                        error("This CI job runs only when TARGET_BRANCH=master. Current: ${env.TARGET_BRANCH}")
+                    }
+                    if (!allowedSource.contains(env.SOURCE_BRANCH)) {
+                        error("This CI job runs only when SOURCE_BRANCH is BE/FE. Current: ${env.SOURCE_BRANCH}")
+                    }
+                    if (!allowedAction.contains(env.MR_ACTION)) {
+                        error("This CI job runs only when MR_ACTION is open/reopen/update. Current: ${env.MR_ACTION}")
+                    }
+                }
+            }
         }
-      }
-      post {
+
+        stage('Checkout (MR Source Branch)') {
+            steps {
+                script {
+                    def src = env.SOURCE_BRANCH
+                    echo "Checking out MR source branch: ${src}"
+
+                    // 이전 작업공간 섞임 방지
+                    deleteDir()
+
+                    // MR 소스 브랜치 체크아웃
+                    git branch: src,
+                        credentialsId: env.GIT_CRED,
+                        url: env.REPO_URL
+
+                    sh 'git status --porcelain || true'
+                    sh 'git log -1 --pretty=format:"%h - %s (%ci)" || true'
+                }
+            }
+        }
+
+        // -------------------------------------------------
+        // Backend CI (BE 브랜치 MR일 때만)
+        // -------------------------------------------------
+        stage('Backend CI (Gradle Build / Checkstyle)') {
+            when {
+                expression { env.SOURCE_BRANCH == 'BE' }
+            }
+            steps {
+                dir('server') {
+                    sh '''
+                        set -euxo pipefail
+                        echo "=== Backend CI Start ==="
+                        chmod +x ./gradlew
+
+                        # 빌드(테스트 제외는 상황에 따라 조정)
+                        ./gradlew clean build -x test --no-daemon
+
+                        # 코드 스타일(있으면 실행)
+                        ./gradlew checkstyleMain --no-daemon || true
+
+                        echo "=== Backend CI Done ==="
+                    '''
+                }
+            }
+            post {
+                always {
+                    // 리포트/로그 아카이브(없어도 통과)
+                    archiveArtifacts artifacts: 'server/build/reports/**/*', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'server/build/libs/**/*', allowEmptyArchive: true
+                }
+            }
+        }
+
+        // -------------------------------------------------
+        // Frontend CI (FE 브랜치 MR일 때만)
+        // -------------------------------------------------
+        stage('Frontend CI (Lint / Test)') {
+            when {
+                expression { env.SOURCE_BRANCH == 'FE' }
+            }
+            steps {
+                dir('frontend') {
+                    sh '''
+                        set -euxo pipefail
+                        echo "=== Frontend CI Start ==="
+
+                        # npm 설치/검사
+                        npm ci || npm install
+
+                        # lint (스크립트 없으면 실패할 수 있으니 방어적으로)
+                        npm run lint || true
+
+                        # test (구성 없으면 true로 넘김)
+                        npm test -- --watchAll=false || true
+
+                        echo "=== Frontend CI Done ==="
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ CI pipeline SUCCESS'
+        }
+        failure {
+            echo '❌ CI pipeline FAILURE - check Console Output'
+        }
         always {
-          archiveArtifacts artifacts: 'server/build/reports/**/*', allowEmptyArchive: true
+            cleanWs()
         }
-      }
     }
-
-    stage('Frontend CI') {
-      when {
-        expression {
-          env.TARGET_BRANCH == 'master' &&
-          env.SOURCE_BRANCH == 'FE' &&
-          (env.MR_ACTION == 'open' || env.MR_ACTION == 'reopen' || env.MR_ACTION == 'update')
-        }
-      }
-      steps {
-        dir('frontend') {
-          sh '''
-            set -eux
-            npm ci || npm install
-            npm run lint || true
-            npm test -- --watchAll=false || true
-          '''
-        }
-      }
-    }
-  }
-
-  post {
-    always {
-      cleanWs()
-    }
-  }
 }
