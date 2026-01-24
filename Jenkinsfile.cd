@@ -118,12 +118,9 @@ pipeline {
                     echo "Waiting for backend to be healthy..."
                     sleep 10
 
-                    # 컨테이너 이름/서비스명 환경에 따라 다를 수 있어.
-                    # 1) 서비스명이 backend라면 compose ps로 컨테이너명 확인 가능
-                    # 2) 아래 health check는 너희 actuator 경로 기준
+                    # Health check - 호스트에서 curl로 체크 (컨테이너 내부 wget 의존성 제거)
                     for i in $(seq 1 20); do
-                        if docker compose -f "${COMPOSE_FILE}" exec -T backend \
-                            wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health 2>/dev/null; then
+                        if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
                             echo "Backend is healthy!"
                             exit 0
                         fi
