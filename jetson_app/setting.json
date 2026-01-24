@@ -5,7 +5,7 @@
     "user_id": 1
   },
   "binding": {
-    "plant_id": 4,
+    "plant_id": 19,
     "binding_state": "BOUND",
     "species": 1,
     "led_time": {
@@ -14,12 +14,12 @@
     },
     "ideal_ranges": {
       "water_level": {
-        "min": 30.0,
-        "max": 80.0
+        "min": 10.0,
+        "max": 60.0
       },
       "nutrient_conc": {
-        "min": 1.2,
-        "max": 2.0
+        "min": 700.0,
+        "max": 2000.0
       },
       "temperature": {
         "min": 18.0,
@@ -33,8 +33,8 @@
   },
   "mode": "AUTO",
   "seq": {
-    "SENSOR_UPLINK": 26,
-    "ACTION_RESULT": 2
+    "SENSOR_UPLINK": 159,
+    "ACTION_RESULT": 53
   },
   "anomaly_state": {
     "open": {

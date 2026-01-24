@@ -35,6 +35,7 @@ from uart.packet import (
     CMD_PUMP_WATER_STOP,
     CMD_PUMP_NUTRI_STOP,
     CMD_AUTO_RECOVERY,
+    CMD_CLOSE
 )
 
 
@@ -215,6 +216,7 @@ def main():
                 ack = handle_mode_update(payload)
                 client.publish(f"{telemetry_base}/ack", json.dumps(ack), qos=1)
                 setting = load_json(SETTING_PATH)
+                print(f"[MODE] mode update applied (current: {setting.get('mode')})")
 
             # ======================================================
             # UPLOAD_URL
@@ -515,7 +517,13 @@ def main():
         print("[SYSTEM] KeyboardInterrupt")
 
     finally:
-        print("[SHUTDOWN] LED OFF, PUMP STOP")
+        print("[SHUTDOWN] send CMD_CLOSE to STM")
+    
+        try:
+            uart.send_cmd(CMD_CLOSE)
+            time.sleep(0.1)  # 전송 보장용 (중요)
+        except Exception:
+            pass
         try:
             led_scheduler.reset() 
             uart.send_cmd(CMD_LED_OFF)
