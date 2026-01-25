@@ -6,6 +6,8 @@ import MainScreen from "../screens/MainScreen";
 import SignupScreen from "../screens/SignupScreen";
 import DeviceAddScreen from '../screens/DeviceaddScreen.tsx';
 import DeviceManagementScreen from '../screens/DevicemanagementScreen.tsx';
+import PlantListScreen from '../screens/PlantLIstScreen.tsx';
+import PlantAddEditScreen from '../screens/PlantAddEditScreen.tsx';
 
 export type RootStackParamList = {
     Launch: undefined;
@@ -14,6 +16,8 @@ export type RootStackParamList = {
     Signup: undefined;
     DeviceManagement: undefined;
     DeviceAdd: undefined;
+    PlantList: undefined;
+    PlantAddEdit: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -31,6 +35,8 @@ export default function RootNavigator() {
             component={DeviceManagementScreen}
           />
           <Stack.Screen name="DeviceAdd" component={DeviceAddScreen} />
+          <Stack.Screen name="PlantList" component={PlantListScreen} />
+          <Stack.Screen name="PlantAddEdit" component={PlantAddEditScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     );
