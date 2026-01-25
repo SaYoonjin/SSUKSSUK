@@ -69,13 +69,14 @@ export default function LoginScreen({ navigation }: any) {
                 body: JSON.stringify({ email: e, password, rememberMe }),
             });
             const json: LoginResponse = await res.json();
-            if ("success" in json && json.success) {
-                setErrorMsg("");
-                navigation.replace("Main");
-                return;
+            if ('success' in json && json.success) {
+              setErrorMsg('');
+              navigation.replace('Main');
+              return;
             }
             setErrorMsg(COMMON_ERROR_TEXT);
         } catch (err) {
+            console.error(err);
             setErrorMsg(COMMON_ERROR_TEXT);
         } finally {
             setLoading(false);
