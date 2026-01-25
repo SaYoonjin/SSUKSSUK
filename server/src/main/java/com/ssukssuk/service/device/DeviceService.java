@@ -21,7 +21,7 @@ public class DeviceService {
 
     public DeviceClaimResponse claim(Long userId, String serial) {
 
-        Device device = deviceRepository.findByDeviceSerial(serial)
+        Device device = deviceRepository.findBySerial(serial)
                 .orElseThrow(() ->
                         new CustomException(ErrorCode.DEVICE_NOT_FOUND)
                 );

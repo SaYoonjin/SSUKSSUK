@@ -21,6 +21,7 @@ public class SensorLogService {
     private final SensorLogRepository sensorLogRepository;
     private final UserPlantRepository userPlantRepository;
 
+     // REST API용 (POST /history/sensor-log)
     public void saveSensorLog(SensorLogRequest request) {
 
         if (!userPlantRepository.existsById(request.getPlantId())) {
@@ -44,6 +45,31 @@ public class SensorLogService {
         sensorLogRepository.save(log);
     }
 
+    //MQTT 수신용 (SensorTelemetryHandler에서 호출)
+    public void saveFromMqtt(
+            Long plantId,
+            LocalDateTime measuredAt,
+            Float temperature,
+            Float humidity,
+            Float waterLevel,
+            Float nutrientConc
+    ) {
+        SensorLog log = SensorLog.builder()
+                .plantId(plantId)
+                .measuredAt(
+                        measuredAt != null ? measuredAt : LocalDateTime.now()
+                )
+                .temperature(temperature)
+                .humidity(humidity)
+                .waterLevel(waterLevel)
+                .nutrientConc(nutrientConc)
+                .receivedAt(LocalDateTime.now())
+                .build();
+
+        sensorLogRepository.save(log);
+    }
+
+    //최신 센서값 조회
     @Transactional(readOnly = true)
     public SensorLogResponse getLatestSensor(Long plantId) {
 
@@ -61,5 +87,4 @@ public class SensorLogService {
                 .nutrientConc(log.getNutrientConc())
                 .build();
     }
-
 }

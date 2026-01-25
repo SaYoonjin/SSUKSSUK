@@ -18,7 +18,7 @@ public class DeviceClaimResponse {
     public static DeviceClaimResponse from(Device device) {
         return DeviceClaimResponse.builder()
                 .deviceId(device.getDeviceId())
-                .serial(device.getDeviceSerial())
+                .serial(device.getSerial())
                 .pairing(device.getPairing())
                 .claimedAt(device.getClaimedAt())
                 .build();

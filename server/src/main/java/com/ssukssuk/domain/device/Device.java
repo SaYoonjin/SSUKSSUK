@@ -19,8 +19,8 @@ public class Device {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "device_serial", nullable = false, unique = true)
-    private String deviceSerial;
+    @Column(name = "device_serial")
+    private String serial;
 
     @Column(nullable = false)
     private Boolean pairing;

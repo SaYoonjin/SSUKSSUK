@@ -11,6 +11,6 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
 
     Optional<Device> findByDeviceIdAndUser_Id(Long deviceId, Long userId);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<Device> findByDeviceSerial(String deviceSerial);
+    Optional<Device> findBySerial(String serial);
+
 }

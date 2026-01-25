@@ -23,7 +23,6 @@ public class DeviceControlService {
 
     private static final Duration DEFAULT_ACK_TIMEOUT = Duration.ofSeconds(3);
 
-    /** 문서 payload 공통 필드 세팅 (msg_id, sent_at, serial_num, plant_id, type) */
     private Map<String, Object> base(String msgId, String serial, Long plantId, String type) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("msg_id", msgId);
@@ -34,7 +33,6 @@ public class DeviceControlService {
         return m;
     }
 
-    /** publish + ack 대기 공통 */
     private AckMessage publishAndWait(String serial, String channel, String msgId, Map<String, Object> payload) {
         CompletableFuture<AckMessage> future =
                 pendingAckStore.register(serial, msgId, DEFAULT_ACK_TIMEOUT);
@@ -58,7 +56,6 @@ public class DeviceControlService {
         }
     }
 
-    /** B-1) claim 업데이트: devices/{serial}/control/claim */
     public AckMessage publishClaimUpdate(String serial, Long userId, String claimState, String mode) {
         String msgId = UUID.randomUUID().toString();
 
@@ -70,7 +67,6 @@ public class DeviceControlService {
         return publishAndWait(serial, "claim", msgId, payload);
     }
 
-    /** B-2) binding 업데이트: devices/{serial}/control/binding */
     public AckMessage publishBindingUpdateBound(String serial, Long plantId, Integer species,
                                                 Double wlMin, Double wlMax, Double ecMin, Double ecMax) {
         String msgId = UUID.randomUUID().toString();
@@ -87,7 +83,6 @@ public class DeviceControlService {
         return publishAndWait(serial, "binding", msgId, payload);
     }
 
-    /** UNBOUND 케이스 */
     public AckMessage publishBindingUpdateUnbound(String serial) {
         String msgId = UUID.randomUUID().toString();
 
@@ -99,7 +94,6 @@ public class DeviceControlService {
         return publishAndWait(serial, "binding", msgId, payload);
     }
 
-    /** B-3) mode 업데이트: devices/{serial}/control/mode */
     public AckMessage publishModeUpdate(String serial, Long plantId, String mode) {
         String msgId = UUID.randomUUID().toString();
 
