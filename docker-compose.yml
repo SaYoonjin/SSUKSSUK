@@ -52,6 +52,7 @@ services:
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
       - mqtt.broker-uri=tcp://mosquitto:1883
+      - TZ=Asia/Seoul
     depends_on:
       mysql:
         condition: service_healthy

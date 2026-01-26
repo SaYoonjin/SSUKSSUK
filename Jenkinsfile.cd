@@ -144,13 +144,12 @@ pipeline {
                     docker-compose -f "${COMPOSE_FILE}" up -d backend
 
                     echo "Waiting for backend to be healthy..."
-                    sleep 15
+                    sleep 30
 
                     # Health check - Docker 내장 healthcheck 상태 확인
-                    # Dockerfile에 HEALTHCHECK가 정의되어 있으므로 해당 상태를 확인
-                    for i in $(seq 1 30); do
+                    for i in $(seq 1 6); do
                         HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "unknown")
-                        echo "Health check attempt $i/30... Status: ${HEALTH_STATUS}"
+                        echo "Health check attempt $i/6... Status: ${HEALTH_STATUS}"
 
                         if [ "${HEALTH_STATUS}" = "healthy" ]; then
                             echo "Backend is healthy!"
@@ -165,7 +164,7 @@ pipeline {
                             exit 1
                         fi
 
-                        sleep 5
+                        sleep 10
                     done
 
                     echo "Health check timeout!"

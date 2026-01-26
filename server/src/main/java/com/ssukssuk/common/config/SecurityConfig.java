@@ -42,12 +42,13 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        // 회원가입/로그인 + swagger는 열어두기
+                        // 회원가입/로그인 + swagger + actuator는 열어두기
                         .requestMatchers(
                                 "/auth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/test/**"
+                                "/test/**",
+                                "/actuator/**"
                         ).permitAll()
 
                         .anyRequest().authenticated()
