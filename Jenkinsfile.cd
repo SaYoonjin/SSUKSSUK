@@ -92,18 +92,10 @@ pipeline {
             }
         }
 
-        stage('Detect server changes (optional)') {
+        stage('Detect server changes') {
             steps {
                 script {
-                    // FORCE_DEPLOY가 true면 무조건 배포
-                    if (params.FORCE_DEPLOY) {
-                        env.SHOULD_DEPLOY = "true"
-                        echo "FORCE_DEPLOY enabled - will deploy regardless of changes"
-                        return
-                    }
-
-                    // webhook이 before/after를 주면 그걸로 diff해서 server 변경 여부 판단
-                    // 값이 없거나 0000... 이면 그냥 배포 진행하도록 처리
+                    // BEFORE_SHA, AFTER_SHA가 있으면 diff로 server/ 변경 여부 판단
                     def beforeSha = env.EFFECTIVE_BEFORE_SHA ?: ""
                     def afterSha  = env.EFFECTIVE_AFTER_SHA  ?: ""
                     env.SHOULD_DEPLOY = "true"
@@ -120,6 +112,7 @@ pipeline {
                             env.SHOULD_DEPLOY = "false"
                         }
                     }
+                    // BEFORE_SHA/AFTER_SHA 없으면 (수동 빌드) 무조건 배포
 
                     echo "SHOULD_DEPLOY = ${env.SHOULD_DEPLOY}"
                 }
