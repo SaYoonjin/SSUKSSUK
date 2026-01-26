@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import LaunchScreen from "../screens/LaunchScreen";
 import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
+import InitialSetupScreen from "../screens/InitialSetupScreen";
 
 import MainTabs from "./MainTabs";
 
@@ -15,9 +16,15 @@ import PlantAddEditScreen from "../screens/PlantAddEditScreen.tsx";
 export type RootStackParamList = {
     Launch: undefined;
     Login: undefined;
-    Main: undefined;
     Signup: undefined;
 
+    // 회원가입 직후 초기 디바이스+식물 등록
+    InitialSetup: undefined;
+
+    // 탭 메인
+    Main: undefined;
+
+    // 기존 스택
     DeviceManagement: undefined;
     DeviceAdd: undefined;
     PlantList: undefined;
@@ -33,9 +40,16 @@ export default function RootNavigator() {
                 <Stack.Screen name="Launch" component={LaunchScreen} />
                 <Stack.Screen name="Login" component={LoginScreen} />
 
+                {/* 회원가입 */}
+                <Stack.Screen name="Signup" component={SignupScreen} />
+
+                {/* ✅ 회원가입 성공 후 여기로 replace */}
+                <Stack.Screen name="InitialSetup" component={InitialSetupScreen} />
+
+                {/* 메인 탭 */}
                 <Stack.Screen name="Main" component={MainTabs} />
 
-                <Stack.Screen name="Signup" component={SignupScreen} />
+                {/* 기존 스택들 */}
                 <Stack.Screen name="DeviceManagement" component={DeviceManagementScreen} />
                 <Stack.Screen name="DeviceAdd" component={DeviceAddScreen} />
                 <Stack.Screen name="PlantList" component={PlantListScreen} />

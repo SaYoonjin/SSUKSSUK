@@ -8,6 +8,7 @@ import HistoryScreen from "../screens/HistoryScreen";
 import PlantScreen from "../screens/PlantScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 
+
 export type MainTabParamList = {
     Home: undefined;
     History: undefined;

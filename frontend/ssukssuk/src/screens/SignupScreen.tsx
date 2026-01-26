@@ -41,36 +41,84 @@ export default function SignupScreen({ navigation }: any) {
     return isEmailValid && isPasswordValid && isNicknameValid && !loading;
   }, [isEmailValid, isPasswordValid, isNicknameValid, loading]);
 
-  const handleSignup = async () => {
-    if (!canSubmit) return;
+  // const handleSignup = async () => {
+  //   if (!canSubmit) return;
+  //
+  //   setLoading(true);
+  //   setErrorMsg('');
+  //
+  //   try {
+  //     const res = await fetch(`${API_BASE_URL}${SIGNUP_PATH}`, {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         email: email.trim(),
+  //         password,
+  //         nickname: nickname.trim(),
+  //       }),
+  //     });
+  //     const json: SignupResponse = await res.json();
+  //
+  //     if ('success' in json && json.success) {
+  //       navigation.navigate('Login');
+  //       return;
+  //     }
+  //     setErrorMsg(json.message || '회원가입 중 오류가 발생했습니다.');
+  //   } catch (err) {
+  //     console.error(err);
+  //     setErrorMsg('서버와의 통신에 실패했습니다.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+      const handleSignup = async () => {
+        if (!canSubmit) return;
 
-    setLoading(true);
-    setErrorMsg('');
+        setLoading(true);
+        setErrorMsg('');
 
-    try {
-      const res = await fetch(`${API_BASE_URL}${SIGNUP_PATH}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-          nickname: nickname.trim(),
-        }),
-      });
-      const json: SignupResponse = await res.json();
+        try {
+          const res = await fetch(`${API_BASE_URL}${SIGNUP_PATH}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: email.trim(),
+              password,
+              nickname: nickname.trim(),
+            }),
+          });
 
-      if ('success' in json && json.success) {
-        navigation.navigate('Login');
-        return;
-      }
-      setErrorMsg(json.message || '회원가입 중 오류가 발생했습니다.');
-    } catch (err) {
-      console.error(err);
-      setErrorMsg('서버와의 통신에 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+          const json: SignupResponse = await res.json();
+
+          // 지금은 테스트/플로우 연결용: 성공 여부 상관없이 InitialSetup으로 이동
+          navigation.replace('InitialSetup');
+          return;
+
+          /**
+           * 원래 로직 (나중에 다시 되돌릴 때 쓰라고 주석으로 남김)
+           *
+           * if ('success' in json && json.success) {
+           *   navigation.replace('InitialSetup'); // 또는 Login으로 보내고 싶으면 'Login'
+           *   return;
+           * }
+           * setErrorMsg(json.message || '회원가입 중 오류가 발생했습니다.');
+           */
+        } catch (err) {
+          console.error(err);
+
+          // 통신 실패여도 지금은 플로우 확인이 목적이라 그냥 넘어가게 처리
+          navigation.replace('InitialSetup');
+          return;
+
+          /**
+           * 원래 로직 (주석 유지)
+           *
+           * setErrorMsg('서버와의 통신에 실패했습니다.');
+           */
+        } finally {
+          setLoading(false);
+        }
+      };
 
   return (
     <KeyboardAvoidingView
