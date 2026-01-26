@@ -14,10 +14,11 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Slf4j
-@Component("sensors")
+@Component("sensor")
 @RequiredArgsConstructor
 public class SensorTelemetryHandler implements MqttMessageHandler {
 
@@ -101,7 +102,9 @@ public class SensorTelemetryHandler implements MqttMessageHandler {
             // 4-2. 측정 시각 파싱
             LocalDateTime measuredAt =
                     msg.getSentAt() != null
-                            ? OffsetDateTime.parse(msg.getSentAt()).toLocalDateTime()
+                            ? OffsetDateTime.parse(msg.getSentAt())
+                            .atZoneSameInstant(ZoneId.of("Asia/Seoul"))
+                            .toLocalDateTime()
                             : LocalDateTime.now();
 
             // 4-3. 센서 로그 저장 + 이벤트 처리(OPEN/RESOLVE) 모두 위임
