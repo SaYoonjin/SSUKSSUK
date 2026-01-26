@@ -3,3 +3,25 @@ __pycache__/
 *.pyc
 build/
 devel/
+
+# STM
+# Build artifacts (컴파일 결과물)
+Debug/
+Release/
+
+# IDE settings (개인 설정 파일)
+.settings/
+*.launch
+
+# Toolchain generated (자동 생성 파일)
+*.o
+*.d
+*.elf
+*.map
+*.list
+*.hex
+*.bin
+
+# OS generated
+Thumbs.db
+.DS_Store
