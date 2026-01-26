@@ -18,12 +18,12 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/signup")
-    public ApiResponse<UserResponse> signUp(@RequestBody @Valid SignUpRequest req) {
+    public ApiResponse<UserResponse> signUp(@Valid @RequestBody SignUpRequest req) {
         return ApiResponse.ok(userService.signUp(req));
     }
 
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@RequestBody @Valid LoginRequest req) {
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest req) {
         return ApiResponse.ok(userService.login(req));
     }
 }
