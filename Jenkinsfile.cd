@@ -39,7 +39,7 @@ pipeline {
             steps {
                 script {
                     if (!env.REF?.trim()) {
-                        error("REF is empty. Generic Webhook Trigger에서 $.ref 변수를 추출했는지 확인")
+                        error('REF is empty. Generic Webhook Trigger에서 $.ref 변수를 추출했는지 확인')
                     }
                     if (env.REF != 'refs/heads/master') {
                         error("This CD job runs only on master push. Current REF=${env.REF}")
