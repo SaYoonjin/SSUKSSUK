@@ -6,13 +6,13 @@ import BottomBar from "../components/BottomBar";
 
 import MainScreen from "../screens/MainScreen";
 import HistoryScreen from "../screens/HistoryScreen";
-import PlantScreen from "../screens/PlantScreen";
+import PlantStack, { PlantStackParamList } from "./PlantStack";
 import ProfileStack, { ProfileStackParamList } from "./ProfileStack";
 
 export type MainTabParamList = {
     Home: undefined;
     History: undefined;
-    Plant: undefined;
+    Plant: NavigatorScreenParams<PlantStackParamList>;
     Profile: NavigatorScreenParams<ProfileStackParamList>;
 };
 
@@ -29,7 +29,18 @@ export default function MainTabs() {
         >
             <Tab.Screen name="Home" component={MainScreen} />
             <Tab.Screen name="History" component={HistoryScreen} />
-            <Tab.Screen name="Plant" component={PlantScreen} />
+
+            <Tab.Screen
+                name="Plant"
+                component={PlantStack}
+                listeners={({ navigation }) => ({
+                    focus: () => {
+                        navigation.navigate("Plant", {
+                            screen: "PlantHome",
+                        });
+                    },
+                })}
+            />
 
             <Tab.Screen
                 name="Profile"
