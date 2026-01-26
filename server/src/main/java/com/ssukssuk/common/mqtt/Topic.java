@@ -6,15 +6,15 @@ public final class Topic {
 
     // 업링크 (device -> server)
     public static final String TELEMETRY_SENSORS =
-            "devices/+/telemetry/sensors";
+            "devices/%s/telemetry/sensors";
     public static final String TELEMETRY_ACTION_RESULT =
-            "devices/+/telemetry/action-result";
+            "devices/%s/telemetry/action-result";
     public static final String TELEMETRY_UPLOAD_URL_REQUEST =
-            "devices/+/telemetry/upload-url-request";
+            "devices/%s/telemetry/upload-url-request";
     public static final String TELEMETRY_IMAGE_UPLOADED =
-            "devices/+/telemetry/image-uploaded";
+            "devices/%s/telemetry/image-uploaded";
     public static final String TELEMETRY_IMAGE_INFERENCE =
-            "devices/+/telemetry/image-inference";
+            "devices/%s/telemetry/image-inference";
 
     // 다운링크 (server -> device)
     public static final String CONTROL_CLAIM =

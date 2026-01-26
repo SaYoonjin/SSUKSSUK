@@ -27,7 +27,7 @@ public class MqttIntegrationConfig {
     @Value("${mqtt.password:}")
     private String password;
 
-    @Value("${mqtt.inbound-topics:devices/+/telemetry/#,devices/+/control/ack}")
+    @Value("${mqtt.inbound-topics:devices/+/telemetry/+,devices/+/control/+}")
     private String inboundTopics;
 
     @Bean
