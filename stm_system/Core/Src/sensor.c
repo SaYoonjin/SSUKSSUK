@@ -1,7 +1,12 @@
+// sensor.c
 #include "sensor.h"
+#include "protocol.h"
 #include "ads1115.h"
 #include "aht20.h"
 #include "i2c.h"
+
+#include <stdbool.h>
+
 
 // =======================
 // 전역 상태
@@ -15,6 +20,11 @@ Threshold_t g_threshold = {
 };
 
 SensorData_t g_sensor = {0};
+
+static bool water_abnormal = false;
+static bool ec_abnormal = false;
+
+
 
 // =======================
 // 내부 유틸
@@ -54,9 +64,60 @@ void sensor_read_all(void)
 
 void sensor_check_threshold(void)
 {
-    // TODO:
-    // if (g_sensor.water_level < g_threshold.water_min)
-    //   → EVENT_WATER_LOW
-    // if (g_sensor.ec < g_threshold.ec_min)
-    //   → EVENT_EC_LOW
+    uint16_t temp_x10 = (uint16_t)(g_sensor.temperature * 10.0f);
+    uint16_t humi_x10 = (uint16_t)(g_sensor.humidity * 10.0f);
+    uint16_t ec       = (uint16_t)(g_sensor.ec);
+    uint16_t water    = (uint16_t)(g_sensor.water_level);
+
+    /* ===============================
+     * WATER LEVEL
+     * =============================== */
+
+    // 정상 → 이상
+    if (!water_abnormal && g_sensor.water_level < g_threshold.water_min)
+    {
+        water_abnormal = true;
+
+        proto_send_event_sensor(
+            EVENT_WATER_LOW,
+            temp_x10, humi_x10, ec, water
+        );
+    }
+
+    // 이상 → 정상
+    else if (water_abnormal && g_sensor.water_level >= g_threshold.water_min)
+    {
+        water_abnormal = false;
+
+        proto_send_event_sensor(
+            EVENT_RECOVERY_DONE,
+            temp_x10, humi_x10, ec, water
+        );
+    }
+
+    /* ===============================
+     * EC
+     * =============================== */
+
+    // 정상 → 이상
+    if (!ec_abnormal && g_sensor.ec < g_threshold.ec_min)
+    {
+        ec_abnormal = true;
+
+        proto_send_event_sensor(
+            EVENT_EC_LOW,
+            temp_x10, humi_x10, ec, water
+        );
+    }
+
+    // 이상 → 정상
+    else if (ec_abnormal && g_sensor.ec >= g_threshold.ec_min)
+    {
+        ec_abnormal = false;
+
+        proto_send_event_sensor(
+            EVENT_RECOVERY_DONE,
+            temp_x10, humi_x10, ec, water
+        );
+    }
 }
