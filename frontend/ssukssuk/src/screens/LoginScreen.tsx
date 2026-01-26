@@ -55,32 +55,35 @@ export default function LoginScreen({ navigation }: any) {
     };
 
     const handleLogin = async () => {
-        const e = email.trim();
-        if (!validateEmail(e) || password.length < 1) {
-            setErrorMsg(COMMON_ERROR_TEXT);
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const res = await fetch(`${API_BASE_URL}${LOGIN_PATH}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: e, password, rememberMe }),
-            });
-            const json: LoginResponse = await res.json();
-            if ('success' in json && json.success) {
-              setErrorMsg('');
-              navigation.replace('Main');
-              return;
-            }
-            setErrorMsg(COMMON_ERROR_TEXT);
-        } catch (err) {
-            console.error(err);
-            setErrorMsg(COMMON_ERROR_TEXT);
-        } finally {
-            setLoading(false);
-        }
+        navigation.replace("Main"); // MainTabs로 들어감 (RootNavigator의 Main이 MainTabs일 때)
+        return;
+        //
+        // const e = email.trim();
+        // if (!validateEmail(e) || password.length < 1) {
+        //     setErrorMsg(COMMON_ERROR_TEXT);
+        //     return;
+        // }
+        //
+        // setLoading(true);
+        // try {
+        //     const res = await fetch(`${API_BASE_URL}${LOGIN_PATH}`, {
+        //         method: "POST",
+        //         headers: { "Content-Type": "application/json" },
+        //         body: JSON.stringify({ email: e, password, rememberMe }),
+        //     });
+        //     const json: LoginResponse = await res.json();
+        //     if ('success' in json && json.success) {
+        //       setErrorMsg('');
+        //       navigation.replace('Main');
+        //       return;
+        //     }
+        //     setErrorMsg(COMMON_ERROR_TEXT);
+        // } catch (err) {
+        //     console.error(err);
+        //     setErrorMsg(COMMON_ERROR_TEXT);
+        // } finally {
+        //     setLoading(false);
+        // }
     };
 
     return (
