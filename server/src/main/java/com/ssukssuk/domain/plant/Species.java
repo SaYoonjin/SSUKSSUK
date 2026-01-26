@@ -3,8 +3,6 @@ package com.ssukssuk.domain.plant;
 import jakarta.persistence.*;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
-
 @Getter
 @Entity
 @Table(name = "species")
@@ -40,10 +38,4 @@ public class Species {
 
     @Column(name = "ec_max")
     private Float ecMax;
-
-    @Column(name = "led_start")
-    private LocalDateTime ledStart;
-
-    @Column(name = "led_end")
-    private LocalDateTime ledEnd;
 }
