@@ -1,0 +1,162 @@
+// =====================================================
+// Jenkinsfile.cd
+// 목적: master 브랜치에 push(= merge 포함)되면 배포 수행
+// 전제: Jenkins는 Docker socket 방식으로 호스트 도커를 제어
+//       /home/ubuntu/S14P11A103 경로가 Jenkins 컨테이너에서 접근 가능해야 함
+// =====================================================
+
+pipeline {
+    agent any
+
+    environment {
+        // 호스트(EC2) 쪽 실제 배포 작업 디렉터리
+        PROJECT_ROOT = '/home/ubuntu/S14P11A103'
+        COMPOSE_FILE = "${PROJECT_ROOT}/docker-compose.yml"
+
+        // GitLab repo
+        REPO_URL = 'https://lab.ssafy.com/s14-webmobile3-sub1/S14P11A103.git'
+        // Jenkins Credentials ID (Username/Password 형태 권장: username=oauth2, password=personal access token)
+        GIT_CRED = 'gitlab-token'
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '30'))
+        timestamps()
+    }
+
+    stages {
+        stage('Show Webhook Variables') {
+            steps {
+                echo "REF        = ${env.REF}"
+                echo "BEFORE_SHA = ${env.BEFORE_SHA}"
+                echo "AFTER_SHA  = ${env.AFTER_SHA}"
+            }
+        }
+
+        stage('Guard (master push only)') {
+            steps {
+                script {
+                    if (!env.REF?.trim()) {
+                        error('REF is empty. Generic Webhook Trigger에서 $.ref 변수를 추출했는지 확인')
+                    }
+                    if (env.REF != 'refs/heads/master') {
+                        error("This CD job runs only on master push. Current REF=${env.REF}")
+                    }
+                }
+            }
+        }
+
+        stage('Update host working copy (no prompt)') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: env.GIT_CRED, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                    sh '''
+                        set -euxo pipefail
+
+                        # Jenkins 컨테이너(root)에서 ubuntu 소유 디렉토리 접근 허용
+                        git config --global --add safe.directory "${PROJECT_ROOT}"
+
+                        cd "${PROJECT_ROOT}"
+
+                        # 혹시 remote가 SSH로 잡혀있어서 인증 요구할 수 있으니, 여기서 https+토큰으로 강제
+                        # GitLab 토큰을 password에 넣고, username은 oauth2 또는 본인 username을 사용 가능
+                        git remote set-url origin "https://${GIT_USER}:${GIT_PASS}@lab.ssafy.com/s14-webmobile3-sub1/S14P11A103.git"
+
+                        git fetch origin master
+                        git checkout master
+                        git reset --hard origin/master
+
+                        echo "[INFO] Current HEAD:"
+                        git log -1 --pretty=format:"%h - %s (%ci)" || true
+                    '''
+                }
+            }
+        }
+
+        stage('Detect server changes (optional)') {
+            steps {
+                script {
+                    // webhook이 before/after를 주면 그걸로 diff해서 server 변경 여부 판단
+                    // 값이 없거나 0000... 이면 그냥 배포 진행하도록 처리
+                    def beforeSha = env.BEFORE_SHA ?: ""
+                    def afterSha  = env.AFTER_SHA  ?: ""
+                    env.SHOULD_DEPLOY = "true"
+
+                    if (beforeSha && afterSha && !beforeSha.startsWith("0000000")) {
+                        sh """
+                            set -euxo pipefail
+                            cd "${PROJECT_ROOT}"
+                            echo "[INFO] Changed files between ${beforeSha}..${afterSha}:"
+                            git diff --name-only ${beforeSha} ${afterSha} | tee /tmp/changed_files.txt
+                        """
+                        def changed = sh(script: 'grep -E "^server/" /tmp/changed_files.txt >/dev/null 2>&1; echo $?', returnStdout: true).trim()
+                        if (changed != "0") {
+                            env.SHOULD_DEPLOY = "false"
+                        }
+                    }
+
+                    echo "SHOULD_DEPLOY = ${env.SHOULD_DEPLOY}"
+                }
+            }
+        }
+
+        stage('Deploy backend') {
+            when {
+                expression { return env.SHOULD_DEPLOY == "true" }
+            }
+            steps {
+                sh '''
+                    set -euxo pipefail
+
+                    echo "=========================================="
+                    echo "Starting Production Deployment (backend)"
+                    echo "=========================================="
+
+                    # backend만 재배포 (docker-compose.yml 기준 서비스명이 backend 라고 가정)
+                    docker compose -f "${COMPOSE_FILE}" stop backend || true
+                    docker compose -f "${COMPOSE_FILE}" build --no-cache backend
+                    docker compose -f "${COMPOSE_FILE}" up -d backend
+
+                    echo "Waiting for backend to be healthy..."
+                    sleep 10
+
+                    # Health check - 호스트에서 curl로 체크 (컨테이너 내부 wget 의존성 제거)
+                    for i in $(seq 1 20); do
+                        if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                            echo "Backend is healthy!"
+                            exit 0
+                        fi
+                        echo "Health check attempt $i/20..."
+                        sleep 3
+                    done
+
+                    echo "Health check failed!"
+                    docker compose -f "${COMPOSE_FILE}" logs --tail 80 backend || true
+                    exit 1
+                '''
+            }
+        }
+
+        stage('Skip deploy (no server changes)') {
+            when {
+                expression { return env.SHOULD_DEPLOY == "false" }
+            }
+            steps {
+                echo "No changes under server/. Skipping backend deploy."
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ CD pipeline SUCCESS'
+        }
+        failure {
+            echo '❌ CD pipeline FAILURE - check Console Output'
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

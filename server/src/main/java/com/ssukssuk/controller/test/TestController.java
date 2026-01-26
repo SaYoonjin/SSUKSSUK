@@ -1,20 +1,11 @@
 package com.ssukssuk.controller.test;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ssukssuk.common.mqtt.dto.AckMessage;
 import com.ssukssuk.common.response.ApiResponse;
-import com.ssukssuk.infra.mqtt.MqttPublisher;
 import com.ssukssuk.service.device.DeviceControlService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/test")
@@ -23,6 +14,9 @@ public class TestController {
 
     private final DeviceControlService deviceControlService;
 
+    /**
+     * CLAIM_UPDATE 테스트 (ACK)
+     */
     @PostMapping("/mqtt/claim")
     public ApiResponse<AckMessage> publishClaim(@RequestBody ClaimReq req) {
         return ApiResponse.ok(
@@ -35,7 +29,9 @@ public class TestController {
         );
     }
 
-    /* ===== publish-only ===== */
+    /**
+     * BINDING_UPDATE (BOUND) - publish-only
+     */
     @PostMapping("/mqtt/binding/bound")
     public ApiResponse<String> publishBindingBound(
             @RequestBody BindingBoundReq req
@@ -48,6 +44,9 @@ public class TestController {
         return ApiResponse.ok("published msgId=" + msgId);
     }
 
+    /**
+     * BINDING_UPDATE (UNBOUND) - publish-only
+     */
     @PostMapping("/mqtt/binding/unbound")
     public ApiResponse<String> publishBindingUnbound(
             @RequestBody BindingUnboundReq req
@@ -56,6 +55,9 @@ public class TestController {
         return ApiResponse.ok("published msgId=" + msgId);
     }
 
+    /**
+     * MODE_UPDATE (ACK)
+     */
     @PostMapping("/mqtt/mode")
     public ApiResponse<AckMessage> publishMode(@RequestBody ModeReq req) {
         return ApiResponse.ok(
@@ -67,20 +69,21 @@ public class TestController {
         );
     }
 
-    /* ===== DTO ===== */
+    // ===== DTOs =====
+
     @Data
     public static class ClaimReq {
         private String serial;
         private Long userId;
-        private String claimState;
-        private String mode;
+        private String claimState; // CLAIMED / UNCLAIMED
+        private String mode;       // AUTO / MANUAL
     }
 
     @Data
     public static class BindingBoundReq {
         private String serial;
         private Long plantId;
-        private Integer species;
+        private Integer species; // speciesId
     }
 
     @Data
@@ -92,6 +95,6 @@ public class TestController {
     public static class ModeReq {
         private String serial;
         private Long plantId;
-        private String mode;
+        private String mode; // AUTO / MANUAL
     }
 }

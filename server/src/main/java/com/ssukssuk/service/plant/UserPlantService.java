@@ -47,6 +47,7 @@ public class UserPlantService {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
 
+        // 메인 식물이면 기존 메인 해제
         if (Boolean.TRUE.equals(isMain)) {
             userPlantRepository.clearMainPlant(userId);
         }

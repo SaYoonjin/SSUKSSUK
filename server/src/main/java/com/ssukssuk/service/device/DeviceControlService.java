@@ -54,10 +54,13 @@ public class DeviceControlService {
         try {
             return future.get(DEFAULT_ACK_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         } catch (Exception e) {
-            throw new RuntimeException("ACK wait failed", e);
+            throw new RuntimeException(
+                    "ACK wait failed (serial=" + serial + ", msgId=" + msgId + ")", e
+            );
         }
     }
 
+    /* ===== CLAIM_UPDATE ===== */
     public AckMessage publishClaimUpdate(
             String serial,
             Long userId,
@@ -65,6 +68,7 @@ public class DeviceControlService {
             String mode
     ) {
         String msgId = UUID.randomUUID().toString();
+
         Map<String, Object> payload = base(msgId, serial, null, "CLAIM_UPDATE");
         payload.put("claim_state", claimState);
         payload.put("user_id", userId);
@@ -73,12 +77,14 @@ public class DeviceControlService {
         return publishAndWait(serial, "claim", msgId, payload);
     }
 
+    /* ===== MODE_UPDATE ===== */
     public AckMessage publishModeUpdate(
             String serial,
             Long plantId,
             String mode
     ) {
         String msgId = UUID.randomUUID().toString();
+
         Map<String, Object> payload = base(msgId, serial, plantId, "MODE_UPDATE");
         payload.put("mode", mode);
         payload.put("effective_from", OffsetDateTime.now().toString());
@@ -86,24 +92,26 @@ public class DeviceControlService {
         return publishAndWait(serial, "mode", msgId, payload);
     }
 
-    /* ===== publish-only ===== */
+    /* ===== BINDING_UPDATE (publish-only) ===== */
     public String publishBindingUpdateBound(
             String serial,
             Long plantId,
             Long speciesId
     ) {
         Species species = speciesRepository.findById(speciesId)
-                .orElseThrow(() -> new RuntimeException("Species not found"));
+                .orElseThrow(() -> new RuntimeException("Species not found: " + speciesId));
 
         String msgId = UUID.randomUUID().toString();
 
         Map<String, Object> payload = base(msgId, serial, plantId, "BINDING_UPDATE");
         payload.put("binding_state", "BOUND");
         payload.put("species", speciesId);
+
         payload.put("led_time", Map.of(
                 "start", species.getLedStart().getHour(),
                 "end", species.getLedEnd().getHour()
         ));
+
         payload.put("ideal_ranges", Map.of(
                 "temperature", Map.of("min", species.getTempMin(), "max", species.getTempMax()),
                 "humidity", Map.of("min", species.getHumMin(), "max", species.getHumMax()),
@@ -136,4 +144,3 @@ public class DeviceControlService {
         return msgId;
     }
 }
-

@@ -3,7 +3,7 @@ package com.ssukssuk.domain.plant;
 import jakarta.persistence.*;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Getter
 @Entity
@@ -41,9 +41,9 @@ public class Species {
     @Column(name = "ec_max")
     private Float ecMax;
 
-    @Column(name = "led_start")
-    private LocalDateTime ledStart;
+    @Column(name = "led_start", nullable = false)
+    private LocalTime ledStart;
 
-    @Column(name = "led_end")
-    private LocalDateTime ledEnd;
+    @Column(name = "led_end", nullable = false)
+    private LocalTime ledEnd;
 }
