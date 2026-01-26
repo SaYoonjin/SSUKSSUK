@@ -111,3 +111,27 @@ HAL_StatusTypeDef proto_send_sensor_data(
         sizeof(payload)
     );
 }
+
+HAL_StatusTypeDef proto_send_event_sensor(
+    uint8_t event_subtype,
+    uint16_t temp_x10,
+    uint16_t humi_x10,
+    uint16_t ec,
+    uint16_t water
+)
+{
+    uint8_t payload[8];
+
+    proto_pack_u16_le(&payload[0], temp_x10);
+    proto_pack_u16_le(&payload[2], humi_x10);
+    proto_pack_u16_le(&payload[4], ec);
+    proto_pack_u16_le(&payload[6], water);
+
+    return proto_send(
+        TYPE_EVENT,
+        event_subtype,
+        payload,
+        sizeof(payload)
+    );
+}
+

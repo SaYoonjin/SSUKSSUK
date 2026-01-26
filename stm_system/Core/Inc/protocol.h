@@ -45,6 +45,14 @@ typedef struct {
     uint8_t payload[PROTO_MAX_PAYLOAD];
 } proto_msg_t;
 
+HAL_StatusTypeDef proto_send_event_sensor(
+    uint8_t event_subtype,
+    uint16_t temp_x10,
+    uint16_t humi_x10,
+    uint16_t ec,
+    uint16_t water
+);
+
 // 공통 유틸
 uint8_t proto_checksum(uint8_t type, uint8_t subtype, uint8_t len, const uint8_t *payload);
 void proto_pack_u16_le(uint8_t *dst, uint16_t v);
