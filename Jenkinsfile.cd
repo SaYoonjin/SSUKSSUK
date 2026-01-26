@@ -69,6 +69,9 @@ pipeline {
 
                         echo "[INFO] Current HEAD:"
                         git log -1 --pretty=format:"%h - %s (%ci)" || true
+
+                        # root로 git 작업 후 ubuntu 소유권 복구 (UID 1000)
+                        chown -R 1000:1000 "${PROJECT_ROOT}/.git"
                     '''
                 }
             }
