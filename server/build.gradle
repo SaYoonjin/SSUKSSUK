@@ -39,6 +39,9 @@ dependencies {
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+    // Actuator (healthcheck)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
     // Spring Integration (MQTT)
     implementation 'org.springframework.boot:spring-boot-starter-integration'
     implementation 'org.springframework.integration:spring-integration-mqtt'

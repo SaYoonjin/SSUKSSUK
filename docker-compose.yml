@@ -51,7 +51,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
-      - MQTT_BROKER_URL=tcp://mosquitto:1883
+      - mqtt.broker-uri=tcp://mosquitto:1883
     depends_on:
       mysql:
         condition: service_healthy

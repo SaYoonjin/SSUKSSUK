@@ -26,23 +26,38 @@ pipeline {
         timestamps()
     }
 
+    parameters {
+        string(name: 'REF', defaultValue: 'refs/heads/master', description: 'Git ref (webhook 또는 수동 입력)')
+        string(name: 'BEFORE_SHA', defaultValue: '', description: 'Commit SHA before push (optional)')
+        string(name: 'AFTER_SHA', defaultValue: '', description: 'Commit SHA after push (optional)')
+        booleanParam(name: 'FORCE_DEPLOY', defaultValue: false, description: '변경사항 없어도 강제 배포')
+    }
+
     stages {
         stage('Show Webhook Variables') {
             steps {
-                echo "REF        = ${env.REF}"
-                echo "BEFORE_SHA = ${env.BEFORE_SHA}"
-                echo "AFTER_SHA  = ${env.AFTER_SHA}"
+                script {
+                    // webhook에서 오는 환경변수 또는 파라미터 사용
+                    env.EFFECTIVE_REF = env.REF?.trim() ?: params.REF
+                    env.EFFECTIVE_BEFORE_SHA = env.BEFORE_SHA?.trim() ?: params.BEFORE_SHA
+                    env.EFFECTIVE_AFTER_SHA = env.AFTER_SHA?.trim() ?: params.AFTER_SHA
+
+                    echo "REF        = ${env.EFFECTIVE_REF}"
+                    echo "BEFORE_SHA = ${env.EFFECTIVE_BEFORE_SHA}"
+                    echo "AFTER_SHA  = ${env.EFFECTIVE_AFTER_SHA}"
+                    echo "FORCE_DEPLOY = ${params.FORCE_DEPLOY}"
+                }
             }
         }
 
         stage('Guard (master push only)') {
             steps {
                 script {
-                    if (!env.REF?.trim()) {
-                        error('REF is empty. Generic Webhook Trigger에서 $.ref 변수를 추출했는지 확인')
+                    if (!env.EFFECTIVE_REF?.trim()) {
+                        error('REF is empty. Generic Webhook Trigger에서 $.ref 변수를 추출했는지 확인하거나, 파라미터로 입력하세요.')
                     }
-                    if (env.REF != 'refs/heads/master') {
-                        error("This CD job runs only on master push. Current REF=${env.REF}")
+                    if (env.EFFECTIVE_REF != 'refs/heads/master') {
+                        error("This CD job runs only on master push. Current REF=${env.EFFECTIVE_REF}")
                     }
                 }
             }
@@ -80,10 +95,17 @@ pipeline {
         stage('Detect server changes (optional)') {
             steps {
                 script {
+                    // FORCE_DEPLOY가 true면 무조건 배포
+                    if (params.FORCE_DEPLOY) {
+                        env.SHOULD_DEPLOY = "true"
+                        echo "FORCE_DEPLOY enabled - will deploy regardless of changes"
+                        return
+                    }
+
                     // webhook이 before/after를 주면 그걸로 diff해서 server 변경 여부 판단
                     // 값이 없거나 0000... 이면 그냥 배포 진행하도록 처리
-                    def beforeSha = env.BEFORE_SHA ?: ""
-                    def afterSha  = env.AFTER_SHA  ?: ""
+                    def beforeSha = env.EFFECTIVE_BEFORE_SHA ?: ""
+                    def afterSha  = env.EFFECTIVE_AFTER_SHA  ?: ""
                     env.SHOULD_DEPLOY = "true"
 
                     if (beforeSha && afterSha && !beforeSha.startsWith("0000000")) {
@@ -122,20 +144,32 @@ pipeline {
                     docker-compose -f "${COMPOSE_FILE}" up -d backend
 
                     echo "Waiting for backend to be healthy..."
-                    sleep 10
+                    sleep 15
 
-                    # Health check - 호스트에서 curl로 체크 (컨테이너 내부 wget 의존성 제거)
-                    for i in $(seq 1 20); do
-                        if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                    # Health check - Docker 내장 healthcheck 상태 확인
+                    # Dockerfile에 HEALTHCHECK가 정의되어 있으므로 해당 상태를 확인
+                    for i in $(seq 1 30); do
+                        HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "unknown")
+                        echo "Health check attempt $i/30... Status: ${HEALTH_STATUS}"
+
+                        if [ "${HEALTH_STATUS}" = "healthy" ]; then
                             echo "Backend is healthy!"
                             exit 0
                         fi
-                        echo "Health check attempt $i/20..."
-                        sleep 3
+
+                        # 컨테이너가 죽었으면 바로 실패
+                        CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' backend 2>/dev/null || echo "unknown")
+                        if [ "${CONTAINER_STATUS}" != "running" ]; then
+                            echo "Container is not running! Status: ${CONTAINER_STATUS}"
+                            docker-compose -f "${COMPOSE_FILE}" logs --tail 100 backend || true
+                            exit 1
+                        fi
+
+                        sleep 5
                     done
 
-                    echo "Health check failed!"
-                    docker-compose -f "${COMPOSE_FILE}" logs --tail 80 backend || true
+                    echo "Health check timeout!"
+                    docker-compose -f "${COMPOSE_FILE}" logs --tail 100 backend || true
                     exit 1
                 '''
             }
