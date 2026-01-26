@@ -10,7 +10,7 @@ import MainTabs from "./MainTabs";
 
 import DeviceAddScreen from "../screens/DeviceaddScreen.tsx";
 import DeviceManagementScreen from "../screens/DevicemanagementScreen.tsx";
-import PlantListScreen from "../screens/PlantLIstScreen.tsx";
+import PlantScreen from "../screens/PlantScreen.tsx";
 import PlantAddEditScreen from "../screens/PlantAddEditScreen.tsx";
 
 export type RootStackParamList = {
@@ -27,7 +27,7 @@ export type RootStackParamList = {
     // 기존 스택
     DeviceManagement: undefined;
     DeviceAdd: undefined;
-    PlantList: undefined;
+    Plant: undefined;
     PlantAddEdit: undefined;
 };
 
@@ -52,7 +52,7 @@ export default function RootNavigator() {
                 {/* 기존 스택들 */}
                 <Stack.Screen name="DeviceManagement" component={DeviceManagementScreen} />
                 <Stack.Screen name="DeviceAdd" component={DeviceAddScreen} />
-                <Stack.Screen name="PlantList" component={PlantListScreen} />
+                <Stack.Screen name="Plant" component={PlantScreen} />
                 <Stack.Screen name="PlantAddEdit" component={PlantAddEditScreen} />
             </Stack.Navigator>
         </NavigationContainer>

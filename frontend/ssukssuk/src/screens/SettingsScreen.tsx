@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import {
     View,
     Text,
@@ -10,7 +10,6 @@ import {
 
 const LIGHT_GREEN = "#75A743";
 const BG = "#FFFFFF";
-const MUTED = "#CFCFCF";
 const ERROR_RED = "#D97B7B";
 
 export default function SettingsScreen({ navigation }: any) {
@@ -68,7 +67,7 @@ export default function SettingsScreen({ navigation }: any) {
                 <Text style={styles.rowText}>푸시 알림 설정</Text>
 
                 {/* 토글 스위치 */}
-                <Pressable onPress={toggle} activeOpacity={1}>
+                <Pressable onPress={toggle}>
                     <Animated.View style={[styles.toggleContainer, { backgroundColor }]}>
                         <Animated.View
                             style={[
