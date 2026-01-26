@@ -33,69 +33,77 @@ export default function DeviceManagementScreen({ navigation }: any) {
   // 디바이스 삭제 핸들러
   const handleDelete = (id: string) => {
     Alert.alert(
-      '디바이스 삭제',
-      '정말로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: () => {
-            setDevices(prev => prev.filter(d => d.id !== id));
+        '디바이스 삭제',
+        '정말로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '삭제',
+            style: 'destructive',
+            onPress: () => {
+              setDevices(prev => prev.filter(d => d.id !== id));
+            },
           },
-        },
-      ],
+        ],
     );
   };
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>디바이스 관리</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* 1. 기기 목록 (기본 높이 유지) */}
-        {devices.map(device => (
-          <PixelCard key={device.id}>
-            <View style={styles.deviceInfo}>
-              <Text style={styles.deviceName}>{device.name}</Text>
-              <Text
-                style={[
-                  styles.plantName,
-                  !device.plantName && styles.noConnection,
-                ]}
-              >
-                {device.plantName ? device.plantName : '연결 없음'}
-              </Text>
-            </View>
-            <View style={styles.actionButtons}>
-              <PixelMiniButton
-                label="해제"
-                color={GREEN}
-                onPress={() => handleDisconnect(device.id)}
-                disabled={!device.plantName}
-              />
-              <View style={{ width: 8 }} />
-              <PixelMiniButton
-                label="삭제"
-                color={ERROR_RED}
-                onPress={() => handleDelete(device.id)}
-              />
-            </View>
-          </PixelCard>
-        ))}
-
-        {/* 2. [+ 디바이스 추가] 버튼 (높이 줄임 - compact 적용) */}
-        <View style={styles.addButtonContainer}>
-          <Pressable onPress={() => navigation.navigate('DeviceAdd')}>
-            <PixelCard centerContent compact>
-              <Text style={styles.addText}>+ 디바이스 추가</Text>
-            </PixelCard>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Pressable
+              onPress={() => navigation.goBack()}
+              hitSlop={10}
+              style={styles.backBtn}
+          >
+            <Text style={styles.backChevron}>‹</Text>
           </Pressable>
+
+          <Text style={styles.headerTitle}>디바이스 관리</Text>
         </View>
-      </ScrollView>
-    </View>
+
+        <ScrollView contentContainerStyle={styles.content}>
+          {/* 1. 기기 목록 (기본 높이 유지) */}
+          {devices.map(device => (
+              <PixelCard key={device.id}>
+                <View style={styles.deviceInfo}>
+                  <Text style={styles.deviceName}>{device.name}</Text>
+                  <Text
+                      style={[
+                        styles.plantName,
+                        !device.plantName && styles.noConnection,
+                      ]}
+                  >
+                    {device.plantName ? device.plantName : '연결 없음'}
+                  </Text>
+                </View>
+                <View style={styles.actionButtons}>
+                  <PixelMiniButton
+                      label="해제"
+                      color={GREEN}
+                      onPress={() => handleDisconnect(device.id)}
+                      disabled={!device.plantName}
+                  />
+                  <View style={{ width: 8 }} />
+                  <PixelMiniButton
+                      label="삭제"
+                      color={ERROR_RED}
+                      onPress={() => handleDelete(device.id)}
+                  />
+                </View>
+              </PixelCard>
+          ))}
+
+          {/* 2. [+ 디바이스 추가] 버튼 (높이 줄임 - compact 적용) */}
+          <View style={styles.addButtonContainer}>
+            <Pressable onPress={() => navigation.navigate('DeviceAdd')}>
+              <PixelCard centerContent compact>
+                <Text style={styles.addText}>+ 디바이스 추가</Text>
+              </PixelCard>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </View>
   );
 }
 
@@ -103,45 +111,45 @@ export default function DeviceManagementScreen({ navigation }: any) {
  * - compact: true일 경우 높이를 줄임
  */
 function PixelCard({
-  children,
-  centerContent,
-  compact,
-}: {
+                     children,
+                     centerContent,
+                     compact,
+                   }: {
   children: React.ReactNode;
   centerContent?: boolean;
   compact?: boolean;
 }) {
   return (
-    <View style={styles.cardContainer}>
-      <View style={styles.borderTop} />
-      <View style={styles.borderBottom} />
-      <View style={styles.borderLeft} />
-      <View style={styles.borderRight} />
-      <View style={styles.cornerTL} />
-      <View style={styles.cornerTR} />
-      <View style={styles.cornerBL} />
-      <View style={styles.cornerBR} />
+      <View style={styles.cardContainer}>
+        <View style={styles.borderTop} />
+        <View style={styles.borderBottom} />
+        <View style={styles.borderLeft} />
+        <View style={styles.borderRight} />
+        <View style={styles.cornerTL} />
+        <View style={styles.cornerTR} />
+        <View style={styles.cornerBL} />
+        <View style={styles.cornerBR} />
 
-      <View
-        style={[
-          styles.cardInner,
-          centerContent && styles.cardCenter,
-          compact && styles.cardCompact, // compact 스타일 적용
-        ]}
-      >
-        {children}
+        <View
+            style={[
+              styles.cardInner,
+              centerContent && styles.cardCenter,
+              compact && styles.cardCompact,
+            ]}
+        >
+          {children}
+        </View>
       </View>
-    </View>
   );
 }
 
 /** 작은 픽셀 버튼 (해제/삭제) */
 function PixelMiniButton({
-  label,
-  color,
-  onPress,
-  disabled,
-}: {
+                           label,
+                           color,
+                           onPress,
+                           disabled,
+                         }: {
   label: string;
   color: string;
   onPress: () => void;
@@ -149,19 +157,19 @@ function PixelMiniButton({
 }) {
   const btnColor = disabled ? '#AAAAAA' : color;
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={styles.miniBtnContainer}
-    >
-      <View style={[styles.borderTop, { backgroundColor: btnColor }]} />
-      <View style={[styles.borderBottom, { backgroundColor: btnColor }]} />
-      <View style={[styles.borderLeft, { backgroundColor: btnColor }]} />
-      <View style={[styles.borderRight, { backgroundColor: btnColor }]} />
-      <View style={styles.miniBtnInner}>
-        <Text style={[styles.miniBtnText, { color: btnColor }]}>{label}</Text>
-      </View>
-    </Pressable>
+      <Pressable
+          onPress={onPress}
+          disabled={disabled}
+          style={styles.miniBtnContainer}
+      >
+        <View style={[styles.borderTop, { backgroundColor: btnColor }]} />
+        <View style={[styles.borderBottom, { backgroundColor: btnColor }]} />
+        <View style={[styles.borderLeft, { backgroundColor: btnColor }]} />
+        <View style={[styles.borderRight, { backgroundColor: btnColor }]} />
+        <View style={styles.miniBtnInner}>
+          <Text style={[styles.miniBtnText, { color: btnColor }]}>{label}</Text>
+        </View>
+      </Pressable>
   );
 }
 
@@ -171,14 +179,39 @@ const ERROR_RED = '#E04B4B';
 const PIXEL = 4;
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: { marginTop: 60, marginBottom: 30, alignItems: 'center' },
-  headerTitle: {
-    fontSize: 30,
-    fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#000',
+  screen: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 26,
+    paddingTop: 45,
   },
-  content: { paddingHorizontal: 22, paddingBottom: 40 },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    marginBottom: 26,
+  },
+
+  backBtn: {
+    paddingRight: 10,
+    paddingVertical: 4,
+  },
+
+  backChevron: {
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+    fontSize: 34,
+    color: '#000000',
+    lineHeight: 34,
+  },
+
+  headerTitle: {
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+    fontSize: 34,
+    color: '#000000',
+  },
+
+  content: { paddingBottom: 40 },
 
   addButtonContainer: { marginTop: 30 },
 
