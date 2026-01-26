@@ -24,27 +24,22 @@ public class DeviceBindingValidator {
      */
     public void validate(String serial, Long plantId) {
 
-        // 1️⃣ 디바이스 존재 여부 (serial 기준)
         Device device = deviceRepository.findBySerial(serial)
                 .orElseThrow(() ->
                         new CustomException(ErrorCode.DEVICE_NOT_FOUND)
                 );
 
-        // 2️⃣ 디바이스가 아직 클레임되지 않은 경우
         if (device.getUser() == null) {
             throw new CustomException(ErrorCode.DEVICE_NOT_CLAIMED);
         }
 
-        // 3️⃣ 이미 식물에 페어링된 디바이스
         if (Boolean.TRUE.equals(device.getPairing())) {
             throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
         }
 
-        // 4️⃣ plantId 유효성 검증
         if (!userPlantRepository.existsById(plantId)) {
             throw new CustomException(ErrorCode.PLANT_NOT_FOUND);
         }
 
-        // 👉 여기까지 통과하면 바인딩/수신 허용
     }
 }
