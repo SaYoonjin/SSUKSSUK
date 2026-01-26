@@ -21,7 +21,6 @@ public class DeviceController {
             Authentication authentication,
             @RequestBody @Valid DeviceClaimRequest request
     ) {
-        // JwtAuthenticationFilter 에서 principal = userId
         Long userId = (Long) authentication.getPrincipal();
 
         return ApiResponse.ok(

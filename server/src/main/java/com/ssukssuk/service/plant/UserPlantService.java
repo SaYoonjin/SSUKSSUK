@@ -46,12 +46,10 @@ public class UserPlantService {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
 
-        // ✅ 메인 식물로 생성하려는 경우 → 기존 메인 자동 해제
         if (Boolean.TRUE.equals(isMain)) {
             userPlantRepository.clearMainPlant(userId);
         }
 
-        // 기본값 방어
         boolean main = Boolean.TRUE.equals(isMain);
 
         UserPlant userPlant = UserPlant.builder()
