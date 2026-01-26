@@ -73,6 +73,20 @@ public enum ErrorCode {
             "이미 다른 사용자에게 연결된 디바이스입니다."
     ),
 
+    DEVICE_ALREADY_PAIRED(
+            HttpStatus.CONFLICT,
+            "DEVICE_ALREADY_PAIRED",
+            "이미 식물에 연결된 디바이스입니다."
+    ),
+
+    DEVICE_NOT_CLAIMED(
+            HttpStatus.BAD_REQUEST,
+            "DEVICE_NOT_CLAIMED",
+            "아직 클레임되지 않은 디바이스입니다."
+    ),
+
+
+
     SENSOR_LOG_NOT_FOUND(
             HttpStatus.NOT_FOUND,
             "SENSOR_LOG_NOT_FOUND",
