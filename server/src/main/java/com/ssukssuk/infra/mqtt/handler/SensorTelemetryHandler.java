@@ -7,7 +7,7 @@ import com.ssukssuk.common.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.infra.idempotency.IdempotencyService;
 import com.ssukssuk.infra.mqtt.MqttPublisher;
 import com.ssukssuk.service.device.DeviceBindingValidator;
-import com.ssukssuk.service.history.SensorTelemetryService;
+import com.ssukssuk.service.history.SensorLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,8 +25,7 @@ public class SensorTelemetryHandler implements MqttMessageHandler {
     private final IdempotencyService idempotencyService;
     private final MqttPublisher mqttPublisher;
     private final DeviceBindingValidator deviceBindingValidator;
-
-    private final SensorTelemetryService sensorTelemetryService;
+    private final SensorLogService sensorLogService;
 
     @Override
     public void handle(MqttEnvelope envelope) {
@@ -104,8 +103,15 @@ public class SensorTelemetryHandler implements MqttMessageHandler {
                             ? OffsetDateTime.parse(msg.getSentAt()).toLocalDateTime()
                             : LocalDateTime.now();
 
-            // 4-3. 센서 로그 저장 + 이벤트 처리(OPEN/RESOLVE) 모두 위임
-            sensorTelemetryService.handleUplink(msg, measuredAt);
+            // 4-3. 센서 로그 저장
+            sensorLogService.saveFromMqtt(
+                    msg.getPlantId(),
+                    measuredAt,
+                    msg.getTemperature(),
+                    msg.getHumidity(),
+                    msg.getWaterLevel(),
+                    msg.getNutrientConc()
+            );
 
             // 4-4. ACK 성공
             mqttPublisher.publish(
