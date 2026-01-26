@@ -13,7 +13,7 @@ import com.ssukssuk.repository.device.DeviceRepository;
 import com.ssukssuk.repository.plant.PlantStatusRepository;
 import com.ssukssuk.repository.plant.SpeciesRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
-
+import com.ssukssuk.service.device.DeviceControlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +28,7 @@ public class UserPlantService {
     private final DeviceRepository deviceRepository;
     private final UserPlantRepository userPlantRepository;
     private final PlantStatusRepository plantStatusRepository;
+    private final DeviceControlService deviceControlService;
 
     public CreatePlantResponse createPlant(
             Long userId,
@@ -46,20 +47,17 @@ public class UserPlantService {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
 
-        // ✅ 메인 식물로 생성하려는 경우 → 기존 메인 자동 해제
+        // 메인 식물이면 기존 메인 해제
         if (Boolean.TRUE.equals(isMain)) {
             userPlantRepository.clearMainPlant(userId);
         }
-
-        // 기본값 방어
-        boolean main = Boolean.TRUE.equals(isMain);
 
         UserPlant userPlant = UserPlant.builder()
                 .user(user)
                 .species(species)
                 .device(device)
                 .plantName(plantName)
-                .isMain(main)
+                .isMain(Boolean.TRUE.equals(isMain))
                 .build();
 
         userPlantRepository.save(userPlant);
@@ -70,6 +68,12 @@ public class UserPlantService {
                 .build();
 
         plantStatusRepository.save(plantStatus);
+
+        deviceControlService.publishBindingUpdateBound(
+                device.getSerial(),
+                userPlant.getPlantId(),
+                species.getSpeciesId()
+        );
 
         return CreatePlantResponse.builder()
                 .plantId(userPlant.getPlantId())

@@ -22,24 +22,21 @@ public class DeviceService {
     public DeviceClaimResponse claim(Long userId, String serial) {
 
         Device device = deviceRepository.findBySerial(serial)
-                .orElseThrow(() ->
-                        new CustomException(ErrorCode.DEVICE_NOT_FOUND)
-                );
+                .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
 
+        // 이미 같은 유저에게 클레임된 경우 → 그대로 OK
         if (device.getUser() != null && device.getUser().getId().equals(userId)) {
             return DeviceClaimResponse.from(device);
         }
 
+        // 이미 다른 유저에게 클레임된 경우
         if (Boolean.TRUE.equals(device.getPairing())) {
-            if (device.getUser().getId().equals(userId)) {
-                return DeviceClaimResponse.from(device);
-            }
             throw new CustomException(ErrorCode.DEVICE_ALREADY_CLAIMED);
         }
 
+        // 최초 클레임
         User user = userRepository.getReferenceById(userId);
-
-        device.claim(user);
+        device.claim(user); // pairing = true, claimed_at 설정
 
         return DeviceClaimResponse.from(device);
     }
