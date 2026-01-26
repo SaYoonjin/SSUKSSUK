@@ -1,0 +1,82 @@
+package com.ssukssuk.common.config;
+
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.integration.channel.DirectChannel;
+import org.springframework.integration.mqtt.core.DefaultMqttPahoClientFactory;
+import org.springframework.integration.mqtt.core.MqttPahoClientFactory;
+import org.springframework.integration.mqtt.inbound.MqttPahoMessageDrivenChannelAdapter;
+import org.springframework.integration.mqtt.outbound.MqttPahoMessageHandler;
+import org.springframework.integration.mqtt.support.DefaultPahoMessageConverter;
+import org.springframework.messaging.MessageChannel;
+
+@Configuration
+public class MqttIntegrationConfig {
+
+    @Value("${mqtt.broker-uri}")
+    private String brokerUri;
+
+    @Value("${mqtt.client-id:ssukssuk-server}")
+    private String clientId;
+
+    @Value("${mqtt.username:}")
+    private String username;
+
+    @Value("${mqtt.password:}")
+    private String password;
+
+    @Value("${mqtt.inbound-topics:devices/+/telemetry/+,devices/+/control/+}")
+    private String inboundTopics;
+
+    @Bean
+    public MqttPahoClientFactory mqttClientFactory() {
+        DefaultMqttPahoClientFactory factory = new DefaultMqttPahoClientFactory();
+
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setServerURIs(new String[]{brokerUri});
+        options.setAutomaticReconnect(true);
+        options.setCleanSession(true);
+
+        if (username != null && !username.isBlank()) {
+            options.setUserName(username);
+        }
+        if (password != null && !password.isBlank()) {
+            options.setPassword(password.toCharArray());
+        }
+
+        factory.setConnectionOptions(options);
+        return factory;
+    }
+
+    @Bean
+    public MessageChannel mqttInboundChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MqttPahoMessageDrivenChannelAdapter mqttInbound(MqttPahoClientFactory mqttClientFactory) {
+        String[] topics = inboundTopics.split(",");
+
+        MqttPahoMessageDrivenChannelAdapter adapter =
+                new MqttPahoMessageDrivenChannelAdapter(clientId + "-in", mqttClientFactory, topics);
+
+        adapter.setConverter(new DefaultPahoMessageConverter());
+        adapter.setQos(1);
+        adapter.setOutputChannel(mqttInboundChannel());
+        return adapter;
+    }
+
+    @Bean
+    public MqttPahoMessageHandler mqttOutbound(MqttPahoClientFactory mqttClientFactory) {
+        MqttPahoMessageHandler handler =
+                new MqttPahoMessageHandler(clientId + "-out", mqttClientFactory);
+
+        handler.setAsync(true);
+        handler.setDefaultQos(1);
+        handler.setDefaultTopic("devices/broadcast");
+        return handler;
+    }
+
+}

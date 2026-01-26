@@ -1,0 +1,66 @@
+package com.ssukssuk.domain.auth;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDateTime;
+
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
+@Entity
+@Table(
+        name = "user",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_user_email", columnNames = "email"),
+                @UniqueConstraint(name = "uk_user_nickname", columnNames = "nickname")
+        }
+)
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
+    private Long id;
+
+    @Column(nullable = false, length = 255)
+    private String email;
+
+    // BCrypt 해시는 보통 60자 내외. 넉넉하게 100 추천.
+    @Column(nullable = false, length = 100)
+    private String password;
+
+    @Column(nullable = false, length = 50)
+    private String nickname;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private UserMode mode;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false, updatable = false)
+    private LocalDateTime updatedAt;
+
+    @Column(name = "removed_at")
+    private LocalDateTime removedAt;
+
+    @Column(name = "is_admin", nullable = false)
+    private boolean isAdmin;
+
+    @PrePersist
+    void prePersist() {
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+        if (this.mode == null) this.mode = UserMode.AUTO; // 기본값
+        // isAdmin은 기본 false
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+}
