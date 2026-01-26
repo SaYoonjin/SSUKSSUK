@@ -134,6 +134,7 @@ services:
       - jenkins-data:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker
+      - /home/ubuntu/S14P11A103:/home/ubuntu/S14P11A103
     networks:
       - app-network
 
