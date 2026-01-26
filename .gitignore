@@ -1,0 +1,28 @@
+# ===========================================
+# Project Root .gitignore
+# ===========================================
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# Documentation (Claude 작업용)
+INFRASTRUCTURE.md
+JENKINS-TROUBLESHOOTING.md
+infra_cicd_brief_for_claude_v2.txt
+
+# Logs
+*.log
+
+# Docker volumes (if local)
+infra/certbot/conf/
+infra/certbot/logs/
