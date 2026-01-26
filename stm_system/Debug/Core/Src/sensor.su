@@ -1,3 +1,0 @@
-../Core/Src/sensor.c:23:14:ads1115_to_voltage	16	static
-../Core/Src/sensor.c:32:6:sensor_read_all	24	static
-../Core/Src/sensor.c:55:6:sensor_check_threshold	4	static

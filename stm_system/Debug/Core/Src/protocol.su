@@ -1,5 +1,0 @@
-../Core/Src/protocol.c:13:9:proto_checksum	24	static
-../Core/Src/protocol.c:31:6:proto_pack_u16_le	16	static
-../Core/Src/protocol.c:40:19:proto_send	64	static
-../Core/Src/protocol.c:75:19:proto_send_pong	8	static
-../Core/Src/protocol.c:93:19:proto_send_sensor_data	32	static

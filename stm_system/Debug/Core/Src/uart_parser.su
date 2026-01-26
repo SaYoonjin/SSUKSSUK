@@ -1,4 +1,0 @@
-../Core/Src/uart_parser.c:16:6:uart_poll	16	static
-../Core/Src/uart_parser.c:31:6:uart_rx_byte	16	static
-../Core/Src/uart_parser.c:48:6:uart_process	24	static
-../Core/Src/uart_parser.c:67:6:handle_packet	24	static
