@@ -10,7 +10,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
+
+const LOGO = require('../assets/logo.png');
 
 type SignupResponse =
   | { success: true; message: string }
@@ -24,25 +27,63 @@ export default function SignupScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
+
   const [errorMsg, setErrorMsg] = useState<string>('');
 
-  // 입력값 유효성 검사
-  const isEmailValid = useMemo(
-    () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()),
-    [email],
-  );
-  const isPasswordValid = useMemo(
-    () => /^(?=.*[!@#$%^&*])(?=.{8,})/.test(password),
-    [password],
-  );
+  // 1. 유효성 검사 로직
+
+  // 이메일 유효성 검사
+  const isEmailValid = useMemo(() => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  }, [email]);
+
+  // [조건 1] 길이: 8자 ~ 20자
+  const isPwLenValid = useMemo(() => {
+    return password.length >= 8 && password.length <= 20;
+  }, [password]);
+
+  // [조건 2] 숫자 포함
+  const isPwHasNumber = useMemo(() => {
+    return /\d/.test(password);
+  }, [password]);
+
+  // [조건 3] 특수문자 포함 (기존 프론트엔드 로직에 있던 특수문자셋 기준)
+  const isPwHasSpecial = useMemo(() => {
+    return /[!@#$%^&*?_~-]/.test(password);
+  }, [password]);
+
+  // 비밀번호 최종 유효성 (세 가지 조건 모두 만족 시 true)
+  const isPasswordValid = isPwLenValid && isPwHasNumber && isPwHasSpecial;
+
+  // 닉네임 유효성
   const isNicknameValid = useMemo(() => nickname.trim().length > 0, [nickname]);
 
-  const canSubmit = useMemo(() => {
-    return isEmailValid && isPasswordValid && isNicknameValid && !loading;
-  }, [isEmailValid, isPasswordValid, isNicknameValid, loading]);
-
+  // 2. 가입하기 버튼 핸들러
   const handleSignup = async () => {
-    if (!canSubmit) return;
+    if (!isEmailValid) {
+      Alert.alert('알림', '올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+
+    // 비밀번호 유효성 세부 피드백
+    if (!isPasswordValid) {
+      if (!isPwLenValid) {
+        Alert.alert('알림', '비밀번호는 8~20자 사이여야 합니다.');
+      } else if (!isPwHasNumber) {
+        Alert.alert('알림', '비밀번호에 숫자가 최소 1개 포함되어야 합니다.');
+      } else if (!isPwHasSpecial) {
+        Alert.alert(
+          '알림',
+          '비밀번호에 특수문자(!@#$%^&*?_~-)가 포함되어야 합니다.',
+        );
+      }
+      return;
+    }
+
+    if (!isNicknameValid) {
+      Alert.alert('알림', '닉네임을 입력해주세요.');
+      return;
+    }
 
     setLoading(true);
     setErrorMsg('');
@@ -60,12 +101,17 @@ export default function SignupScreen({ navigation }: any) {
       const json: SignupResponse = await res.json();
 
       if ('success' in json && json.success) {
-        navigation.navigate('Login');
+        Alert.alert('환영합니다!', '회원가입이 완료되었습니다.', [
+          {
+            text: '로그인하러 가기',
+            onPress: () => navigation.navigate('Login'),
+          },
+        ]);
         return;
       }
       setErrorMsg(json.message || '회원가입 중 오류가 발생했습니다.');
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
       setErrorMsg('서버와의 통신에 실패했습니다.');
     } finally {
       setLoading(false);
@@ -82,19 +128,15 @@ export default function SignupScreen({ navigation }: any) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <Image
-            source={require('../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
           <Text style={styles.brand}>쑥쑥</Text>
         </View>
 
-        {/* 알림 메시지 영역 */}
         <View style={styles.alertSlot}>
           {errorMsg ? <PixelAlert text={errorMsg} /> : null}
         </View>
 
+        {/* 이메일 */}
         <Text style={styles.label}>이메일</Text>
         <PixelInput
           value={email}
@@ -104,26 +146,37 @@ export default function SignupScreen({ navigation }: any) {
           autoCapitalize="none"
         />
 
-        <Text style={[styles.label, { marginTop: 18 }]}>비밀번호</Text>
+        {/* 비밀번호 */}
+        <Text style={[styles.label, styles.marginTop18]}>비밀번호</Text>
         <PixelInput
           value={password}
           onChangeText={setPassword}
           placeholder="비밀번호"
           secureTextEntry
+          maxLength={20} // 백엔드 최대 길이 제한
         />
-        <Text style={styles.helperText}>8자 이상 입력, 특수기호 포함</Text>
 
-        <Text style={[styles.label, { marginTop: 18 }]}>닉네임</Text>
+        {/* [수정] 비밀번호 조건 체크리스트 (3가지 항목) */}
+        <View style={styles.criteriaContainer}>
+          <CriteriaItem satisfied={isPwLenValid} text="8~20자 이내" />
+          <CriteriaItem satisfied={isPwHasNumber} text="숫자 포함" />
+          <CriteriaItem satisfied={isPwHasSpecial} text="특수문자 포함" />
+        </View>
+
+        {/* 닉네임 */}
+        <Text style={[styles.label, styles.marginTop18]}>닉네임</Text>
         <PixelInput
           value={nickname}
           onChangeText={setNickname}
           placeholder="닉네임"
+          maxLength={50} // 닉네임 최대 길이 제한
         />
 
+        {/* 가입하기 버튼 */}
         <Pressable
           onPress={handleSignup}
-          disabled={!canSubmit}
-          style={[styles.signupBtn, !canSubmit && styles.btnDisabled]}
+          style={[styles.signupBtn, loading && styles.btnDisabled]}
+          disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#FFF" />
@@ -140,28 +193,42 @@ export default function SignupScreen({ navigation }: any) {
   );
 }
 
-/** 픽셀 아트 스타일 컴포넌트 **/
+// ---------------- 컴포넌트 및 스타일 정의 ----------------
+
+function CriteriaItem({
+  satisfied,
+  text,
+}: {
+  satisfied: boolean;
+  text: string;
+}) {
+  return (
+    <View style={styles.criteriaItem}>
+      <Text
+        style={[
+          styles.criteriaIcon,
+          satisfied ? styles.textSuccess : styles.textFail,
+        ]}
+      >
+        {satisfied ? 'v' : 'x'}
+      </Text>
+      <Text
+        style={[
+          styles.criteriaText,
+          satisfied ? styles.textSuccess : styles.textFail,
+        ]}
+      >
+        {text}
+      </Text>
+    </View>
+  );
+}
 
 function PixelAlert({ text }: { text: string }) {
   return (
     <View style={styles.pixelAlertContainer}>
       <View style={styles.alertBgUnderlay} />
-      <View style={styles.alertPixelTop} />
-      <View style={styles.alertPixelBottom} />
-      <View style={styles.alertPixelLeft} />
-      <View style={styles.alertPixelRight} />
-      <View style={styles.alertCornerTL1} />
-      <View style={styles.alertCornerTL2} />
-      <View style={styles.alertCornerTL3} />
-      <View style={styles.alertCornerTR1} />
-      <View style={styles.alertCornerTR2} />
-      <View style={styles.alertCornerTR3} />
-      <View style={styles.alertCornerBL1} />
-      <View style={styles.alertCornerBL2} />
-      <View style={styles.alertCornerBL3} />
-      <View style={styles.alertCornerBR1} />
-      <View style={styles.alertCornerBR2} />
-      <View style={styles.alertCornerBR3} />
+      <BorderPixels color={ERROR_RED} />
       <Text style={styles.alertText} numberOfLines={1}>
         {text}
       </Text>
@@ -172,22 +239,7 @@ function PixelAlert({ text }: { text: string }) {
 function PixelInput(props: any) {
   return (
     <View style={styles.pixelInputContainer}>
-      <View style={styles.pixelTop} />
-      <View style={styles.pixelBottom} />
-      <View style={styles.pixelLeft} />
-      <View style={styles.pixelRight} />
-      <View style={styles.pixelCornerTL1} />
-      <View style={styles.pixelCornerTL2} />
-      <View style={styles.pixelCornerTL3} />
-      <View style={styles.pixelCornerTR1} />
-      <View style={styles.pixelCornerTR2} />
-      <View style={styles.pixelCornerTR3} />
-      <View style={styles.pixelCornerBL1} />
-      <View style={styles.pixelCornerBL2} />
-      <View style={styles.pixelCornerBL3} />
-      <View style={styles.pixelCornerBR1} />
-      <View style={styles.pixelCornerBR2} />
-      <View style={styles.pixelCornerBR3} />
+      <BorderPixels color={GREEN} />
       <TextInput
         {...props}
         style={styles.input}
@@ -197,9 +249,23 @@ function PixelInput(props: any) {
   );
 }
 
+const BorderPixels = ({ color }: { color: string }) => (
+  <>
+    <View style={[styles.pixelTop, { backgroundColor: color }]} />
+    <View style={[styles.pixelBottom, { backgroundColor: color }]} />
+    <View style={[styles.pixelLeft, { backgroundColor: color }]} />
+    <View style={[styles.pixelRight, { backgroundColor: color }]} />
+    <View style={[styles.cornerTL, { backgroundColor: color }]} />
+    <View style={[styles.cornerTR, { backgroundColor: color }]} />
+    <View style={[styles.cornerBL, { backgroundColor: color }]} />
+    <View style={[styles.cornerBR, { backgroundColor: color }]} />
+  </>
+);
+
 const GREEN = '#2E5A35';
 const LIGHT_GREEN = '#75A743';
 const ERROR_RED = '#E04B4B';
+const SUCCESS_GREEN = '#2E5A35';
 const ERROR_BG = '#FFE9E9';
 const PIXEL_SIZE = 4;
 
@@ -222,7 +288,46 @@ const styles = StyleSheet.create({
   },
   alertSlot: { height: 34, marginBottom: 10, justifyContent: 'center' },
 
-  // Pixel Alert 스타일
+  marginTop18: { marginTop: 18 },
+
+  criteriaContainer: {
+    flexDirection: 'column',
+    marginTop: 10,
+    marginLeft: 4,
+    gap: 6,
+  },
+  criteriaItem: { flexDirection: 'row', alignItems: 'center' },
+
+  criteriaIcon: {
+    fontSize: 16,
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+    marginRight: 6,
+  },
+  criteriaText: { fontSize: 16, fontFamily: 'NeoDunggeunmoPro-Regular' },
+
+  textSuccess: { color: SUCCESS_GREEN },
+  textFail: { color: ERROR_RED },
+
+  signupBtn: {
+    marginTop: 30,
+    backgroundColor: GREEN,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  btnDisabled: { opacity: 0.6 },
+  signupBtnText: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+  },
+  backBtn: { marginTop: 20, alignItems: 'center' },
+  backBtnText: {
+    fontSize: 14,
+    color: GREEN,
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+    textDecorationLine: 'underline',
+  },
+
   pixelAlertContainer: {
     position: 'relative',
     height: 34,
@@ -245,152 +350,7 @@ const styles = StyleSheet.create({
     fontFamily: 'NeoDunggeunmoPro-Regular',
     zIndex: 10,
   },
-  alertPixelTop: {
-    position: 'absolute',
-    top: -PIXEL_SIZE,
-    left: PIXEL_SIZE,
-    right: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 5,
-  },
-  alertPixelBottom: {
-    position: 'absolute',
-    bottom: -PIXEL_SIZE,
-    left: PIXEL_SIZE,
-    right: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 5,
-  },
-  alertPixelLeft: {
-    position: 'absolute',
-    top: PIXEL_SIZE,
-    bottom: PIXEL_SIZE,
-    left: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 5,
-  },
-  alertPixelRight: {
-    position: 'absolute',
-    top: PIXEL_SIZE,
-    bottom: PIXEL_SIZE,
-    right: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 5,
-  },
-  alertCornerTL1: {
-    position: 'absolute',
-    top: 0,
-    left: -PIXEL_SIZE,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerTL2: {
-    position: 'absolute',
-    top: -PIXEL_SIZE,
-    left: 0,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerTL3: {
-    position: 'absolute',
-    top: PIXEL_SIZE,
-    left: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerTR1: {
-    position: 'absolute',
-    top: 0,
-    right: -PIXEL_SIZE,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerTR2: {
-    position: 'absolute',
-    top: -PIXEL_SIZE,
-    right: 0,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerTR3: {
-    position: 'absolute',
-    top: PIXEL_SIZE,
-    right: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerBL1: {
-    position: 'absolute',
-    bottom: 0,
-    left: -PIXEL_SIZE,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerBL2: {
-    position: 'absolute',
-    bottom: -PIXEL_SIZE,
-    left: 0,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerBL3: {
-    position: 'absolute',
-    bottom: PIXEL_SIZE,
-    left: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerBR1: {
-    position: 'absolute',
-    bottom: 0,
-    right: -PIXEL_SIZE,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerBR2: {
-    position: 'absolute',
-    bottom: -PIXEL_SIZE,
-    right: 0,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
-  alertCornerBR3: {
-    position: 'absolute',
-    bottom: PIXEL_SIZE,
-    right: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: ERROR_RED,
-    zIndex: 6,
-  },
 
-  // Pixel Input 스타일
   pixelInputContainer: {
     position: 'relative',
     height: 54,
@@ -406,13 +366,13 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     zIndex: 10,
   },
+
   pixelTop: {
     position: 'absolute',
     top: -PIXEL_SIZE,
     left: PIXEL_SIZE,
     right: PIXEL_SIZE,
     height: PIXEL_SIZE,
-    backgroundColor: GREEN,
   },
   pixelBottom: {
     position: 'absolute',
@@ -420,7 +380,6 @@ const styles = StyleSheet.create({
     left: PIXEL_SIZE,
     right: PIXEL_SIZE,
     height: PIXEL_SIZE,
-    backgroundColor: GREEN,
   },
   pixelLeft: {
     position: 'absolute',
@@ -428,7 +387,6 @@ const styles = StyleSheet.create({
     bottom: PIXEL_SIZE,
     left: -PIXEL_SIZE * 2,
     width: PIXEL_SIZE,
-    backgroundColor: GREEN,
   },
   pixelRight: {
     position: 'absolute',
@@ -436,129 +394,33 @@ const styles = StyleSheet.create({
     bottom: PIXEL_SIZE,
     right: -PIXEL_SIZE * 2,
     width: PIXEL_SIZE,
-    backgroundColor: GREEN,
   },
-  pixelCornerTL1: {
+  cornerTL: {
     position: 'absolute',
     top: 0,
     left: -PIXEL_SIZE,
     width: PIXEL_SIZE,
     height: PIXEL_SIZE,
-    backgroundColor: GREEN,
   },
-  pixelCornerTL2: {
-    position: 'absolute',
-    top: -PIXEL_SIZE,
-    left: 0,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: GREEN,
-  },
-  pixelCornerTL3: {
-    position: 'absolute',
-    top: PIXEL_SIZE,
-    left: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: GREEN,
-  },
-  pixelCornerTR1: {
+  cornerTR: {
     position: 'absolute',
     top: 0,
     right: -PIXEL_SIZE,
     width: PIXEL_SIZE,
     height: PIXEL_SIZE,
-    backgroundColor: GREEN,
   },
-  pixelCornerTR2: {
-    position: 'absolute',
-    top: -PIXEL_SIZE,
-    right: 0,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: GREEN,
-  },
-  pixelCornerTR3: {
-    position: 'absolute',
-    top: PIXEL_SIZE,
-    right: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: GREEN,
-  },
-  pixelCornerBL1: {
+  cornerBL: {
     position: 'absolute',
     bottom: 0,
     left: -PIXEL_SIZE,
     width: PIXEL_SIZE,
     height: PIXEL_SIZE,
-    backgroundColor: GREEN,
   },
-  pixelCornerBL2: {
-    position: 'absolute',
-    bottom: -PIXEL_SIZE,
-    left: 0,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: GREEN,
-  },
-  pixelCornerBL3: {
-    position: 'absolute',
-    bottom: PIXEL_SIZE,
-    left: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: GREEN,
-  },
-  pixelCornerBR1: {
+  cornerBR: {
     position: 'absolute',
     bottom: 0,
     right: -PIXEL_SIZE,
     width: PIXEL_SIZE,
     height: PIXEL_SIZE,
-    backgroundColor: GREEN,
-  },
-  pixelCornerBR2: {
-    position: 'absolute',
-    bottom: -PIXEL_SIZE,
-    right: 0,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: GREEN,
-  },
-  pixelCornerBR3: {
-    position: 'absolute',
-    bottom: PIXEL_SIZE,
-    right: -PIXEL_SIZE * 2,
-    width: PIXEL_SIZE,
-    height: PIXEL_SIZE,
-    backgroundColor: GREEN,
-  },
-
-  helperText: {
-    fontSize: 13,
-    color: GREEN,
-    fontFamily: 'NeoDunggeunmoPro-Regular',
-    marginTop: 8,
-    marginLeft: 4,
-  },
-  signupBtn: {
-    marginTop: 30,
-    backgroundColor: GREEN,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  btnDisabled: { opacity: 0.6 },
-  signupBtnText: {
-    fontSize: 20,
-    color: '#FFFFFF',
-    fontFamily: 'NeoDunggeunmoPro-Regular',
-  },
-  backBtn: { marginTop: 20, alignItems: 'center' },
-  backBtnText: {
-    fontSize: 14,
-    color: GREEN,
-    fontFamily: 'NeoDunggeunmoPro-Regular',
-    textDecorationLine: 'underline',
   },
 });
