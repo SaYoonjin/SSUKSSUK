@@ -54,6 +54,9 @@ pipeline {
                     sh '''
                         set -euxo pipefail
 
+                        # Jenkins 컨테이너(root)에서 ubuntu 소유 디렉토리 접근 허용
+                        git config --global --add safe.directory "${PROJECT_ROOT}"
+
                         cd "${PROJECT_ROOT}"
 
                         # 혹시 remote가 SSH로 잡혀있어서 인증 요구할 수 있으니, 여기서 https+토큰으로 강제
