@@ -1,18 +1,20 @@
 package com.ssukssuk.service.device;
 
 import com.ssukssuk.common.mqtt.dto.AckMessage;
+import com.ssukssuk.domain.plant.Species;
 import com.ssukssuk.infra.mqtt.MqttPublisher;
 import com.ssukssuk.infra.mqtt.ack.PendingAckStore;
+import com.ssukssuk.repository.plant.SpeciesRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +22,7 @@ public class DeviceControlService {
 
     private final MqttPublisher mqttPublisher;
     private final PendingAckStore pendingAckStore;
+    private final SpeciesRepository speciesRepository;
 
     private static final Duration DEFAULT_ACK_TIMEOUT = Duration.ofSeconds(3);
 
@@ -33,6 +36,7 @@ public class DeviceControlService {
         return m;
     }
 
+    /* ===== ACK 필요한 경우 ===== */
     private AckMessage publishAndWait(
             String serial,
             String channel,
@@ -48,7 +52,7 @@ public class DeviceControlService {
         );
 
         try {
-            return future.get();
+            return future.get(DEFAULT_ACK_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             throw new RuntimeException("ACK wait failed", e);
         }
@@ -61,7 +65,6 @@ public class DeviceControlService {
             String mode
     ) {
         String msgId = UUID.randomUUID().toString();
-
         Map<String, Object> payload = base(msgId, serial, null, "CLAIM_UPDATE");
         payload.put("claim_state", claimState);
         payload.put("user_id", userId);
@@ -76,7 +79,6 @@ public class DeviceControlService {
             String mode
     ) {
         String msgId = UUID.randomUUID().toString();
-
         Map<String, Object> payload = base(msgId, serial, plantId, "MODE_UPDATE");
         payload.put("mode", mode);
         payload.put("effective_from", OffsetDateTime.now().toString());
@@ -84,40 +86,40 @@ public class DeviceControlService {
         return publishAndWait(serial, "mode", msgId, payload);
     }
 
-    public AckMessage publishBindingUpdateBound(
+    /* ===== publish-only ===== */
+    public String publishBindingUpdateBound(
             String serial,
             Long plantId,
-            Integer species,
-            Double tempMin, Double tempMax,
-            Double humMin, Double humMax,
-            Double wlMin, Double wlMax,
-            Double ecMin, Double ecMax,
-            LocalDateTime ledStart,
-            LocalDateTime ledEnd
+            Long speciesId
     ) {
+        Species species = speciesRepository.findById(speciesId)
+                .orElseThrow(() -> new RuntimeException("Species not found"));
+
         String msgId = UUID.randomUUID().toString();
 
         Map<String, Object> payload = base(msgId, serial, plantId, "BINDING_UPDATE");
         payload.put("binding_state", "BOUND");
-        payload.put("species", species);
-
+        payload.put("species", speciesId);
         payload.put("led_time", Map.of(
-                "start", ledStart.getHour(),
-                "end", ledEnd.getHour()
+                "start", species.getLedStart().getHour(),
+                "end", species.getLedEnd().getHour()
+        ));
+        payload.put("ideal_ranges", Map.of(
+                "temperature", Map.of("min", species.getTempMin(), "max", species.getTempMax()),
+                "humidity", Map.of("min", species.getHumMin(), "max", species.getHumMax()),
+                "water_level", Map.of("min", species.getWaterMin(), "max", species.getWaterMax()),
+                "nutrient_conc", Map.of("min", species.getEcMin(), "max", species.getEcMax())
         ));
 
-        Map<String, Object> idealRanges = new LinkedHashMap<>();
-        idealRanges.put("temperature", Map.of("min", tempMin, "max", tempMax));
-        idealRanges.put("humidity", Map.of("min", humMin, "max", humMax));
-        idealRanges.put("water_level", Map.of("min", wlMin, "max", wlMax));
-        idealRanges.put("nutrient_conc", Map.of("min", ecMin, "max", ecMax));
+        mqttPublisher.publish(
+                MqttPublisher.controlTopic(serial, "binding"),
+                payload
+        );
 
-        payload.put("ideal_ranges", idealRanges);
-
-        return publishAndWait(serial, "binding", msgId, payload);
+        return msgId;
     }
 
-    public AckMessage publishBindingUpdateUnbound(String serial) {
+    public String publishBindingUpdateUnbound(String serial) {
         String msgId = UUID.randomUUID().toString();
 
         Map<String, Object> payload = base(msgId, serial, null, "BINDING_UPDATE");
@@ -126,6 +128,12 @@ public class DeviceControlService {
         payload.put("led_time", null);
         payload.put("ideal_ranges", null);
 
-        return publishAndWait(serial, "binding", msgId, payload);
+        mqttPublisher.publish(
+                MqttPublisher.controlTopic(serial, "binding"),
+                payload
+        );
+
+        return msgId;
     }
 }
+
