@@ -40,7 +40,7 @@ export default function HistoryScreen({ navigation }: any) {
     const runSlide = (newIndex: number) => {
         setPhotoIndex(newIndex);
         Animated.spring(scrollX, {
-            // ✅ translateX도 픽셀 라운딩 (끝 1px 틈 방지)
+            // translateX도 픽셀 라운딩 (끝 1px 틈 방지)
             toValue: PixelRatio.roundToNearestPixel(-newIndex * PHOTO_WIDTH),
             friction: 8,
             tension: 40,
@@ -105,7 +105,14 @@ export default function HistoryScreen({ navigation }: any) {
                 </PixelBox>
 
                 <SectionHeader title="기록 보관소" />
-                <Pressable onPress={() => {}}>
+                <Pressable
+                    onPress={() => {
+                        navigation.navigate("HistoryAlbum", {
+                            start: "2026.01.10",
+                            end: "2026.01.23",
+                        });
+                    }}
+                >
                     <PixelBox hasShadow style={styles.archiveBar}>
                         <View style={styles.folderIcon}><View style={styles.folderTab} /><View style={styles.folderBody} /></View>
                         <View style={styles.archiveTextWrap}>
@@ -169,14 +176,14 @@ function GrowthLineChart({ days, values, width, height }: any) {
     const max = Math.max(...values) * 1.1;
     const xStep = (width - p * 2) / (days.length - 1);
     const yPos = (v: number) => p + (height - p * 2) * (1 - (v - min) / (max - min));
-    const points = values.map((v:any, i:any) => `${p + i * xStep},${yPos(v)}`).join(" ");
-    const fillPath = `M${p},${height - p} ` + values.map((v:any, i:any) => `L${p + i * xStep},${yPos(v)}`).join(" ") + ` L${p + (values.length - 1) * xStep},${height - p} Z`;
+    const points = values.map((v: any, i: any) => `${p + i * xStep},${yPos(v)}`).join(" ");
+    const fillPath = `M${p},${height - p} ` + values.map((v: any, i: any) => `L${p + i * xStep},${yPos(v)}`).join(" ") + ` L${p + (values.length - 1) * xStep},${height - p} Z`;
     return (
         <Svg width={width} height={height}>
             {[0, 1, 2, 3, 4].map((i) => (<Line key={i} x1={p} y1={p + (i * (height - p * 2)) / 4} x2={width - p} y2={p + (i * (height - p * 2)) / 4} stroke="#F0F0F0" strokeWidth={1} />))}
             <Path d={fillPath} fill={ACCENT} fillOpacity={0.1} />
             <Polyline points={points} fill="none" stroke={ACCENT} strokeWidth={3} strokeLinejoin="round" />
-            {values.map((v:any, i:any) => (
+            {values.map((v: any, i: any) => (
                 <G key={i}>
                     <Circle cx={p + i * xStep} cy={yPos(v)} r={4} fill={CARD_BG} stroke={ACCENT} strokeWidth={2} />
                     <SvgText x={p + i * xStep} y={yPos(v) - 10} fontSize="13" textAnchor="middle" fill={ACCENT} fontFamily="NeoDunggeunmoPro-Regular">{v}</SvgText>
@@ -281,4 +288,4 @@ const styles = StyleSheet.create({
 
 const dummyDays = ["01.17", "01.18", "01.19", "01.20", "01.21", "01.22", "01.23"];
 const dummyGrowth = [4.2, 4.7, 5.3, 5.3, 5.6, 6.1, 6.8];
-const dummyAnomaly = [{water:1,nutrient:1,tempHum:2},{water:3,nutrient:2,tempHum:1},{water:0,nutrient:1,tempHum:1},{water:1,nutrient:0,tempHum:0},{water:1,nutrient:1,tempHum:0},{water:0,nutrient:1,tempHum:1},{water:0,nutrient:0,tempHum:1}];
+const dummyAnomaly = [{ water: 1, nutrient: 1, tempHum: 2 }, { water: 3, nutrient: 2, tempHum: 1 }, { water: 0, nutrient: 1, tempHum: 1 }, { water: 1, nutrient: 0, tempHum: 0 }, { water: 1, nutrient: 1, tempHum: 0 }, { water: 0, nutrient: 1, tempHum: 1 }, { water: 0, nutrient: 0, tempHum: 1 }];

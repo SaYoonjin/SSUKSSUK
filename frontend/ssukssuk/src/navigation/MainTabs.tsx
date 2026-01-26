@@ -5,13 +5,13 @@ import { NavigatorScreenParams } from "@react-navigation/native";
 import BottomBar from "../components/BottomBar";
 
 import MainScreen from "../screens/MainScreen";
-import HistoryScreen from "../screens/HistoryScreen";
 import PlantStack, { PlantStackParamList } from "./PlantStack";
 import ProfileStack, { ProfileStackParamList } from "./ProfileStack";
+import HistoryStack, { HistoryStackParamList } from "./HistoryStack";
 
 export type MainTabParamList = {
     Home: undefined;
-    History: undefined;
+    History: NavigatorScreenParams<HistoryStackParamList>;
     Plant: NavigatorScreenParams<PlantStackParamList>;
     Profile: NavigatorScreenParams<ProfileStackParamList>;
 };
@@ -28,7 +28,16 @@ export default function MainTabs() {
             tabBar={(props) => <BottomBar {...props} />}
         >
             <Tab.Screen name="Home" component={MainScreen} />
-            <Tab.Screen name="History" component={HistoryScreen} />
+
+            <Tab.Screen
+                name="History"
+                component={HistoryStack}
+                listeners={({ navigation }) => ({
+                    focus: () => {
+                        navigation.navigate("History", { screen: "HistoryHome" });
+                    },
+                })}
+            />
 
             <Tab.Screen
                 name="Plant"
