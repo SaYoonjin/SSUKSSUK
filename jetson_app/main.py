@@ -8,9 +8,19 @@ from datetime import datetime, timedelta
 
 import paho.mqtt.client as mqtt
 
+from uart.packet import (
+    CMD_READY,
+    CMD_REQ_SENSOR,
+    TYPE_EVENT,
+    EVENT_WATER_LOW,
+    EVENT_EC_LOW,
+    EVENT_RECOVERY_DONE,
+    CMD_PUMP_WATER,
+    CMD_PUMP_NUTRI,
+    CMD_PUMP_STOP,
+)
+
 from uart.uart_manager import UARTManager
-from uart.packet import CMD_READY
-from uart.packet import CMD_REQ_SENSOR
 from mqtt.claim_handler import handle_claim_update
 from mqtt.binding_handler import handle_binding_update
 from mqtt.mode_handler import handle_mode_update
@@ -18,7 +28,6 @@ from mqtt.mode_handler import handle_mode_update
 from telemetry.sensor_uplink import build_sensor_uplink
 
 from config_loader import load_json
-
 
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
@@ -29,6 +38,23 @@ def is_new_hour(now, last_hour):
     if last_hour is None:
         return True
     return now.hour != last_hour
+    
+def get_control_mode(setting: dict):
+    """
+    setting.json의 mode 필드가 어떤 형태로 와도(AUTO 문자열 / dict) 안전하게 mode를 뽑는다.
+    return: "AUTO" | "MANUAL" | None
+    """
+    mode_val = setting.get("mode")
+
+    # 1) mode가 문자열인 경우: "AUTO" / "MANUAL"
+    if isinstance(mode_val, str):
+        return mode_val
+
+    # 2) mode가 dict인 경우: {"control_mode":"AUTO"} 등
+    if isinstance(mode_val, dict):
+        return mode_val.get("control_mode") or mode_val.get("mode")
+
+    return None
 
 
 def main():
@@ -211,42 +237,136 @@ def main():
         while True:
 
             # =========================
-            # 1️⃣ UART 수신 처리
+            # 1️UART 수신 처리
             # =========================
             packets = uart.poll()
+            ideal_ranges = (
+                setting
+                .get("binding", {})
+                .get("ideal_ranges", {})
+            )
+
     
             for pkt in packets:
-                if pkt["type"] == 0x02 and pkt["subtype"] == 0x01:
-                    raw = pkt["payload"]
-    
+                pkt_type = pkt["type"]
+                pkt_sub = pkt["subtype"]
+                raw = pkt["payload"]
+            
+                # =========================
+                # 1️SENSOR DATA (정기)
+                # =========================
+                if pkt_type == 0x02 and pkt_sub == 0x01:
                     temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
-    
+            
                     values = {
                         "temperature": temp_x10 / 10.0,
                         "humidity": humi_x10 / 10.0,
                         "water_level": float(water),
                         "nutrient_conc": float(ec),
                     }
-    
+            
                     uplink = build_sensor_uplink(
                         serial_num=serial,
                         plant_id=setting["binding"]["plant_id"],
                         values=values,
+                        ideal_ranges=ideal_ranges,
                         event_kind="PERIODIC",
                         trigger_sensor_type=None
                     )
-    
+            
                     client.publish(
                         f"devices/{serial}/telemetry/sensors",
                         json.dumps(uplink),
                         qos=1,
                         retain=False
                     )
-    
-                    print("[MQTT] SENSOR_UPLINK sent")
-    
+            
+                    print("[MQTT] SENSOR_UPLINK PERIODIC sent", values)
+            
+                # =========================
+                # 2️EVENT 처리
+                # =========================
+                elif pkt_type == TYPE_EVENT:
+                    temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
+            
+                    values = {
+                        "temperature": temp_x10 / 10.0,
+                        "humidity": humi_x10 / 10.0,
+                        "water_level": float(water),
+                        "nutrient_conc": float(ec),
+                    }
+            
+                    # EVENT → trigger 매핑
+                    if pkt_sub == EVENT_WATER_LOW:
+                        event_kind = "ANOMALY_DETECTED"
+                        trigger = "WATER_LEVEL"
+            
+                    elif pkt_sub == EVENT_EC_LOW:
+                        event_kind = "ANOMALY_DETECTED"
+                        trigger = "NUTRIENT_CONC"
+            
+                    elif pkt_sub == EVENT_RECOVERY_DONE:
+                        event_kind = "RECOVERY_DONE"
+                        trigger = None
+            
+                    else:
+                        print(f"[UART] Unknown EVENT subtype: {pkt_sub}")
+                        continue
+            
+                    print(
+                        f"[UART][EVENT] subtype={pkt_sub} "
+                        f"event_kind={event_kind} trigger={trigger} values={values}"
+                    )
+            
+                    uplink = build_sensor_uplink(
+                        serial_num=serial,
+                        plant_id=setting["binding"]["plant_id"],
+                        values=values,
+                        ideal_ranges=ideal_ranges,
+                        event_kind=event_kind,
+                        trigger_sensor_type=trigger
+                    )
+            
+                    client.publish(
+                        f"devices/{serial}/telemetry/sensors",
+                        json.dumps(uplink),
+                        qos=1,
+                        retain=False
+                    )
+            
+                    print("[MQTT] SENSOR_UPLINK EVENT sent")
+            
+                    # =========================
+                    # 3️AUTO / MANUAL 분기
+                    # =========================
+                    mode = get_control_mode(setting)
+                    print(f"[MODE] current mode = {mode} (raw={setting.get('mode')})")
+            
+                    if event_kind == "ANOMALY_DETECTED":
+                        if mode == "AUTO":
+                            print("[AUTO] anomaly detected → pump control")
+            
+#                            if trigger == "WATER_LEVEL":
+#                                uart.send_cmd(CMD_PUMP_WATER)
+#                                print("[UART] CMD_PUMP_WATER sent")
+#            
+#                            elif trigger == "NUTRIENT_CONC":
+#                                uart.send_cmd(CMD_PUMP_NUTRI)
+#                                print("[UART] CMD_PUMP_NUTRI sent")
+            
+                        else:
+                            print("[MANUAL] anomaly detected → waiting for user")
+            
+                    elif event_kind == "RECOVERY_DONE":
+                        if mode == "AUTO":
+#                            uart.send_cmd(CMD_PUMP_STOP)
+                            print("[UART] CMD_PUMP_STOP sent")
+            
+                        print("[RECOVERY] system back to normal")
+
+                    
             # =========================
-            # 2️⃣ 정각 스케줄러
+            # 2️정각 스케줄러
             # =========================
             now = datetime.now()
 
@@ -261,7 +381,7 @@ def main():
                 print(f"[SCHED] CMD_REQ_SENSOR sent at {now.strftime('%H:%M')}")
     
             # =========================
-            # 3️⃣ 루프 속도 제한
+            # 3️루프 속도 제한
             # =========================
             time.sleep(0.2)
     

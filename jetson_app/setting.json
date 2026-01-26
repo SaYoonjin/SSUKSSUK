@@ -14,15 +14,15 @@
     },
     "ideal_ranges": {
       "water_level": {
-        "min": 25.0,
-        "max": 80.0
+        "min": 10.0,
+        "max": 100.0
       },
       "nutrient_conc": {
-        "min": 650.0,
-        "max": 900.0
+        "min": 1500.0,
+        "max": 4000.0
       },
       "temperature": {
-        "min": 18.0,
+        "min": 15.0,
         "max": 25.0
       },
       "humidity": {
