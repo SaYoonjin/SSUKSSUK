@@ -36,7 +36,7 @@ public class DeviceBindingValidator {
         }
 
         // 3️⃣ 이미 식물에 페어링된 디바이스
-        if (Boolean.TRUE.equals(device.getPairing())) {
+        if (!Boolean.TRUE.equals(device.getPairing())) {
             throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
         }
 
@@ -44,7 +44,5 @@ public class DeviceBindingValidator {
         if (!userPlantRepository.existsById(plantId)) {
             throw new CustomException(ErrorCode.PLANT_NOT_FOUND);
         }
-
-        // 👉 여기까지 통과하면 바인딩/수신 허용
     }
 }

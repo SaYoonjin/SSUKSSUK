@@ -69,6 +69,28 @@ public class SensorLogService {
         sensorLogRepository.save(log);
     }
 
+    // MQTT 수신용 - sensor_event 연동을 위해 PK 반환 버전 추가
+    public Long saveFromMqttReturnId(
+            Long plantId,
+            LocalDateTime measuredAt,
+            Float temperature,
+            Float humidity,
+            Float waterLevel,
+            Float nutrientConc
+    ) {
+        SensorLog log = SensorLog.builder()
+                .plantId(plantId)
+                .measuredAt(measuredAt != null ? measuredAt : LocalDateTime.now())
+                .temperature(temperature)
+                .humidity(humidity)
+                .waterLevel(waterLevel)
+                .nutrientConc(nutrientConc)
+                .receivedAt(LocalDateTime.now())
+                .build();
+
+        return sensorLogRepository.save(log).getSensorLogId(); // PK getter명은 엔티티에 맞게!
+    }
+
     //최신 센서값 조회
     @Transactional(readOnly = true)
     public SensorLogResponse getLatestSensor(Long plantId) {
