@@ -87,7 +87,7 @@ pipeline {
                             echo "[INFO] Changed files between ${beforeSha}..${afterSha}:"
                             git diff --name-only ${beforeSha} ${afterSha} | tee /tmp/changed_files.txt
                         """
-                        def changed = sh(script: "grep -E '^server/' /tmp/changed_files.txt >/dev/null 2>&1; echo $?", returnStdout: true).trim()
+                        def changed = sh(script: 'grep -E "^server/" /tmp/changed_files.txt >/dev/null 2>&1; echo $?', returnStdout: true).trim()
                         if (changed != "0") {
                             env.SHOULD_DEPLOY = "false"
                         }
