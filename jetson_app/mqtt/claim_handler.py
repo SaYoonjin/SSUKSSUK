@@ -35,8 +35,7 @@ def handle_claim_update(payload: dict, uart) -> dict:
     setting["claim"]["claim_state"] = "CLAIMED"
     setting["claim"]["user_id"] = payload.get("user_id")
 
-    setting["mode"]["mode"] = payload.get("mode", "MANUAL")
-    setting["mode"]["effective_from"] = payload.get("sent_at")
+    setting["mode"] = payload.get("mode", "MANUAL")
 
     save_json(SETTING_PATH, setting)
 

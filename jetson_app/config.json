@@ -7,14 +7,21 @@
 
   "mqtt": {
     "broker": {
-      "host": "192.168.45.229",
-      "port": 1883,
+      "host": "i14a103.p.ssafy.io",
+      "port": 443,
       "username": null,
       "password": null,
       "keepalive_sec": 60,
       "client_id": null
     },
-
+    
+    "transport": "websockets",
+    "ws_path": "/mqtt",
+    "tls": {
+      "enabled": true,
+      "ca_cert": null
+    },
+    
     "qos": {
       "telemetry": 1,
       "control": 1

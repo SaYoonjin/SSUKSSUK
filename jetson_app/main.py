@@ -49,7 +49,12 @@ def main():
     )
 
     # 3. MQTT 클라이언트 초기화
-    client = mqtt.Client(client_id=client_id)
+    client = mqtt.Client(
+        client_id=client_id,
+        # transport=broker.get("transport", "tcp")
+        transport="websockets"
+    )
+
 
     # =========================
     # 🔑 상태 기반 구독 함수
@@ -83,8 +88,12 @@ def main():
     # MQTT 콜백
     # =========================
     def on_connect(client, userdata, flags, rc):
-        print("[MQTT] connected")
-        subscribe_by_state()
+        if rc == 0:
+            print("[MQTT] connected")
+            subscribe_by_state()
+        else:
+            print(f"[MQTT] connect failed rc={rc}")
+
 
     def on_message(client, userdata, msg):
         nonlocal setting
@@ -175,6 +184,19 @@ def main():
     client.on_message = on_message
 
     # 4. MQTT 연결
+    # TLS 설정 (443 + WSS)
+    if config["mqtt"]["tls"]["enabled"]:
+        client.tls_set()
+        client.tls_insecure_set(True)
+    
+    # WebSocket path
+    client.ws_set_options(
+        path=config["mqtt"].get("ws_path", "/mqtt")
+    )
+    
+    client.on_connect = on_connect
+    client.on_message = on_message
+    
     client.connect(
         broker["host"],
         broker["port"],

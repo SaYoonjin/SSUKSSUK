@@ -50,6 +50,13 @@ def handle_binding_update(payload: dict, uart):
             if key in setting["binding"]["ideal_ranges"]:
                 setting["binding"]["ideal_ranges"][key]["min"] = value.get("min")
                 setting["binding"]["ideal_ranges"][key]["max"] = value.get("max")
+                
+        # BOUND 처리 내부에 추가
+        led_time = payload.get("led_time")
+        if led_time:
+            setting["binding"]["led_time"]["start"] = led_time.get("start")
+            setting["binding"]["led_time"]["end"] = led_time.get("end")
+
 
     else:  # UNBOUND
         setting["binding"]["plant_id"] = None
@@ -59,6 +66,9 @@ def handle_binding_update(payload: dict, uart):
         for key in setting["binding"]["ideal_ranges"]:
             setting["binding"]["ideal_ranges"][key]["min"] = None
             setting["binding"]["ideal_ranges"][key]["max"] = None
+            
+        setting["binding"]["led_time"]["start"] = None
+        setting["binding"]["led_time"]["end"] = None
 
     save_json(SETTING_PATH, setting)
 

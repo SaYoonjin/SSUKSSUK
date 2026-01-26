@@ -8,6 +8,10 @@
     "plant_id": 12345,
     "binding_state": "BOUND",
     "species": 1,
+    "led_time": {
+      "start": 6,
+      "end": 20
+    },
     "ideal_ranges": {
       "water_level": {
         "min": 25.0,
@@ -18,16 +22,16 @@
         "max": 900.0
       },
       "temperature": {
-        "min": null,
-        "max": null
+        "min": 18.0,
+        "max": 25.0
       },
       "humidity": {
-        "min": null,
-        "max": null
+        "min": 10.0,
+        "max": 50.0
       }
     }
   },
-  "mode": "MANUAL",
+  "mode": "AUTO",
   "seq": {
     "SENSOR_UPLINK": 0,
     "ACTION_RESULT": 0
