@@ -26,4 +26,17 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
           and up.removedAt is null
     """)
     void clearMainPlant(@Param("userId") Long userId);
+
+    @Query("""
+        select (count(up) > 0)
+        from UserPlant up
+        where up.plantId = :plantId
+          and up.removedAt is null
+          and up.device.serial = :serial
+          and up.isConnected = true
+    """)
+    boolean existsActiveBinding(
+            @Param("plantId") Long plantId,
+            @Param("serial") String serial
+    );
 }
