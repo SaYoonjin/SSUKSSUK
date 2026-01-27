@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 
-const TOMATO_IMG = require('../assets/tomato_ex.png');
+const TOMATO_IMG = require('../assets/tomato_normal.png');
 
 type Plant = {
   id: string;
