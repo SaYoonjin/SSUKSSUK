@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -50,16 +51,28 @@ public class SensorEventService {
             Long sensorLogId,
             LocalDateTime measuredAt
     ) {
-        Integer sensorCode = mapToSensorCode(triggerType);
-
-        sensorEventRepository
-                .findOpenByPlantIdAndSensorCode(plantId, sensorCode)
-                .ifPresent(event ->
-                        event.resolve(sensorLogId, measuredAt)
-                );
+        resolveIfOpenAndReturn(plantId, triggerType, sensorLogId, measuredAt);
     }
 
-    // trigger_sensor_type → sensor_code 매핑
+    /**
+     * RECOVERY_DONE + resolved 이벤트 반환
+     */
+    @Transactional
+    public Optional<SensorEvent> resolveIfOpenAndReturn(
+            Long plantId,
+            SensorUplinkMessage.TriggerSensorType triggerType,
+            Long sensorLogId,
+            LocalDateTime measuredAt
+    ) {
+        Integer sensorCode = mapToSensorCode(triggerType);
+
+        Optional<SensorEvent> openEventOpt =
+                sensorEventRepository.findOpenByPlantIdAndSensorCode(plantId, sensorCode);
+
+        openEventOpt.ifPresent(event -> event.resolve(sensorLogId, measuredAt));
+        return openEventOpt;
+    }
+
     public Integer mapToSensorCode(SensorUplinkMessage.TriggerSensorType type) {
         if (type == null) {
             throw new IllegalArgumentException("trigger_sensor_type is null");
