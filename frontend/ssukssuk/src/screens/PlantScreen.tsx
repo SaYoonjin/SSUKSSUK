@@ -67,131 +67,130 @@ export default function PlantListScreen({ navigation }: any) {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={() => setActiveMenuId(null)}>
-      <View style={styles.screen}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>나의 식물</Text>
-        </View>
+      <TouchableWithoutFeedback onPress={() => setActiveMenuId(null)}>
+        <View style={styles.screen}>
+          {/* 상단 고정: ScrollView 밖 */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>나의 식물</Text>
+          </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.gridContainer}>
-            {plants.map(plant => (
-              <View key={plant.id} style={styles.cardWrapper}>
-                <PixelCard>
-                  <View style={styles.cardHeader}>
-                    <View style={styles.nameRow}>
-                      <View
-                        style={[
-                          styles.statusDot,
-                          {
-                            backgroundColor: plant.isSelected
-                              ? '#75A743'
-                              : '#CCC',
-                          },
-                        ]}
-                      />
-                      <Text style={styles.plantNickname}>{plant.nickname}</Text>
-                    </View>
-                    <Pressable
-                      onPress={e => {
-                        e.stopPropagation();
-                        handleMenuPress(plant.id);
-                      }}
-                      hitSlop={10}
-                    >
-                      <Text style={styles.menuDots}>•••</Text>
-                    </Pressable>
-                  </View>
+          {/* 스크롤 영역 */}
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={styles.gridContainer}>
+              {plants.map(plant => (
+                  <View key={plant.id} style={styles.cardWrapper}>
+                    <PixelCard>
+                      <View style={styles.cardHeader}>
+                        <View style={styles.nameRow}>
+                          <View
+                              style={[
+                                styles.statusDot,
+                                {
+                                  backgroundColor: plant.isSelected
+                                      ? '#75A743'
+                                      : '#CCC',
+                                },
+                              ]}
+                          />
+                          <Text style={styles.plantNickname}>{plant.nickname}</Text>
+                        </View>
+                        <Pressable
+                            onPress={e => {
+                              e.stopPropagation();
+                              handleMenuPress(plant.id);
+                            }}
+                            hitSlop={10}
+                        >
+                          <Text style={styles.menuDots}>•••</Text>
+                        </Pressable>
+                      </View>
 
-                  <View style={styles.imageContainer}>
-                    {plant.image ? (
-                      <Image
-                        source={plant.image}
-                        style={styles.plantImage}
-                        resizeMode="contain"
-                      />
-                    ) : (
-                      // [수정 2] 인라인 스타일 제거 -> styles.emojiText 사용
-                      <Text style={styles.emojiText}>🌱</Text>
-                    )}
-                  </View>
+                      <View style={styles.imageContainer}>
+                        {plant.image ? (
+                            <Image
+                                source={plant.image}
+                                style={styles.plantImage}
+                                resizeMode="contain"
+                            />
+                        ) : (
+                            <Text style={styles.emojiText}>🌱</Text>
+                        )}
+                      </View>
 
-                  <Pressable
-                    onPress={() => handleSelectPlant(plant.id)}
-                    disabled={plant.isSelected}
-                    style={[
-                      styles.selectBtn,
-                      plant.isSelected && styles.selectBtnActive,
-                    ]}
-                  >
-                    {/* [수정 3] 인라인 스타일 제거 -> styles.disabledText 사용 */}
-                    <Text
-                      style={[
-                        styles.selectBtnText,
-                        plant.isSelected && styles.disabledText,
-                      ]}
-                    >
-                      {plant.isSelected ? '선택됨' : '선택하기'}
-                    </Text>
-                  </Pressable>
-
-                  {activeMenuId === plant.id && (
-                    <View style={styles.popupMenu}>
                       <Pressable
-                        onPress={() => handleEdit(plant)}
-                        style={styles.menuItem}
+                          onPress={() => handleSelectPlant(plant.id)}
+                          disabled={plant.isSelected}
+                          style={[
+                            styles.selectBtn,
+                            plant.isSelected && styles.selectBtnActive,
+                          ]}
                       >
-                        <Text style={styles.menuText}>수정하기</Text>
-                      </Pressable>
-                      <View style={styles.menuDivider} />
-                      <Pressable
-                        onPress={() => handleDelete(plant.id)}
-                        style={styles.menuItem}
-                      >
-                        {/* [수정 4] 인라인 스타일 제거 -> styles.deleteText 사용 */}
-                        <Text style={[styles.menuText, styles.deleteText]}>
-                          삭제하기
+                        <Text
+                            style={[
+                              styles.selectBtnText,
+                              plant.isSelected && styles.disabledText,
+                            ]}
+                        >
+                          {plant.isSelected ? '선택됨' : '선택하기'}
                         </Text>
                       </Pressable>
-                    </View>
-                  )}
-                </PixelCard>
-              </View>
-            ))}
-          </View>
 
-          <View style={styles.addButtonContainer}>
-            <Pressable
-              onPress={() =>
-                navigation.navigate('PlantAddEdit', { mode: 'add' })
-              }
-            >
-              <PixelCard compact style={styles.addButtonCard}>
-                <Text style={styles.addButtonText}>+ 식물 추가</Text>
-              </PixelCard>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </View>
-    </TouchableWithoutFeedback>
+                      {activeMenuId === plant.id && (
+                          <View style={styles.popupMenu}>
+                            <Pressable
+                                onPress={() => handleEdit(plant)}
+                                style={styles.menuItem}
+                            >
+                              <Text style={styles.menuText}>수정하기</Text>
+                            </Pressable>
+                            <View style={styles.menuDivider} />
+                            <Pressable
+                                onPress={() => handleDelete(plant.id)}
+                                style={styles.menuItem}
+                            >
+                              <Text style={[styles.menuText, styles.deleteText]}>
+                                삭제하기
+                              </Text>
+                            </Pressable>
+                          </View>
+                      )}
+                    </PixelCard>
+                  </View>
+              ))}
+            </View>
+
+            <View style={styles.addButtonContainer}>
+              <Pressable
+                  onPress={() =>
+                      navigation.navigate('PlantAddEdit', { mode: 'add' })
+                  }
+              >
+                <PixelCard compact style={styles.addButtonCard}>
+                  <Text style={styles.addButtonText}>+ 식물 추가</Text>
+                </PixelCard>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </TouchableWithoutFeedback>
   );
 }
 
 function PixelCard({ children, style, compact }: any) {
   return (
-    <View style={[styles.cardContainer, style]}>
-      <View style={styles.borderTop} />
-      <View style={styles.borderBottom} />
-      <View style={styles.borderLeft} />
-      <View style={styles.borderRight} />
-      <View style={styles.cornerTL} />
-      <View style={styles.cornerTR} />
-      <View style={styles.cornerBL} />
-      <View style={styles.cornerBR} />
-      <View style={[styles.cardInner, compact && styles.cardInnerCompact]}>
-        {children}
+      <View style={[styles.cardContainer, style]}>
+        <View style={styles.borderTop} />
+        <View style={styles.borderBottom} />
+        <View style={styles.borderLeft} />
+        <View style={styles.borderRight} />
+        <View style={styles.cornerTL} />
+        <View style={styles.cornerTR} />
+        <View style={styles.cornerBL} />
+        <View style={styles.cornerBR} />
+        <View style={[styles.cardInner, compact && styles.cardInnerCompact]}>
+          {children}
+        </View>
       </View>
-    </View>
   );
 }
 
@@ -254,7 +253,6 @@ const styles = StyleSheet.create({
   },
   plantImage: { width: '100%', height: '100%' },
 
-  // [새로 추가된 스타일] 인라인 스타일 대체용
   emojiText: { fontSize: 40 },
   disabledText: { color: '#AAA' },
   deleteText: { color: '#E04B4B' },

@@ -50,6 +50,7 @@ export default function DeviceManagementScreen({ navigation }: any) {
 
   return (
       <View style={styles.screen}>
+        {/* 상단 고정: ScrollView 밖 */}
         <View style={styles.header}>
           <Pressable
               onPress={() => navigation.goBack()}
@@ -62,6 +63,7 @@ export default function DeviceManagementScreen({ navigation }: any) {
           <Text style={styles.headerTitle}>디바이스 관리</Text>
         </View>
 
+        {/* 스크롤 영역 */}
         <ScrollView contentContainerStyle={styles.content}>
           {/* 1. 기기 목록 (기본 높이 유지) */}
           {devices.map(device => (
