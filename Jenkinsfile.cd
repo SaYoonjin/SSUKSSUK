@@ -131,38 +131,90 @@ pipeline {
                     echo "Starting Production Deployment (backend)"
                     echo "=========================================="
 
-                    # backend만 재배포 (docker-compose.yml 기준 서비스명이 backend 라고 가정)
+                    IMAGE_NAME="s14p11a103-backend"
+
+                    # 1. 기존 이미지 백업 (롤백용)
+                    echo "[Step 1] Backing up current image..."
+                    docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:previous || echo "No existing image to backup"
+
+                    # 2. 새 이미지 빌드 (컨테이너 중지 전에 빌드)
+                    echo "[Step 2] Building new image..."
+                    if ! docker-compose -f "${COMPOSE_FILE}" build --no-cache backend; then
+                        echo "Build failed! Service remains running with old version."
+                        exit 1
+                    fi
+
+                    # 3. 기존 컨테이너 중지 & 새 컨테이너 시작
+                    echo "[Step 3] Stopping old container and starting new one..."
                     docker-compose -f "${COMPOSE_FILE}" stop backend || true
-                    docker-compose -f "${COMPOSE_FILE}" build --no-cache backend
                     docker-compose -f "${COMPOSE_FILE}" up -d backend
 
                     echo "Waiting for backend to be healthy..."
                     sleep 30
 
-                    # Health check - Docker 내장 healthcheck 상태 확인
+                    # 4. Health check
+                    echo "[Step 4] Running health checks..."
+                    DEPLOY_SUCCESS=false
                     for i in $(seq 1 6); do
                         HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "unknown")
                         echo "Health check attempt $i/6... Status: ${HEALTH_STATUS}"
 
                         if [ "${HEALTH_STATUS}" = "healthy" ]; then
                             echo "Backend is healthy!"
-                            exit 0
+                            DEPLOY_SUCCESS=true
+                            break
                         fi
 
-                        # 컨테이너가 죽었으면 바로 실패
+                        # 컨테이너가 죽었으면 바로 롤백
                         CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' backend 2>/dev/null || echo "unknown")
                         if [ "${CONTAINER_STATUS}" != "running" ]; then
                             echo "Container is not running! Status: ${CONTAINER_STATUS}"
                             docker-compose -f "${COMPOSE_FILE}" logs --tail 100 backend || true
-                            exit 1
+                            break
                         fi
 
                         sleep 10
                     done
 
-                    echo "Health check timeout!"
-                    docker-compose -f "${COMPOSE_FILE}" logs --tail 100 backend || true
-                    exit 1
+                    # 5. 실패 시 롤백
+                    if [ "${DEPLOY_SUCCESS}" = "false" ]; then
+                        echo "=========================================="
+                        echo "[ROLLBACK] Deployment failed! Rolling back..."
+                        echo "=========================================="
+
+                        # 이전 이미지가 있는지 확인
+                        if docker image inspect ${IMAGE_NAME}:previous >/dev/null 2>&1; then
+                            docker-compose -f "${COMPOSE_FILE}" stop backend || true
+                            docker tag ${IMAGE_NAME}:previous ${IMAGE_NAME}:latest
+                            docker-compose -f "${COMPOSE_FILE}" up -d backend
+                            echo "[ROLLBACK] Rolled back to previous version"
+
+                            # 롤백 후 health check
+                            sleep 20
+                            ROLLBACK_STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "unknown")
+                            echo "[ROLLBACK] Health status after rollback: ${ROLLBACK_STATUS}"
+                        else
+                            echo "[ROLLBACK] No previous image available for rollback!"
+                        fi
+
+                        exit 1
+                    fi
+
+                    # 6. 성공 시 이미지 정리
+                    echo "[Step 6] Cleaning up old images..."
+
+                    # 이전 백업 이미지 삭제
+                    docker rmi ${IMAGE_NAME}:previous || true
+
+                    # dangling 이미지 삭제 (태그 없는 <none> 이미지들)
+                    docker image prune -f || true
+
+                    # 사용하지 않는 빌드 캐시 정리
+                    docker builder prune -f --filter "until=24h" || true
+
+                    echo "=========================================="
+                    echo "Deployment completed successfully!"
+                    echo "=========================================="
                 '''
             }
         }
