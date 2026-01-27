@@ -42,9 +42,10 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        // 회원가입/로그인 + swagger는 열어두기
                         .requestMatchers(
-                                "/auth/**",
+                                "/auth/login",
+                                "/auth/signup",
+                                "/auth/refresh",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/test/**"

@@ -27,9 +27,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         return path.startsWith("/test/")
-                || path.startsWith("/auth/")
                 || path.startsWith("/swagger-ui/")
-                || path.startsWith("/v3/api-docs/");
+                || path.startsWith("/v3/api-docs/")
+                || path.equals("/auth/login")
+                || path.equals("/auth/signup")
+                || path.equals("/auth/refresh");
     }
 
     @Override
@@ -41,7 +43,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = resolveBearerToken(request);
 
-        // 토큰이 있고 + 유효할 때만 인증 처리
         if (token != null && tokenProvider.validate(token)) {
             Long userId = tokenProvider.getUserId(token);
             boolean isAdmin = tokenProvider.isAdmin(token);
