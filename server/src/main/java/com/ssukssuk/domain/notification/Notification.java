@@ -7,10 +7,15 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "notification",
+@Table(
+        name = "notification",
         indexes = {
-                @Index(name = "idx_notification_plant_id_created_at", columnList = "plant_id, created_at")
-        })
+                @Index(name = "idx_notification_user_created_at", columnList = "user_id, created_at"),
+                @Index(name = "idx_notification_plant_created_at", columnList = "plant_id, created_at"),
+                @Index(name = "idx_notification_event_id", columnList = "event_id"),
+                @Index(name = "idx_notification_inference_id", columnList = "inference_id")
+        }
+)
 public class Notification {
 
     @Id
@@ -18,14 +23,25 @@ public class Notification {
     @Column(name = "notification_id")
     private Long notificationId;
 
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
     @Column(name = "plant_id", nullable = false)
     private Long plantId;
 
     @Column(name = "event_id")
     private Long eventId;
 
-    @Column(name = "noti_type", nullable = false, length = 50)
-    private String notiType; // ex) WATER_ACTION_DONE, NUTRIENT_ACTION_DONE
+    @Column(name = "inference_id")
+    private Long inferenceId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "noti_type", nullable = false, length = 20)
+    private NotiType notiType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "noti_title", nullable = false, length = 20)
+    private NotiTitle notiTitle;
 
     @Column(name = "message", nullable = false, length = 255)
     private String message;
@@ -36,17 +52,48 @@ public class Notification {
     @Column(name = "read_at")
     private LocalDateTime readAt;
 
-    public static Notification create(Long plantId, Long eventId, String notiType, String message) {
+    public void markRead(LocalDateTime readAt) {
+        this.readAt = (readAt != null) ? readAt : LocalDateTime.now();
+    }
+
+    public static Notification of(
+            Long userId,
+            Long plantId,
+            Long eventId,
+            Long inferenceId,
+            NotiType notiType,
+            NotiTitle notiTitle,
+            String message
+    ) {
         Notification n = new Notification();
-        n.plantId = plantId;
+        n.userId = require(userId, "userId");
+        n.plantId = require(plantId, "plantId");
         n.eventId = eventId;
-        n.notiType = notiType;
-        n.message = message;
+        n.inferenceId = inferenceId;
+        n.notiType = require(notiType, "notiType");
+        n.notiTitle = require(notiTitle, "notiTitle");
+        n.message = requireText(message, "message");
         n.createdAt = LocalDateTime.now();
         return n;
     }
 
-    public void markRead(LocalDateTime readAt) {
-        this.readAt = readAt != null ? readAt : LocalDateTime.now();
+    public enum NotiType {
+        SENSOR, IMAGE, ACTION_DONE
+    }
+
+    public enum NotiTitle {
+        WATER_LEVEL, TEMPERATURE, NUTRIENT_CONC, HUMIDITY,
+        DISCOLORATION,
+        ACTION_DONE
+    }
+
+    private static <T> T require(T v, String f) {
+        if (v == null) throw new IllegalArgumentException(f + " must not be null");
+        return v;
+    }
+
+    private static String requireText(String v, String f) {
+        if (v == null || v.isBlank()) throw new IllegalArgumentException(f + " must not be blank");
+        return v;
     }
 }

@@ -39,4 +39,30 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
             @Param("plantId") Long plantId,
             @Param("serial") String serial
     );
+<<<<<<< Updated upstream
+=======
+
+    @Query("""
+    select new com.ssukssuk.repository.plant.BindingProjection(
+        d.serial,
+        up.plantId
+    )
+    from UserPlant up
+    join up.device d
+    where up.removedAt is null
+      and up.isConnected = true
+""")
+    List<BindingProjection> findAllActiveBindings();
+
+    // plantId로 "현재 연결된(활성)" userId 찾기
+    @Query("""
+        select up.user.id
+        from UserPlant up
+        where up.plantId = :plantId
+          and up.removedAt is null
+          and up.isConnected = true
+    """)
+    Optional<Long> findActiveUserIdByPlantId(@Param("plantId") Long plantId);
+
+>>>>>>> Stashed changes
 }
