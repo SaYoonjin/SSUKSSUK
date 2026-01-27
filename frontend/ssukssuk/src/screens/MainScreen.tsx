@@ -18,7 +18,7 @@ const BG_NIGHT = require("../assets/background2.png");
 const ALARM_ICON = require("../assets/alarm.png");
 const TOMATO_NORMAL = require("../assets/tomato_normal.png");
 
-const DAY_START_HOUR = 7;
+const DAY_START_HOUR = 8;
 const DAY_END_HOUR = 18;
 
 const SHEET_BG = "#D4E1C6";
@@ -119,7 +119,7 @@ export default function MainScreen({ navigation }: any) {
     const [useDayBg, setUseDayBg] = useState(() => isDayTime(new Date()));
     const [hasAlarm, setHasAlarm] = useState(false);
     const sheetRef = useRef<BottomSheet>(null);
-    const snapPoints = useMemo(() => ["8%", "42%"], []);
+    const snapPoints = useMemo(() => ["8%", "43%"], []);
 
     const backgroundSource = useMemo(() => (useDayBg ? BG_DAY : BG_NIGHT), [useDayBg]);
 
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     },
     headerLeft: { flexDirection: "row", alignItems: "flex-end", gap: 6 },
     plantName: { fontSize: 32, color: "#1A1A1A", fontFamily: FONT },
-    plantType: { fontSize: 13, color: "#1A1A1A", opacity: 0.6, marginBottom: 4, fontFamily: FONT },
+    plantType: { fontSize: 16, color: "#1A1A1A", opacity: 0.6, marginBottom: 4, fontFamily: FONT },
     dDayPill: { backgroundColor: "#000", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
     dDayText: { fontSize: 13, color: "#FFF", fontFamily: FONT },
 
