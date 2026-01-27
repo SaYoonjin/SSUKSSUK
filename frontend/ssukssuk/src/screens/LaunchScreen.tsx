@@ -33,7 +33,9 @@ export default function LaunchScreen({ navigation }: Props) {
                     onPress={() => navigation.replace("Login")}
                     style={styles.startBox}
                 >
-                    <Text style={styles.startText}>start!</Text>
+                    <Text style={styles.startText}>
+                        <Text style={styles.arrow}>&gt;</Text> start!
+                    </Text>
                 </Pressable>
             )}
         </View>
@@ -66,12 +68,18 @@ const styles = StyleSheet.create({
 
     startBox: {
         position: "absolute",
-        bottom:150, // ← 여기 값으로 높이 조절 가능
+        bottom: 170,
         alignSelf: "center",
     },
 
     startText: {
         fontSize: 30,
+        color: "#75A743",
+        fontFamily: "NeoDunggeunmoPro-Regular",
+    },
+
+    arrow: {
+        marginRight: 6,
         color: "#75A743",
         fontFamily: "NeoDunggeunmoPro-Regular",
     },
