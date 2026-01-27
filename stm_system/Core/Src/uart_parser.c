@@ -1,8 +1,12 @@
 #include "uart_parser.h"
 #include "protocol.h"
 #include "sensor.h"
+#include "gpio.h"   // GPIO 제어용
 #include <string.h>
 #include <stdio.h>
+
+#define RELAY_LED_PORT GPIOB
+#define RELAY_LED_PIN  GPIO_PIN_0
 
 static uint8_t rx_buf[64];
 static uint8_t idx = 0;
@@ -109,4 +113,17 @@ void handle_packet(uint8_t type, uint8_t subtype,
         }
     }
 
+    else if (type == TYPE_CMD && subtype == CMD_LED_ON) {
+        // Active LOW 릴레이 기준 (켜기), GPIO output level: high
+        HAL_GPIO_WritePin(RELAY_LED_PORT, RELAY_LED_PIN, GPIO_PIN_RESET);
+        // Reset -> low -> 릴레이 ON -> NO 닫힘
+    }
+
+    else if (type == TYPE_CMD && subtype == CMD_LED_OFF) {
+        // 끄기
+        HAL_GPIO_WritePin(RELAY_LED_PORT, RELAY_LED_PIN, GPIO_PIN_SET);
+    }
+
+
 }
+
