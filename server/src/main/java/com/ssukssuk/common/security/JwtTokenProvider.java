@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Component
 public class JwtTokenProvider {
@@ -105,5 +107,14 @@ public class JwtTokenProvider {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    public LocalDateTime getRefreshTokenExpiry() {
+        return LocalDateTime.now()
+                .plusSeconds(refreshTokenExpirationMs / 1000);
+    }
+
+    public long getAccessTokenExpiresInSeconds() {
+        return accessTokenExpirationMs / 1000;
     }
 }
