@@ -23,8 +23,6 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
-    /* ===================== 회원가입 ===================== */
-
     @Transactional
     public UserResponse signUp(SignUpRequest req) {
         if (userRepository.existsByEmail(req.email())) {
@@ -34,7 +32,7 @@ public class UserService {
         User user = User.builder()
                 .email(req.email())
                 .password(passwordEncoder.encode(req.password()))
-                .nickname(req.nickname())
+                .nickname(req.nickname().trim())
                 .mode(UserMode.AUTO)
                 .isAdmin(false)
                 .build();
@@ -48,8 +46,6 @@ public class UserService {
                 saved.isAdmin()
         );
     }
-
-    /* ===================== 로그인 ===================== */
 
     @Transactional
     public LoginResponse login(LoginRequest req) {
@@ -72,14 +68,13 @@ public class UserService {
 
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        // 🔹 refresh token DB 저장
-        RefreshToken token = RefreshToken.builder()
-                .userId(user.getId())
-                .token(refreshToken)
-                .expiresAt(jwtTokenProvider.getRefreshTokenExpiry())
-                .build();
-
-        refreshTokenRepository.save(token);
+        refreshTokenRepository.save(
+                RefreshToken.builder()
+                        .userId(user.getId())
+                        .token(refreshToken)
+                        .expiresAt(jwtTokenProvider.getRefreshTokenExpiry())
+                        .build()
+        );
 
         return new LoginResponse(
                 user.getId(),
@@ -90,20 +85,15 @@ public class UserService {
         );
     }
 
-    /* ===================== 토큰 재발급 ===================== */
-
     @Transactional
     public TokenRefreshResponse refresh(TokenRefreshRequest req) {
-
         String refreshToken = req.refreshToken();
 
-        // 1. JWT 검증
         if (!jwtTokenProvider.validate(refreshToken)
                 || !"REFRESH".equals(jwtTokenProvider.getTokenType(refreshToken))) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 2. DB 확인
         RefreshToken savedToken = refreshTokenRepository.findByToken(refreshToken)
                 .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
 
@@ -111,15 +101,16 @@ public class UserService {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 3. 기존 refresh 폐기
         savedToken.revoke();
 
-        // 4. 사용자 조회
         Long userId = jwtTokenProvider.getUserId(refreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 5. 새 토큰 발급
+        if (user.getRemovedAt() != null) {
+            throw new CustomException(ErrorCode.USER_DELETED);
+        }
+
         String newAccessToken = jwtTokenProvider.createAccessToken(
                 user.getId(),
                 user.getEmail(),
@@ -128,18 +119,70 @@ public class UserService {
 
         String newRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        RefreshToken newToken = RefreshToken.builder()
-                .userId(user.getId())
-                .token(newRefreshToken)
-                .expiresAt(jwtTokenProvider.getRefreshTokenExpiry())
-                .build();
-
-        refreshTokenRepository.save(newToken);
+        refreshTokenRepository.save(
+                RefreshToken.builder()
+                        .userId(user.getId())
+                        .token(newRefreshToken)
+                        .expiresAt(jwtTokenProvider.getRefreshTokenExpiry())
+                        .build()
+        );
 
         return new TokenRefreshResponse(
                 newAccessToken,
                 newRefreshToken,
                 jwtTokenProvider.getAccessTokenExpiresInSeconds()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public MeResponse getMe(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRemovedAt() != null) {
+            throw new CustomException(ErrorCode.USER_DELETED);
+        }
+
+        return new MeResponse(user.getId(), user.getNickname());
+    }
+
+    @Transactional
+    public void updateNickname(Long userId, NicknameUpdateRequest req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRemovedAt() != null) {
+            throw new CustomException(ErrorCode.USER_DELETED);
+        }
+
+        String newNickname = req.newNickname().trim();
+
+        if (newNickname.equals(user.getNickname())) return;
+
+        if (userRepository.existsByNickname(newNickname)) {
+            throw new CustomException(ErrorCode.NICKNAME_DUPLICATE);
+        }
+
+        user.changeNickname(newNickname);
+    }
+
+    @Transactional
+    public void updatePassword(Long userId, PasswordUpdateRequest req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRemovedAt() != null) {
+            throw new CustomException(ErrorCode.USER_DELETED);
+        }
+
+        if (!req.newPassword().equals(req.confirmPassword())) {
+            throw new CustomException(ErrorCode.PASSWORD_CONFIRM_MISMATCH);
+        }
+
+        if (!passwordEncoder.matches(req.currentPassword(), user.getPassword())) {
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
+        }
+
+        user.changePassword(passwordEncoder.encode(req.newPassword()));
     }
 }
