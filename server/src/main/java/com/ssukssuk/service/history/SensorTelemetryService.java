@@ -3,6 +3,7 @@ package com.ssukssuk.service.history;
 import com.ssukssuk.common.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.domain.history.ActionLog;
 import com.ssukssuk.domain.history.SensorEvent;
+import com.ssukssuk.domain.notification.Notification;
 import com.ssukssuk.repository.history.ActionLogRepository;
 import com.ssukssuk.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ public class SensorTelemetryService {
     @Transactional
     public void handleUplink(SensorUplinkMessage msg, LocalDateTime measuredAt) {
 
-        // 1. sensor_log 무조건 INSERT
+        // 1) sensor_log 무조건 INSERT
         Long sensorLogId = sensorLogService.saveFromMqttReturnId(
                 msg.getPlantId(),
                 measuredAt,
@@ -35,7 +36,7 @@ public class SensorTelemetryService {
                 msg.getNutrientConc()
         );
 
-        // 2. event_kind 분기
+        // 2) event_kind 분기
         if (msg.getEventKind() == null) return;
 
         switch (msg.getEventKind()) {
@@ -44,16 +45,26 @@ public class SensorTelemetryService {
             }
 
             case ANOMALY_DETECTED -> {
-                sensorEventService.openOrUpdate(
+                Optional<SensorEvent> createdOpt = sensorEventService.openOrUpdateAndReturnCreated(
                         msg.getPlantId(),
                         msg.getTriggerSensorType(),
                         sensorLogId,
                         measuredAt
                 );
+
+                // 처음 이상치(OPEN 생성)일 때만 알림 테이블 insert
+                createdOpt.ifPresent(createdEvent -> {
+                    Notification.NotiTitle title = mapTriggerToNotiTitle(msg.getTriggerSensorType());
+
+                    notificationService.notifySensorAnomaly(
+                            msg.getPlantId(),
+                            createdEvent.getEventId(),
+                            title
+                    );
+                });
             }
 
             case RECOVERY_DONE -> {
-                // resolve 된 이벤트를 받아옴
                 Optional<SensorEvent> resolvedOpt = sensorEventService.resolveIfOpenAndReturn(
                         msg.getPlantId(),
                         msg.getTriggerSensorType(),
@@ -74,24 +85,26 @@ public class SensorTelemetryService {
 
                 ActionLog actionLog = latestSuccessActionOpt.get();
 
-                // action_type에 따라 "조치 완료" 인앱 알림 생성
+                // 자동 조치 완료 알림
                 String actionType = actionLog.getActionType();
-                if ("WATER_ADD".equalsIgnoreCase(actionType)) {
-                    notificationService.create(
+                if ("WATER_ADD".equalsIgnoreCase(actionType) || "NUTRIENT_ADD".equalsIgnoreCase(actionType)) {
+                    notificationService.notifyActionDone(
                             msg.getPlantId(),
-                            eventId,
-                            "WATER_ACTION_DONE",
-                            "자동모드: 물 수위가 채워졌습니다."
-                    );
-                } else if ("NUTRIENT_ADD".equalsIgnoreCase(actionType)) {
-                    notificationService.create(
-                            msg.getPlantId(),
-                            eventId,
-                            "NUTRIENT_ACTION_DONE",
-                            "자동모드: 영양분이 보충되었습니다."
+                            eventId
                     );
                 }
             }
         }
+    }
+
+    private Notification.NotiTitle mapTriggerToNotiTitle(SensorUplinkMessage.TriggerSensorType triggerType) {
+        if (triggerType == null) throw new IllegalArgumentException("trigger_sensor_type is null");
+
+        return switch (triggerType) {
+            case WATER_LEVEL -> Notification.NotiTitle.WATER_LEVEL;
+            case TEMPERATURE -> Notification.NotiTitle.TEMPERATURE;
+            case NUTRIENT_CONC -> Notification.NotiTitle.NUTRIENT_CONC;
+            case HUMIDITY -> Notification.NotiTitle.HUMIDITY;
+        };
     }
 }

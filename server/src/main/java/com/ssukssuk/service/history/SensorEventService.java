@@ -18,7 +18,7 @@ public class SensorEventService {
 
     // ANOMALY_DETECTED
     @Transactional
-    public void openOrUpdate(
+    public Optional<SensorEvent> openOrUpdateAndReturnCreated(
             Long plantId,
             SensorUplinkMessage.TriggerSensorType triggerType,
             Long sensorLogId,
@@ -31,32 +31,16 @@ public class SensorEventService {
                 .orElse(null);
 
         if (openEvent == null) {
-            SensorEvent created = SensorEvent.open(
-                    plantId,
-                    sensorCode,
-                    sensorLogId,
-                    measuredAt
-            );
+            SensorEvent created = SensorEvent.open(plantId, sensorCode, sensorLogId, measuredAt);
             sensorEventRepository.save(created);
+            return Optional.of(created);
         } else {
             openEvent.updateLast(sensorLogId);
+            return Optional.empty();
         }
     }
 
     // RECOVERY_DONE
-    @Transactional
-    public void resolveIfOpen(
-            Long plantId,
-            SensorUplinkMessage.TriggerSensorType triggerType,
-            Long sensorLogId,
-            LocalDateTime measuredAt
-    ) {
-        resolveIfOpenAndReturn(plantId, triggerType, sensorLogId, measuredAt);
-    }
-
-    /**
-     * RECOVERY_DONE + resolved 이벤트 반환
-     */
     @Transactional
     public Optional<SensorEvent> resolveIfOpenAndReturn(
             Long plantId,
@@ -74,9 +58,7 @@ public class SensorEventService {
     }
 
     public Integer mapToSensorCode(SensorUplinkMessage.TriggerSensorType type) {
-        if (type == null) {
-            throw new IllegalArgumentException("trigger_sensor_type is null");
-        }
+        if (type == null) throw new IllegalArgumentException("trigger_sensor_type is null");
 
         return switch (type) {
             case TEMPERATURE -> 1;

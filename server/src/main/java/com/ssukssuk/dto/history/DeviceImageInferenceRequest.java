@@ -24,7 +24,7 @@ public class DeviceImageInferenceRequest {
 
     private Double height;
     private Double width;
-    private Boolean anomaly;
+    private Double anomaly;
     private Double confidence;
 
     @JsonProperty("image_kind1")

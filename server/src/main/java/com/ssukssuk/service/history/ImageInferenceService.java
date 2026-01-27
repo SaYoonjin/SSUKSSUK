@@ -9,6 +9,7 @@ import com.ssukssuk.dto.history.DeviceImageInferenceRequest;
 import com.ssukssuk.repository.history.ImageInferenceRepository;
 import com.ssukssuk.repository.history.PlantImageRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
+import com.ssukssuk.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +24,17 @@ public class ImageInferenceService {
     private final PlantImageRepository plantImageRepository;
     private final ImageInferenceRepository imageInferenceRepository;
     private final UserPlantRepository userPlantRepository;
+    private final NotificationService notificationService;
 
     private final MqttIdempotencyManager idempotencyManager;
     private final MqttPublishService mqttPublishService;
 
     private static final String REF_TYPE = "IMAGE_INFERENCE";
+
+    // 변색률(%) 기준
+    private static final double DISCOLOR_RATIO_THRESHOLD = 20.0;
+    // 신뢰도(%) 기준
+    private static final double CONFIDENCE_THRESHOLD = 70.0;
 
     @Transactional
     public void handle(DeviceImageInferenceRequest request) {
@@ -134,7 +141,7 @@ public class ImageInferenceService {
                     request.getPublicUrl1(),
                     request.getMeasuredAt1()
             );
-            saveInference(img1, request);
+            saveInferenceAndMaybeNotify(img1, request);
         }
 
         if (has2) {
@@ -144,7 +151,7 @@ public class ImageInferenceService {
                     request.getPublicUrl2(),
                     request.getMeasuredAt2()
             );
-            saveInference(img2, request);
+            saveInferenceAndMaybeNotify(img2, request);
         }
 
         mqttPublishService.sendAck(
@@ -173,17 +180,36 @@ public class ImageInferenceService {
         return plantImageRepository.save(image);
     }
 
-    private void saveInference(PlantImage image, DeviceImageInferenceRequest req) {
+    // inference 저장 후 조건 충족 시 notification 생성
+    private void saveInferenceAndMaybeNotify(PlantImage image, DeviceImageInferenceRequest req) {
         ImageInference inference = ImageInference.builder()
                 .plantImage(image)
                 .height(req.getHeight())
                 .width(req.getWidth())
-                .anomaly(req.getAnomaly())
-                .confidence(req.getConfidence())
+                .anomaly(req.getAnomaly())          // 변색률(%)
+                .confidence(req.getConfidence())    // 신뢰도(%)
                 .inferenceAt(LocalDateTime.now())
                 .build();
 
         imageInferenceRepository.save(inference);
+
+        // ID 확보
+        Long inferenceId = inference.getInferenceId();
+
+        // 변색 이상치 조건: anomaly >= 20% AND confidence >= 70%
+        if (isDiscolorAnomaly(req.getAnomaly(), req.getConfidence())) {
+
+            notificationService.notifyImageDiscoloration(
+                    req.getPlantId(),
+                    inferenceId
+            );
+        }
+    }
+
+    private boolean isDiscolorAnomaly(Double anomalyPercent, Double confidencePercent) {
+        if (anomalyPercent == null || confidencePercent == null) return false;
+        return anomalyPercent >= DISCOLOR_RATIO_THRESHOLD
+                && confidencePercent >= CONFIDENCE_THRESHOLD;
     }
 
     private String normalizeCameraPosition(String value) {

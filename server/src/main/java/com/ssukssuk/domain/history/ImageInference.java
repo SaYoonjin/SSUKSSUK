@@ -29,7 +29,7 @@ public class ImageInference {
     private Double width;
 
     @Column(nullable = false)
-    private Boolean anomaly;
+    private Double anomaly;
 
     @Column(nullable = false)
     private Double confidence;

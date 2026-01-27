@@ -30,10 +30,9 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
     @Query("""
         select (count(up) > 0)
         from UserPlant up
-        join up.device d
         where up.plantId = :plantId
-          and d.serial = :serial
           and up.removedAt is null
+          and up.device.serial = :serial
           and up.isConnected = true
     """)
     boolean existsActiveBinding(
@@ -52,5 +51,15 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
       and up.isConnected = true
 """)
     List<BindingProjection> findAllActiveBindings();
+
+    // plantId로 "현재 연결된(활성)" userId 찾기
+    @Query("""
+        select up.user.id
+        from UserPlant up
+        where up.plantId = :plantId
+          and up.removedAt is null
+          and up.isConnected = true
+    """)
+    Optional<Long> findActiveUserIdByPlantId(@Param("plantId") Long plantId);
 
 }
