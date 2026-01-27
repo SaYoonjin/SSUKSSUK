@@ -32,7 +32,6 @@ public class ImageInferenceService {
     @Transactional
     public void handle(DeviceImageInferenceRequest request) {
 
-        // ===== 0) 기본 검증 =====
         if (request == null
                 || isBlank(request.getMsgId())
                 || isBlank(request.getSerialNum())
@@ -46,7 +45,6 @@ public class ImageInferenceService {
             return;
         }
 
-        // ===== 1) 멱등 처리 =====
         if (!idempotencyManager.firstSeen(request.getMsgId())) {
             mqttPublishService.sendAck(
                     AckMessage.droppedDuplicate(
@@ -60,7 +58,6 @@ public class ImageInferenceService {
             return;
         }
 
-        // ===== 2) 바인딩 검증 (plantId 필수) =====
         if (request.getPlantId() == null) {
             mqttPublishService.sendAck(
                     AckMessage.error(
@@ -96,7 +93,6 @@ public class ImageInferenceService {
             return;
         }
 
-        // ===== 3) payload 검증 (이미지 1개라도 있어야 저장) =====
         boolean has1 = hasImage(request.getImageKind1(), request.getPublicUrl1(), request.getMeasuredAt1());
         boolean has2 = hasImage(request.getImageKind2(), request.getPublicUrl2(), request.getMeasuredAt2());
 
@@ -115,7 +111,6 @@ public class ImageInferenceService {
             return;
         }
 
-        // inference 값 필수(스펙 기준)
         if (request.getHeight() == null || request.getWidth() == null
                 || request.getAnomaly() == null || request.getConfidence() == null) {
             mqttPublishService.sendAck(
@@ -132,7 +127,6 @@ public class ImageInferenceService {
             return;
         }
 
-        // ===== 4) 저장 (있는 것만) =====
         if (has1) {
             PlantImage img1 = saveImage(
                     request.getPlantId(),
@@ -153,7 +147,6 @@ public class ImageInferenceService {
             saveInference(img2, request);
         }
 
-        // ===== 5) OK ACK =====
         mqttPublishService.sendAck(
                 AckMessage.ok(
                         request.getSerialNum(),

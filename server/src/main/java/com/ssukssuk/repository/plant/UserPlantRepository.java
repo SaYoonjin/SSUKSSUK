@@ -30,13 +30,27 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
     @Query("""
         select (count(up) > 0)
         from UserPlant up
+        join up.device d
         where up.plantId = :plantId
+          and d.serial = :serial
           and up.removedAt is null
-          and up.device.serial = :serial
           and up.isConnected = true
     """)
     boolean existsActiveBinding(
             @Param("plantId") Long plantId,
             @Param("serial") String serial
     );
+
+    @Query("""
+    select new com.ssukssuk.repository.plant.BindingProjection(
+        d.serial,
+        up.plantId
+    )
+    from UserPlant up
+    join up.device d
+    where up.removedAt is null
+      and up.isConnected = true
+""")
+    List<BindingProjection> findAllActiveBindings();
+
 }
