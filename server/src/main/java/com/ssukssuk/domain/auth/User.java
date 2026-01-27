@@ -70,4 +70,10 @@ public class User {
     public void changePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
+
+    public void withdraw() {
+        this.removedAt = LocalDateTime.now();
+    }
+
+
 }

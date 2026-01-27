@@ -2,9 +2,7 @@ package com.ssukssuk.controller.test;
 
 import com.ssukssuk.common.mqtt.dto.AckMessage;
 import com.ssukssuk.common.response.ApiResponse;
-import com.ssukssuk.dto.history.DeviceImageInferenceRequest;
 import com.ssukssuk.service.device.DeviceControlService;
-import com.ssukssuk.service.history.ImageInferenceService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,18 +13,16 @@ import org.springframework.web.bind.annotation.*;
 public class TestController {
 
     private final DeviceControlService deviceControlService;
-    private final ImageInferenceService imageInferenceService;
 
     @PostMapping("/mqtt/claim")
-    public ApiResponse<AckMessage> publishClaim(@RequestBody ClaimReq req) {
-        return ApiResponse.ok(
-                deviceControlService.publishClaimUpdate(
-                        req.getSerial(),
-                        req.getUserId(),
-                        req.getClaimState(),
-                        req.getMode()
-                )
+    public ApiResponse<String> publishClaim(@RequestBody ClaimReq req) {
+        String msgId = deviceControlService.publishClaimUpdate(
+                req.getSerial(),
+                req.getUserId(),
+                req.getClaimState(),
+                req.getMode()
         );
+        return ApiResponse.ok("published msgId=" + msgId);
     }
 
     @PostMapping("/mqtt/binding/bound")
@@ -50,29 +46,28 @@ public class TestController {
     }
 
     @PostMapping("/mqtt/mode")
-    public ApiResponse<AckMessage> publishMode(@RequestBody ModeReq req) {
-        return ApiResponse.ok(
-                deviceControlService.publishModeUpdate(
-                        req.getSerial(),
-                        req.getPlantId(),
-                        req.getMode()
-                )
+    public ApiResponse<String> publishMode(@RequestBody ModeReq req) {
+        String msgId = deviceControlService.publishModeUpdate(
+                req.getSerial(),
+                req.getPlantId(),
+                req.getMode()
         );
+        return ApiResponse.ok("published msgId=" + msgId);
     }
 
     @Data
     public static class ClaimReq {
         private String serial;
         private Long userId;
-        private String claimState;
-        private String mode;
+        private String claimState; // CLAIMED / UNCLAIMED
+        private String mode;       // AUTO / MANUAL
     }
 
     @Data
     public static class BindingBoundReq {
         private String serial;
         private Long plantId;
-        private Integer species;
+        private Integer species; // speciesId
     }
 
     @Data
@@ -84,6 +79,6 @@ public class TestController {
     public static class ModeReq {
         private String serial;
         private Long plantId;
-        private String mode;
+        private String mode; // AUTO / MANUAL
     }
 }

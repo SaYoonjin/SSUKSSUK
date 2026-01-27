@@ -5,6 +5,7 @@ import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.common.response.ApiResponse;
 import com.ssukssuk.common.security.JwtAuthenticationFilter;
 import com.ssukssuk.common.security.JwtTokenProvider;
+import com.ssukssuk.repository.auth.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -22,12 +23,13 @@ import java.nio.charset.StandardCharsets;
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtTokenProvider);
+        JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtTokenProvider, userRepository);
 
         return http
                 .csrf(csrf -> csrf.disable())
@@ -43,14 +45,14 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/auth/login",
-                                "/auth/signup",
-                                "/auth/refresh",
+
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/test/**"
+                                "/auth/login",
+                                "/auth/signup",
+                                "/auth/refresh"
                         ).permitAll()
-
+                        .requestMatchers("/auth/logout").authenticated()
                         .anyRequest().authenticated()
                 )
 

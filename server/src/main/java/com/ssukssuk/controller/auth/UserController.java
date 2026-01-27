@@ -26,15 +26,21 @@ public class UserController {
     }
 
     @PostMapping("/refresh")
-    public ApiResponse<TokenRefreshResponse> refresh(@Valid @RequestBody TokenRefreshRequest req) {
+    public ApiResponse<TokenRefreshResponse> refresh(
+            @Valid @RequestBody TokenRefreshRequest req
+    ) {
         return ApiResponse.ok(userService.refresh(req));
     }
 
+    // ✅ 내 정보 조회
     @GetMapping("/me")
-    public ApiResponse<MeResponse> me(@AuthenticationPrincipal Long userId) {
+    public ApiResponse<MeResponse> me(
+            @AuthenticationPrincipal Long userId
+    ) {
         return ApiResponse.ok(userService.getMe(userId));
     }
 
+    // ✅ 닉네임 변경
     @PatchMapping("/nickname")
     public ApiResponse<Void> updateNickname(
             @AuthenticationPrincipal Long userId,
@@ -44,12 +50,31 @@ public class UserController {
         return ApiResponse.ok();
     }
 
+    // ✅ 비밀번호 변경
     @PatchMapping("/password")
     public ApiResponse<Void> updatePassword(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody PasswordUpdateRequest req
     ) {
         userService.updatePassword(userId, req);
+        return ApiResponse.ok();
+    }
+
+    // ✅ 로그아웃
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(
+            @AuthenticationPrincipal Long userId
+    ) {
+        userService.logout(userId);
+        return ApiResponse.ok();
+    }
+
+    // ✅ 회원 탈퇴
+    @DeleteMapping("/withdraw")
+    public ApiResponse<Void> withdraw(
+            @AuthenticationPrincipal Long userId
+    ) {
+        userService.withdraw(userId);
         return ApiResponse.ok();
     }
 }

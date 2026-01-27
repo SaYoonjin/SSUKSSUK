@@ -1,7 +1,5 @@
 package com.ssukssuk.service.scheduler;
 
-import com.ssukssuk.common.mqtt.Topic;
-import com.ssukssuk.common.mqtt.service.MqttPublishService;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -14,7 +12,6 @@ import java.util.UUID;
 public class ImageCaptureScheduler {
 
     private final UserPlantRepository userPlantRepository;
-    private final MqttPublishService mqttPublishService;
 
     @Scheduled(cron = "0 0 9,18 * * *")
     public void requestImageCapture() {
@@ -25,12 +22,6 @@ public class ImageCaptureScheduler {
                     String uploadUrl = generateUploadUrl(binding.getPlantId());
                     String msgId = UUID.randomUUID().toString();
 
-                    mqttPublishService.sendUploadUrlCommand(
-                            binding.getSerial(),
-                            binding.getPlantId(),
-                            msgId,
-                            uploadUrl
-                    );
                 });
     }
 

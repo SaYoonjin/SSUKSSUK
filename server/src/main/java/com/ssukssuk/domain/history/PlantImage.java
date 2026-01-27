@@ -26,12 +26,12 @@ public class PlantImage {
     @Column(name = "plant_id", nullable = false)
     private Long plantId;
 
-    @Column(name = "camera_position", nullable = false, length = 10)
-    private String cameraPosition;
-
     @Column(name = "captured_at", nullable = false)
     private LocalDateTime capturedAt;
 
-    @Column(name = "image_url", nullable = false, length = 1024)
-    private String imageUrl;
+    @Column(name = "image_url_top", nullable = false, length = 1024)
+    private String imageUrlTop;
+
+    @Column(name = "image_url_side", nullable = false, length = 1024)
+    private String imageUrlSide;
 }

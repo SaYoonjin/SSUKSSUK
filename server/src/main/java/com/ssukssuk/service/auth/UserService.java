@@ -23,6 +23,9 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
+    /* =========================
+        회원가입
+     ========================= */
     @Transactional
     public UserResponse signUp(SignUpRequest req) {
         if (userRepository.existsByEmail(req.email())) {
@@ -47,6 +50,9 @@ public class UserService {
         );
     }
 
+    /* =========================
+        로그인
+     ========================= */
     @Transactional
     public LoginResponse login(LoginRequest req) {
         User user = userRepository.findByEmail(req.email())
@@ -85,15 +91,20 @@ public class UserService {
         );
     }
 
+    /* =========================
+        토큰 재발급
+     ========================= */
     @Transactional
     public TokenRefreshResponse refresh(TokenRefreshRequest req) {
         String refreshToken = req.refreshToken();
 
+        // JWT 검증
         if (!jwtTokenProvider.validate(refreshToken)
                 || !"REFRESH".equals(jwtTokenProvider.getTokenType(refreshToken))) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
+        // DB 확인
         RefreshToken savedToken = refreshTokenRepository.findByToken(refreshToken)
                 .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
 
@@ -101,6 +112,7 @@ public class UserService {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
+        // 기존 토큰 폐기
         savedToken.revoke();
 
         Long userId = jwtTokenProvider.getUserId(refreshToken);
@@ -111,6 +123,7 @@ public class UserService {
             throw new CustomException(ErrorCode.USER_DELETED);
         }
 
+        // 새 토큰 발급
         String newAccessToken = jwtTokenProvider.createAccessToken(
                 user.getId(),
                 user.getEmail(),
@@ -134,6 +147,9 @@ public class UserService {
         );
     }
 
+    /* =========================
+        내 정보 조회
+     ========================= */
     @Transactional(readOnly = true)
     public MeResponse getMe(Long userId) {
         User user = userRepository.findById(userId)
@@ -146,6 +162,9 @@ public class UserService {
         return new MeResponse(user.getId(), user.getNickname());
     }
 
+    /* =========================
+        닉네임 변경
+     ========================= */
     @Transactional
     public void updateNickname(Long userId, NicknameUpdateRequest req) {
         User user = userRepository.findById(userId)
@@ -166,6 +185,9 @@ public class UserService {
         user.changeNickname(newNickname);
     }
 
+    /* =========================
+        비밀번호 변경
+     ========================= */
     @Transactional
     public void updatePassword(Long userId, PasswordUpdateRequest req) {
         User user = userRepository.findById(userId)
@@ -184,5 +206,29 @@ public class UserService {
         }
 
         user.changePassword(passwordEncoder.encode(req.newPassword()));
+    }
+
+    /* =========================
+        로그아웃
+     ========================= */
+    @Transactional
+    public void logout(Long userId) {
+        refreshTokenRepository.deleteByUserId(userId);
+    }
+
+    /* =========================
+        회원 탈퇴
+     ========================= */
+    @Transactional
+    public void withdraw(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRemovedAt() != null) {
+            throw new CustomException(ErrorCode.USER_DELETED);
+        }
+
+        user.withdraw();
+        refreshTokenRepository.revokeAllByUserId(userId);
     }
 }

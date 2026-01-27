@@ -20,15 +20,19 @@ public class DeviceImageInferenceRequest {
     @JsonProperty("plant_id")
     private Long plantId;
 
-    private String type;
+    private String type; // IMAGE_INFERENCE
 
+    private String symptomEnum;
+
+    // inference 결과
     private Double height;
     private Double width;
     private Double anomaly;
     private Double confidence;
 
+    // TOP 이미지
     @JsonProperty("image_kind1")
-    private String imageKind1;
+    private String imageKind1;   // TOP
 
     @JsonProperty("public_url1")
     private String publicUrl1;
@@ -36,8 +40,9 @@ public class DeviceImageInferenceRequest {
     @JsonProperty("measured_at1")
     private LocalDateTime measuredAt1;
 
+    // SIDE 이미지
     @JsonProperty("image_kind2")
-    private String imageKind2;
+    private String imageKind2;   // SIDE
 
     @JsonProperty("public_url2")
     private String publicUrl2;
@@ -45,3 +50,4 @@ public class DeviceImageInferenceRequest {
     @JsonProperty("measured_at2")
     private LocalDateTime measuredAt2;
 }
+

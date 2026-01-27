@@ -18,18 +18,23 @@ public class ImageInference {
     @Column(name = "inference_id")
     private Long inferenceId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "image_id", nullable = false)
-    private PlantImage plantImage;
+    @Column(name = "plant_id")
+    private Long plantId;
 
-    @Column(nullable = false)
+    @Column(name = "image_id", nullable = false)
+    private Long imageId;
+
+    @Column
     private Double height;
 
-    @Column(nullable = false)
+    @Column
     private Double width;
 
-    @Column(nullable = false)
-    private Double anomaly;
+    @Column
+    private Integer anomaly;
+
+    @Column(name = "symptom_enum", length = 50)
+    private String symptomEnum;
 
     @Column(nullable = false)
     private Double confidence;

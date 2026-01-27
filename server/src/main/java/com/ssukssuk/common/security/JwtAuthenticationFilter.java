@@ -1,5 +1,8 @@
 package com.ssukssuk.common.security;
 
+import com.ssukssuk.common.exception.CustomException;
+import com.ssukssuk.common.exception.ErrorCode;
+import com.ssukssuk.repository.auth.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,10 +20,16 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
+    public JwtAuthenticationFilter(
+            JwtTokenProvider tokenProvider,
+            UserRepository userRepository
+    ) {
         this.tokenProvider = tokenProvider;
+        this.userRepository = userRepository;
     }
+
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -45,6 +54,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null && tokenProvider.validate(token)) {
             Long userId = tokenProvider.getUserId(token);
+
+            if (userRepository.isWithdrawn(userId)) {
+                throw new CustomException(ErrorCode.USER_DELETED);
+            }
+
             boolean isAdmin = tokenProvider.isAdmin(token);
 
             List<SimpleGrantedAuthority> authorities =

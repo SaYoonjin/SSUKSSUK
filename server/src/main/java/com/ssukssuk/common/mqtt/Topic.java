@@ -9,10 +9,6 @@ public final class Topic {
             "devices/+/telemetry/sensors";
     public static final String TELEMETRY_ACTION_RESULT =
             "devices/+/telemetry/action-result";
-    public static final String TELEMETRY_UPLOAD_URL_REQUEST =
-            "devices/+/telemetry/upload-url-request";
-    public static final String TELEMETRY_IMAGE_UPLOADED =
-            "devices/+/telemetry/image-uploaded";
     public static final String TELEMETRY_IMAGE_INFERENCE =
             "devices/+/telemetry/image-inference";
 

@@ -1,32 +1,29 @@
 package com.ssukssuk.service.device;
 
-import com.ssukssuk.common.mqtt.dto.AckMessage;
 import com.ssukssuk.domain.plant.Species;
 import com.ssukssuk.infra.mqtt.MqttPublisher;
-import com.ssukssuk.infra.mqtt.ack.PendingAckStore;
 import com.ssukssuk.repository.plant.SpeciesRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class DeviceControlService {
 
     private final MqttPublisher mqttPublisher;
-    private final PendingAckStore pendingAckStore;
     private final SpeciesRepository speciesRepository;
 
-    private static final Duration DEFAULT_ACK_TIMEOUT = Duration.ofSeconds(3);
-
-    private Map<String, Object> base(String msgId, String serial, Long plantId, String type) {
+    private Map<String, Object> base(
+            String msgId,
+            String serial,
+            Long plantId,
+            String type
+    ) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("msg_id", msgId);
         m.put("sent_at", OffsetDateTime.now().toString());
@@ -36,32 +33,8 @@ public class DeviceControlService {
         return m;
     }
 
-    /* ===== ACK 필요한 경우 ===== */
-    private AckMessage publishAndWait(
-            String serial,
-            String channel,
-            String msgId,
-            Map<String, Object> payload
-    ) {
-        CompletableFuture<AckMessage> future =
-                pendingAckStore.register(serial, msgId, DEFAULT_ACK_TIMEOUT);
-
-        mqttPublisher.publish(
-                MqttPublisher.controlTopic(serial, channel),
-                payload
-        );
-
-        try {
-            return future.get(DEFAULT_ACK_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            throw new RuntimeException(
-                    "ACK wait failed (serial=" + serial + ", msgId=" + msgId + ")", e
-            );
-        }
-    }
-
-    /* ===== CLAIM_UPDATE ===== */
-    public AckMessage publishClaimUpdate(
+    /* ===== CLAIM_UPDATE (publish-only) ===== */
+    public String publishClaimUpdate(
             String serial,
             Long userId,
             String claimState,
@@ -74,11 +47,16 @@ public class DeviceControlService {
         payload.put("user_id", userId);
         payload.put("mode", mode);
 
-        return publishAndWait(serial, "claim", msgId, payload);
+        mqttPublisher.publish(
+                MqttPublisher.controlTopic(serial, "claim"),
+                payload
+        );
+
+        return msgId;
     }
 
-    /* ===== MODE_UPDATE ===== */
-    public AckMessage publishModeUpdate(
+    /* ===== MODE_UPDATE (publish-only) ===== */
+    public String publishModeUpdate(
             String serial,
             Long plantId,
             String mode
@@ -89,17 +67,24 @@ public class DeviceControlService {
         payload.put("mode", mode);
         payload.put("effective_from", OffsetDateTime.now().toString());
 
-        return publishAndWait(serial, "mode", msgId, payload);
+        mqttPublisher.publish(
+                MqttPublisher.controlTopic(serial, "mode"),
+                payload
+        );
+
+        return msgId;
     }
 
-    /* ===== BINDING_UPDATE (publish-only) ===== */
+    /* ===== BINDING_UPDATE : BOUND ===== */
     public String publishBindingUpdateBound(
             String serial,
             Long plantId,
             Long speciesId
     ) {
         Species species = speciesRepository.findById(speciesId)
-                .orElseThrow(() -> new RuntimeException("Species not found: " + speciesId));
+                .orElseThrow(() ->
+                        new RuntimeException("Species not found: " + speciesId)
+                );
 
         String msgId = UUID.randomUUID().toString();
 
@@ -113,10 +98,22 @@ public class DeviceControlService {
         ));
 
         payload.put("ideal_ranges", Map.of(
-                "temperature", Map.of("min", species.getTempMin(), "max", species.getTempMax()),
-                "humidity", Map.of("min", species.getHumMin(), "max", species.getHumMax()),
-                "water_level", Map.of("min", species.getWaterMin(), "max", species.getWaterMax()),
-                "nutrient_conc", Map.of("min", species.getEcMin(), "max", species.getEcMax())
+                "temperature", Map.of(
+                        "min", species.getTempMin(),
+                        "max", species.getTempMax()
+                ),
+                "humidity", Map.of(
+                        "min", species.getHumMin(),
+                        "max", species.getHumMax()
+                ),
+                "water_level", Map.of(
+                        "min", species.getWaterMin(),
+                        "max", species.getWaterMax()
+                ),
+                "nutrient_conc", Map.of(
+                        "min", species.getEcMin(),
+                        "max", species.getEcMax()
+                )
         ));
 
         mqttPublisher.publish(
@@ -127,6 +124,7 @@ public class DeviceControlService {
         return msgId;
     }
 
+    /* ===== BINDING_UPDATE : UNBOUND ===== */
     public String publishBindingUpdateUnbound(String serial) {
         String msgId = UUID.randomUUID().toString();
 
