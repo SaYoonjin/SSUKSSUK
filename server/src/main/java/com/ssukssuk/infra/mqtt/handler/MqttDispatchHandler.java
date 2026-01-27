@@ -47,7 +47,7 @@ public class MqttDispatchHandler {
     private String resolveHandlerKeyByTopic(String topic) {
         if (topic == null) return null;
 
-        if (topic.contains("/telemetry/sensors")) return "sensor";
+        if (topic.contains("/telemetry/sensors")) return "sensors";
 
         if (topic.contains("/telemetry/action-result")) return "actionResult";
 

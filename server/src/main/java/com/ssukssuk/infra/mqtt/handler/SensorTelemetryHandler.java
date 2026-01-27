@@ -18,7 +18,7 @@ import java.time.ZoneId;
 import java.util.UUID;
 
 @Slf4j
-@Component("sensor")
+@Component("sensors")
 @RequiredArgsConstructor
 public class SensorTelemetryHandler implements MqttMessageHandler {
 
