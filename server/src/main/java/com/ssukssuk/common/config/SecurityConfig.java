@@ -50,7 +50,9 @@ public class SecurityConfig {
                                 "/auth/login",
                                 "/auth/signup",
                                 "/auth/refresh",
-                                "/api/test/**"
+                                "/api/test/**",
+                                "/test/**",
+                                "/actuator/**"
                         ).permitAll()
                         .requestMatchers("/auth/logout").authenticated()
                         .anyRequest().authenticated()

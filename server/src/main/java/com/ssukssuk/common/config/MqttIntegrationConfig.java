@@ -29,8 +29,8 @@ public class MqttIntegrationConfig {
     @Value("${mqtt.password:}")
     private String password;
 
-    @Value("${mqtt.inbound-topics:devices/+/telemetry/#,devices/+/control/ack}")
-    private String inboundTopics;
+    @Value("${mqtt.topic.telemetry}")
+    private String telemetryTopic;
 
     @Bean
     public MqttPahoClientFactory mqttClientFactory() {
@@ -53,22 +53,16 @@ public class MqttIntegrationConfig {
     }
 
     @Bean
-    public MessageChannel mqttInboundChannel() {
-        return new DirectChannel();
-    }
+    public MessageChannel mqttInboundChannel() {return new DirectChannel();}
 
     @Bean
-    public MessageChannel mqttOutboundChannel() {
-        return new DirectChannel();
-    }
-
+    public MessageChannel mqttOutboundChannel() {return new DirectChannel();}
 
     @Bean
     public MqttPahoMessageDrivenChannelAdapter mqttInbound(MqttPahoClientFactory mqttClientFactory) {
-        String[] topics = inboundTopics.split(",");
 
         MqttPahoMessageDrivenChannelAdapter adapter =
-                new MqttPahoMessageDrivenChannelAdapter(clientId + "-in", mqttClientFactory, topics);
+                new MqttPahoMessageDrivenChannelAdapter(clientId + "-in", mqttClientFactory, telemetryTopic);
 
         adapter.setConverter(new DefaultPahoMessageConverter());
         adapter.setQos(1);
@@ -84,9 +78,7 @@ public class MqttIntegrationConfig {
 
         handler.setAsync(true);
         handler.setDefaultQos(1);
-        // handler.setDefaultTopic("devices/broadcast");
         return handler;
     }
-
 
 }
