@@ -1,6 +1,6 @@
 package com.ssukssuk.service.history;
 
-import com.ssukssuk.common.mqtt.dto.SensorUplinkMessage;
+import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.domain.history.ActionLog;
 import com.ssukssuk.domain.history.SensorEvent;
 import com.ssukssuk.domain.notification.Notification;

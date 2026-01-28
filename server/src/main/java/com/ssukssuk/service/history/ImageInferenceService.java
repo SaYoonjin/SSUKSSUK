@@ -1,9 +1,9 @@
 package com.ssukssuk.service.history;
 
-import com.ssukssuk.common.mqtt.idempotency.MqttIdempotencyManager;
 import com.ssukssuk.domain.history.ImageInference;
 import com.ssukssuk.domain.history.PlantImage;
 import com.ssukssuk.dto.history.DeviceImageInferenceRequest;
+import com.ssukssuk.infra.idempotency.IdempotencyService;
 import com.ssukssuk.repository.history.ImageInferenceRepository;
 import com.ssukssuk.repository.history.PlantImageRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class ImageInferenceService {
@@ -19,7 +20,7 @@ public class ImageInferenceService {
     private final PlantImageRepository plantImageRepository;
     private final ImageInferenceRepository imageInferenceRepository;
     private final UserPlantRepository userPlantRepository;
-    private final MqttIdempotencyManager idempotencyManager;
+    private final IdempotencyService idempotencyService;
 
     @Transactional
     public void handle(DeviceImageInferenceRequest request) {
@@ -33,7 +34,8 @@ public class ImageInferenceService {
         }
 
         // 2. 멱등 처리
-        if (!idempotencyManager.firstSeen(request.getMsgId())) {
+        String idempotencyKey = request.getSerialNum() + ":" + request.getMsgId();
+        if (!idempotencyService.markIfFirst(idempotencyKey)) {
             return;
         }
 

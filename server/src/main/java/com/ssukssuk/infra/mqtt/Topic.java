@@ -1,4 +1,4 @@
-package com.ssukssuk.common.mqtt;
+package com.ssukssuk.infra.mqtt;
 
 public final class Topic {
 

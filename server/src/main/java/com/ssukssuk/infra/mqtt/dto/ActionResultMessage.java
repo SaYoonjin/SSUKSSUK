@@ -1,4 +1,4 @@
-package com.ssukssuk.common.mqtt.dto;
+package com.ssukssuk.infra.mqtt.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;

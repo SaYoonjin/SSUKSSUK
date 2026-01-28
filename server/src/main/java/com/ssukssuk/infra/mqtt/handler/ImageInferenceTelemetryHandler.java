@@ -1,7 +1,7 @@
 package com.ssukssuk.infra.mqtt.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssukssuk.common.mqtt.dto.MqttEnvelope;
+import com.ssukssuk.infra.mqtt.dto.MqttEnvelope;
 import com.ssukssuk.dto.history.DeviceImageInferenceRequest;
 import com.ssukssuk.service.history.ImageInferenceService;
 import lombok.RequiredArgsConstructor;

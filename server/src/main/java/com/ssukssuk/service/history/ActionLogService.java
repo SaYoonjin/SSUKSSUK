@@ -1,6 +1,6 @@
 package com.ssukssuk.service.history;
 
-import com.ssukssuk.common.mqtt.dto.ActionResultMessage;
+import com.ssukssuk.infra.mqtt.dto.ActionResultMessage;
 import com.ssukssuk.domain.history.ActionLog;
 import com.ssukssuk.repository.history.ActionLogRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,8 +1,8 @@
 package com.ssukssuk.infra.mqtt.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssukssuk.common.mqtt.dto.AckMessage;
-import com.ssukssuk.common.mqtt.dto.MqttEnvelope;
+import com.ssukssuk.infra.mqtt.dto.AckMessage;
+import com.ssukssuk.infra.mqtt.dto.MqttEnvelope;
 import com.ssukssuk.infra.mqtt.ack.PendingAckStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

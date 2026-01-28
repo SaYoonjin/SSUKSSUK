@@ -1,6 +1,6 @@
 package com.ssukssuk.service.history;
 
-import com.ssukssuk.common.mqtt.dto.SensorUplinkMessage;
+import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.domain.history.SensorEvent;
 import com.ssukssuk.repository.history.SensorEventRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,9 +1,9 @@
 package com.ssukssuk.infra.mqtt.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssukssuk.common.mqtt.dto.AckMessage;
-import com.ssukssuk.common.mqtt.dto.MqttEnvelope;
-import com.ssukssuk.common.mqtt.dto.SensorUplinkMessage;
+import com.ssukssuk.infra.mqtt.dto.AckMessage;
+import com.ssukssuk.infra.mqtt.dto.MqttEnvelope;
+import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.infra.idempotency.IdempotencyService;
 import com.ssukssuk.infra.mqtt.MqttPublisher;
 import com.ssukssuk.service.device.DeviceBindingValidator;

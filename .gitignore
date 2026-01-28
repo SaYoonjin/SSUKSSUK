@@ -49,3 +49,4 @@ JENKINS-TROUBLESHOOTING.md
 INFRASTRUCTURE.md
 S3_impl.md
 server/SERVER_STRUCTURE.md
+server/docs/*

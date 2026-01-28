@@ -1,6 +1,6 @@
 package com.ssukssuk.controller.test;
 
-import com.ssukssuk.common.mqtt.dto.AckMessage;
+import com.ssukssuk.infra.mqtt.dto.AckMessage;
 import com.ssukssuk.common.response.ApiResponse;
 import com.ssukssuk.service.device.DeviceControlService;
 import lombok.Data;
