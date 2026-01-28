@@ -26,23 +26,38 @@ pipeline {
         timestamps()
     }
 
+    parameters {
+        string(name: 'REF', defaultValue: 'refs/heads/master', description: 'Git ref (webhook 또는 수동 입력)')
+        string(name: 'BEFORE_SHA', defaultValue: '', description: 'Commit SHA before push (optional)')
+        string(name: 'AFTER_SHA', defaultValue: '', description: 'Commit SHA after push (optional)')
+        booleanParam(name: 'FORCE_DEPLOY', defaultValue: false, description: '변경사항 없어도 강제 배포')
+    }
+
     stages {
         stage('Show Webhook Variables') {
             steps {
-                echo "REF        = ${env.REF}"
-                echo "BEFORE_SHA = ${env.BEFORE_SHA}"
-                echo "AFTER_SHA  = ${env.AFTER_SHA}"
+                script {
+                    // webhook에서 오는 환경변수 또는 파라미터 사용
+                    env.EFFECTIVE_REF = env.REF?.trim() ?: params.REF
+                    env.EFFECTIVE_BEFORE_SHA = env.BEFORE_SHA?.trim() ?: params.BEFORE_SHA
+                    env.EFFECTIVE_AFTER_SHA = env.AFTER_SHA?.trim() ?: params.AFTER_SHA
+
+                    echo "REF        = ${env.EFFECTIVE_REF}"
+                    echo "BEFORE_SHA = ${env.EFFECTIVE_BEFORE_SHA}"
+                    echo "AFTER_SHA  = ${env.EFFECTIVE_AFTER_SHA}"
+                    echo "FORCE_DEPLOY = ${params.FORCE_DEPLOY}"
+                }
             }
         }
 
         stage('Guard (master push only)') {
             steps {
                 script {
-                    if (!env.REF?.trim()) {
-                        error('REF is empty. Generic Webhook Trigger에서 $.ref 변수를 추출했는지 확인')
+                    if (!env.EFFECTIVE_REF?.trim()) {
+                        error('REF is empty. Generic Webhook Trigger에서 $.ref 변수를 추출했는지 확인하거나, 파라미터로 입력하세요.')
                     }
-                    if (env.REF != 'refs/heads/master') {
-                        error("This CD job runs only on master push. Current REF=${env.REF}")
+                    if (env.EFFECTIVE_REF != 'refs/heads/master') {
+                        error("This CD job runs only on master push. Current REF=${env.EFFECTIVE_REF}")
                     }
                 }
             }
@@ -77,13 +92,12 @@ pipeline {
             }
         }
 
-        stage('Detect server changes (optional)') {
+        stage('Detect server changes') {
             steps {
                 script {
-                    // webhook이 before/after를 주면 그걸로 diff해서 server 변경 여부 판단
-                    // 값이 없거나 0000... 이면 그냥 배포 진행하도록 처리
-                    def beforeSha = env.BEFORE_SHA ?: ""
-                    def afterSha  = env.AFTER_SHA  ?: ""
+                    // BEFORE_SHA, AFTER_SHA가 있으면 diff로 server/ 변경 여부 판단
+                    def beforeSha = env.EFFECTIVE_BEFORE_SHA ?: ""
+                    def afterSha  = env.EFFECTIVE_AFTER_SHA  ?: ""
                     env.SHOULD_DEPLOY = "true"
 
                     if (beforeSha && afterSha && !beforeSha.startsWith("0000000")) {
@@ -98,6 +112,7 @@ pipeline {
                             env.SHOULD_DEPLOY = "false"
                         }
                     }
+                    // BEFORE_SHA/AFTER_SHA 없으면 (수동 빌드) 무조건 배포
 
                     echo "SHOULD_DEPLOY = ${env.SHOULD_DEPLOY}"
                 }
@@ -116,27 +131,90 @@ pipeline {
                     echo "Starting Production Deployment (backend)"
                     echo "=========================================="
 
-                    # backend만 재배포 (docker-compose.yml 기준 서비스명이 backend 라고 가정)
+                    IMAGE_NAME="s14p11a103-backend"
+
+                    # 1. 기존 이미지 백업 (롤백용)
+                    echo "[Step 1] Backing up current image..."
+                    docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:previous || echo "No existing image to backup"
+
+                    # 2. 새 이미지 빌드 (컨테이너 중지 전에 빌드)
+                    echo "[Step 2] Building new image..."
+                    if ! docker-compose -f "${COMPOSE_FILE}" build --no-cache backend; then
+                        echo "Build failed! Service remains running with old version."
+                        exit 1
+                    fi
+
+                    # 3. 기존 컨테이너 중지 & 새 컨테이너 시작
+                    echo "[Step 3] Stopping old container and starting new one..."
                     docker-compose -f "${COMPOSE_FILE}" stop backend || true
-                    docker-compose -f "${COMPOSE_FILE}" build --no-cache backend
                     docker-compose -f "${COMPOSE_FILE}" up -d backend
 
                     echo "Waiting for backend to be healthy..."
-                    sleep 10
+                    sleep 30
 
-                    # Health check - 호스트에서 curl로 체크 (컨테이너 내부 wget 의존성 제거)
-                    for i in $(seq 1 20); do
-                        if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                    # 4. Health check
+                    echo "[Step 4] Running health checks..."
+                    DEPLOY_SUCCESS=false
+                    for i in $(seq 1 6); do
+                        HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "unknown")
+                        echo "Health check attempt $i/6... Status: ${HEALTH_STATUS}"
+
+                        if [ "${HEALTH_STATUS}" = "healthy" ]; then
                             echo "Backend is healthy!"
-                            exit 0
+                            DEPLOY_SUCCESS=true
+                            break
                         fi
-                        echo "Health check attempt $i/20..."
-                        sleep 3
+
+                        # 컨테이너가 죽었으면 바로 롤백
+                        CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' backend 2>/dev/null || echo "unknown")
+                        if [ "${CONTAINER_STATUS}" != "running" ]; then
+                            echo "Container is not running! Status: ${CONTAINER_STATUS}"
+                            docker-compose -f "${COMPOSE_FILE}" logs --tail 100 backend || true
+                            break
+                        fi
+
+                        sleep 10
                     done
 
-                    echo "Health check failed!"
-                    docker-compose -f "${COMPOSE_FILE}" logs --tail 80 backend || true
-                    exit 1
+                    # 5. 실패 시 롤백
+                    if [ "${DEPLOY_SUCCESS}" = "false" ]; then
+                        echo "=========================================="
+                        echo "[ROLLBACK] Deployment failed! Rolling back..."
+                        echo "=========================================="
+
+                        # 이전 이미지가 있는지 확인
+                        if docker image inspect ${IMAGE_NAME}:previous >/dev/null 2>&1; then
+                            docker-compose -f "${COMPOSE_FILE}" stop backend || true
+                            docker tag ${IMAGE_NAME}:previous ${IMAGE_NAME}:latest
+                            docker-compose -f "${COMPOSE_FILE}" up -d backend
+                            echo "[ROLLBACK] Rolled back to previous version"
+
+                            # 롤백 후 health check
+                            sleep 20
+                            ROLLBACK_STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "unknown")
+                            echo "[ROLLBACK] Health status after rollback: ${ROLLBACK_STATUS}"
+                        else
+                            echo "[ROLLBACK] No previous image available for rollback!"
+                        fi
+
+                        exit 1
+                    fi
+
+                    # 6. 성공 시 이미지 정리
+                    echo "[Step 6] Cleaning up old images..."
+
+                    # 이전 백업 이미지 삭제
+                    docker rmi ${IMAGE_NAME}:previous || true
+
+                    # dangling 이미지 삭제 (태그 없는 <none> 이미지들)
+                    docker image prune -f || true
+
+                    # 사용하지 않는 빌드 캐시 정리
+                    docker builder prune -f --filter "until=24h" || true
+
+                    echo "=========================================="
+                    echo "Deployment completed successfully!"
+                    echo "=========================================="
                 '''
             }
         }
