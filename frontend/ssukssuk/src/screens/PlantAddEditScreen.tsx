@@ -55,7 +55,7 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
             <PixelInput
               value={type}
               editable={false}
-              style={{ backgroundColor: '#D9D9D9' }}
+              style={{ backgroundColor: '#fafaf6' }}
             />
           ) : (
             <PixelDropdown
@@ -268,7 +268,7 @@ const BorderPixels = () => (
   </>
 );
 
-const BG_COLOR = '#D4E1C6';
+const BG_COLOR = '#EDEDE9';
 const GREEN_BTN = '#2E5A35';
 const PIXEL = 4;
 const BORDER_COLOR = '#000';

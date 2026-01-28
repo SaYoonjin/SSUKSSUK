@@ -196,7 +196,7 @@ function PixelCard({ children, style, compact }: any) {
 
 const BG_COLOR = '#EDEDE9';
 const PIXEL = 4;
-const BORDER_COLOR = '#000';
+const BORDER_COLOR = '#300e08';
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG_COLOR },
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 30,
     fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#000',
+    color: 'rgba(36,46,19,0.9)',
   },
   scrollContent: { paddingHorizontal: 22, paddingBottom: 40 },
 
@@ -237,11 +237,11 @@ const styles = StyleSheet.create({
   },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
-  plantNickname: { fontSize: 18, fontFamily: 'NeoDunggeunmoPro-Regular' },
+  plantNickname: { fontSize: 18, fontFamily: 'NeoDunggeunmoPro-Regular' , color:"rgba(36,46,19,0.9)"},
   menuDots: {
     fontSize: 14,
     fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#000',
+    color: '#300e08',
   },
 
   imageContainer: {
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#000',
+    borderColor: '#300e08',
     backgroundColor: '#f6f6f6',
     borderBottomWidth: 4,
     borderRightWidth: 4,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   selectBtnText: {
     fontSize: 14,
     fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#000',
+    color: '#300e08',
   },
 
   popupMenu: {
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     width: 90,
     backgroundColor: '#FFF',
     borderWidth: 2,
-    borderColor: '#000',
+    borderColor: '#300e08',
     zIndex: 99,
     elevation: 5,
   },
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 12,
     fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#000',
+    color: '#300e08',
   },
   menuDivider: { height: 1, backgroundColor: '#EEE', width: '100%' },
 
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     left: PIXEL,
     right: PIXEL,
     height: PIXEL,
-    backgroundColor: BORDER_COLOR,
+    backgroundColor: "#300e08",
   },
   borderBottom: {
     position: 'absolute',
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     left: PIXEL,
     right: PIXEL,
     height: PIXEL,
-    backgroundColor: BORDER_COLOR,
+    backgroundColor: "#300e08",
   },
   borderLeft: {
     position: 'absolute',
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     bottom: PIXEL,
     left: 0,
     width: PIXEL,
-    backgroundColor: BORDER_COLOR,
+    backgroundColor: "#300e08",
   },
   borderRight: {
     position: 'absolute',
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     bottom: PIXEL,
     right: 0,
     width: PIXEL,
-    backgroundColor: BORDER_COLOR,
+    backgroundColor: "#300e08",
   },
   cornerTL: {
     position: 'absolute',
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     left: PIXEL,
     width: PIXEL,
     height: PIXEL,
-    backgroundColor: BORDER_COLOR,
+    backgroundColor: "#300e08",
   },
   cornerTR: {
     position: 'absolute',
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     right: PIXEL,
     width: PIXEL,
     height: PIXEL,
-    backgroundColor: BORDER_COLOR,
+    backgroundColor: "#300e08",
   },
   cornerBL: {
     position: 'absolute',
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     left: PIXEL,
     width: PIXEL,
     height: PIXEL,
-    backgroundColor: BORDER_COLOR,
+    backgroundColor: "#300e08",
   },
   cornerBR: {
     position: 'absolute',
