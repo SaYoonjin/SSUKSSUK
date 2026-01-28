@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/devices")
+@RequestMapping("/api/devices")
 public class DeviceController {
 
     private final DeviceService deviceService;
