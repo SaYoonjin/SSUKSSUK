@@ -10,7 +10,7 @@ import {
 } from "react-native";
 
 const BG_COLOR = "#EDEDE9";
-const BORDER = "#1A1A1A";
+const BORDER = "#300e08";
 const CARD_BG = "#FFFEF6";
 const SHADOW = "#4A4A4A";
 const ACCENT = "rgba(243,253,224,0.9)";
