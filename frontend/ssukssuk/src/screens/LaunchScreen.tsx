@@ -45,7 +45,7 @@ export default function LaunchScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#EDEDE9",
     },
 
     centerBox: {

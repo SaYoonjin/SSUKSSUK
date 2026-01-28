@@ -102,10 +102,10 @@ function PixelInput({ width, ...props }: any) {
 
 const GREEN = '#2E5A35';
 const PIXEL_SIZE = 4;
-const BORDER_COLOR = '#000000';
+const BORDER_COLOR = 'rgba(36,46,19,0.9)';
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFFFFF' },
+  screen: { flex: 1, backgroundColor: '#EDEDE9' },
   container: {
     flexGrow: 1,
     paddingHorizontal: 22,
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#000',
+    color: 'rgba(36,46,19,0.9)',
   },
 
   content: { marginBottom: 50, alignItems: 'center', width: '100%' },
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 18,
     fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#000',
+    color: 'rgba(36,46,19,0.9)',
     lineHeight: 26,
     marginBottom: 30,
   },
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     height: 54,
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EDEDE9',
     // marginHorizontal은 width prop이 없을 때만 사용되거나 상위에서 제어
   },
   input: {

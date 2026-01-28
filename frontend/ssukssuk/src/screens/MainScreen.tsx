@@ -15,7 +15,7 @@ import BottomSheet, {
 
 const BG_DAY = require("../assets/background1.png");
 const BG_NIGHT = require("../assets/background2.png");
-const ALARM_ICON = require("../assets/alarm.png");
+const ALARM_ICON = require("../assets/alarm_balloon.png");
 const TOMATO_NORMAL = require("../assets/tomato_normal.png");
 
 const DAY_START_HOUR = 8;

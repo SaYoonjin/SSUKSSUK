@@ -183,7 +183,7 @@ const PIXEL = 4;
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#EDEDE9',
     paddingHorizontal: 26,
     paddingTop: 45,
   },
@@ -203,14 +203,14 @@ const styles = StyleSheet.create({
   backChevron: {
     fontFamily: 'NeoDunggeunmoPro-Regular',
     fontSize: 34,
-    color: '#000000',
+    color: 'rgba(36,46,19,0.9)',
     lineHeight: 34,
   },
 
   headerTitle: {
     fontFamily: 'NeoDunggeunmoPro-Regular',
     fontSize: 34,
-    color: '#000000',
+    color: 'rgba(36,46,19,0.9)',
   },
 
   content: { paddingBottom: 40 },
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: '#fafaf6',
     minHeight: 80,
   },
 
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   deviceName: {
     fontSize: 20,
     fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#000',
+    color: 'rgba(36,46,19,0.9)',
   },
   plantName: {
     fontSize: 16,
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   addText: {
     fontSize: 20,
     fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#000',
+    color: 'rgba(36,46,19,0.9)',
   },
 
   actionButtons: { flexDirection: 'row' },
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF',
+    backgroundColor: '#fafaf6',
   },
   miniBtnText: { fontSize: 16, fontFamily: 'NeoDunggeunmoPro-Regular' },
 

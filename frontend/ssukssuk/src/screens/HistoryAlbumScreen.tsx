@@ -9,20 +9,48 @@ import {
     Image,
 } from "react-native";
 
-const BG_COLOR = "#D4E1C6";
+const BG_COLOR = "#EDEDE9";
 const BORDER = "#1A1A1A";
 const CARD_BG = "#FFFEF6";
 const SHADOW = "#4A4A4A";
-const ACCENT = "rgba(180, 195, 155, 0.9)";
+const ACCENT = "rgba(243,253,224,0.9)";
 
 const SAMPLE1 = require("../assets/tomato_pic_1.jpg");
 const SAMPLE2 = require("../assets/tomato_pic_2.jpg");
 
-// 끝이 지그재그로 잘린 마스킹 테이프 컴포넌트
+function parseDotDate(s: string) {
+    const [y, m, d] = s.split(".").map((v) => Number(v));
+    return new Date(y, (m || 1) - 1, d || 1);
+}
+
+function formatDotDate(dt: Date) {
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, "0");
+    const d = String(dt.getDate()).padStart(2, "0");
+    return `${y}.${m}.${d}`;
+}
+
+function makeDateRangeAsc(startStr: string, endStr: string) {
+    const start = parseDotDate(startStr);
+    const end = parseDotDate(endStr);
+
+    const s = start <= end ? start : end;
+    const e = start <= end ? end : start;
+
+    const out: Date[] = [];
+    const cur = new Date(s);
+    cur.setHours(0, 0, 0, 0);
+
+    while (cur <= e) {
+        out.push(new Date(cur));
+        cur.setDate(cur.getDate() + 1);
+    }
+    return out;
+}
+
 const PixelTape = ({ style, width }: any) => (
     <View style={[styles.tapeContainer, { width: width || "65%" }, style]}>
         <View style={styles.tapeBody}>
-            {/* 끝 마감 캡: 테이프 몸통(ACCENT)이 양 끝에서 삐져나오는 현상 방지 */}
             <View style={styles.endCapLeft} />
             <View style={styles.endCapRight} />
 
@@ -46,17 +74,23 @@ const PixelTape = ({ style, width }: any) => (
 export default function HistoryAlbumScreen({ navigation, route }: any) {
     const { start, end } = route.params;
 
-    // 사진 데이터와 함께 각 카드의 "랜덤 테이프 스타일"을 미리 계산
     const photoData = useMemo(() => {
-        return Array.from({ length: 14 }, (_, i) => ({
-            img: i % 2 === 0 ? SAMPLE1 : SAMPLE2,
-            tapeStyle: {
-                rotate: `${(Math.random() * 14 - 9).toFixed(1)}deg`, // 랜덤 회전
-                translateX: Math.random() * 20 - 10, // 좌우로 최대 10px씩 랜덤 이동
-                width: `${50 + Math.random() * 8}%`, // 너비 랜덤
-            },
-        }));
-    }, []);
+        const datesAsc = makeDateRangeAsc(start, end);
+        const datesDesc = [...datesAsc].reverse();
+
+        return datesDesc.flatMap((dt, dayIdx) => {
+            return [0, 1].map((shotIdx) => ({
+                img: (dayIdx * 2 + shotIdx) % 2 === 0 ? SAMPLE1 : SAMPLE2,
+                dateLabel: formatDotDate(dt),
+                tapeStyle: {
+                    rotate: `${(Math.random() * 14 - 9).toFixed(1)}deg`,
+                    translateX: Math.random() * 20 - 10,
+                    width: `${50 + Math.random() * 8}%`,
+                },
+            }));
+        });
+    }, [start, end]);
+
 
     return (
         <SafeAreaView style={styles.root}>
@@ -84,7 +118,6 @@ export default function HistoryAlbumScreen({ navigation, route }: any) {
                 <View style={styles.grid}>
                     {photoData.map((item, idx) => (
                         <View key={idx} style={styles.cardContainer}>
-                            {/* 랜덤 스타일 적용 */}
                             <PixelTape
                                 width={item.tapeStyle.width}
                                 style={{
@@ -109,7 +142,7 @@ export default function HistoryAlbumScreen({ navigation, route }: any) {
                                 <View style={styles.captionWrapper}>
                                     <View style={styles.captionLine} />
                                     <View style={styles.captionLabel}>
-                                        <Text style={styles.caption}>DAY {idx + 1}</Text>
+                                        <Text style={styles.caption}>{item.dateLabel}</Text>
                                     </View>
                                 </View>
                             </View>
@@ -139,17 +172,17 @@ const styles = StyleSheet.create({
     backChevron: {
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 34,
-        color: BORDER,
+        color: "rgba(36,46,19,0.9)",
     },
     title: {
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 34,
-        color: BORDER,
+        color: "rgba(36,46,19,0.9)",
     },
     content: { paddingTop: 8 },
 
     periodBar: {
-        backgroundColor: "#E8EEDF",
+        backgroundColor: "#dedfde",
         borderWidth: 2,
         borderColor: BORDER,
         padding: 12,
@@ -161,8 +194,8 @@ const styles = StyleSheet.create({
     },
     periodText: {
         fontFamily: "NeoDunggeunmoPro-Regular",
-        fontSize: 16,
-        color: BORDER,
+        fontSize: 24,
+        color: "rgba(36,46,19,0.9)",
         textAlign: "center",
     },
 
@@ -249,7 +282,7 @@ const styles = StyleSheet.create({
     photoFrame: {
         borderWidth: 2,
         borderColor: BORDER,
-        backgroundColor: "#000",
+        backgroundColor: "rgba(36,46,19,0.9)",
         marginBottom: 10,
     },
     photo: {
@@ -275,8 +308,8 @@ const styles = StyleSheet.create({
     },
     caption: {
         fontFamily: "NeoDunggeunmoPro-Regular",
-        fontSize: 13,
-        color: BORDER,
+        fontSize: 16,
+        color: "rgba(36,46,19,0.9)",
         letterSpacing: 0.5,
     },
 });

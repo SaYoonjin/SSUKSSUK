@@ -17,7 +17,7 @@ const DESIGN_H = 780;
 
 const GREEN = "#2E5A35";
 const LIGHT_GREEN = "#75A743";
-const BG = "#FFFFFF";
+const BG = "#EDEDE9";
 
 const PIXEL_SIZE = 4;
 

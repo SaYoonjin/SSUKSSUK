@@ -194,7 +194,7 @@ function PixelCard({ children, style, compact }: any) {
   );
 }
 
-const BG_COLOR = '#D4E1C6';
+const BG_COLOR = '#EDEDE9';
 const PIXEL = 4;
 const BORDER_COLOR = '#000';
 
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
 
   cardContainer: { position: 'relative', padding: 4 },
   cardInner: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#f6f6f6',
     padding: 12,
     alignItems: 'center',
     minHeight: 160,
@@ -263,12 +263,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#000',
-    backgroundColor: '#FFF',
+    backgroundColor: '#f6f6f6',
     borderBottomWidth: 4,
     borderRightWidth: 4,
   },
   selectBtnActive: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#f6f6f6',
     borderColor: '#AAA',
     borderBottomWidth: 2,
     borderRightWidth: 2,

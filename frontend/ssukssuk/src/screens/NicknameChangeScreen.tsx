@@ -117,10 +117,10 @@ const LIGHT_GREEN = "#75A743";
 const PIXEL_SIZE = 4;
 
 const styles = StyleSheet.create({
-    safe: { flex: 1, backgroundColor: "#FFFFFF" },
+    safe: { flex: 1, backgroundColor: "#EDEDE9" },
     screen: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#EDEDE9",
         paddingHorizontal: 26,
         paddingTop: 45,
     },
@@ -135,13 +135,13 @@ const styles = StyleSheet.create({
     backChevron: {
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 34,
-        color: "#000000",
+        color: "rgba(36,46,19,0.9)",
         lineHeight: 34,
     },
     headerTitle: {
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 34,
-        color: "#000000",
+        color: "rgba(36,46,19,0.9)",
     },
 
     content: {
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
         height: 54,
         justifyContent: "center",
         paddingHorizontal: 20,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#EDEDE9",
         marginHorizontal: PIXEL_SIZE * 2,
         marginTop: 10,
     },
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     bottomBar: {
         paddingHorizontal: 26,
         paddingBottom: 50,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#EDEDE9",
     },
 
     changeBtn: {
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     },
     changeBtnText: {
         fontSize: 20,
-        color: "#FFFFFF",
+        color: "#EDEDE9",
         fontFamily: "NeoDunggeunmoPro-Regular",
     },
 });

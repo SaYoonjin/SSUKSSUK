@@ -9,7 +9,7 @@ import {
 } from "react-native";
 
 const LIGHT_GREEN = "#75A743";
-const BG = "#FFFFFF";
+const BG = "#EDEDE9";
 const ERROR_RED = "#D97B7B";
 
 export default function SettingsScreen({ navigation }: any) {
@@ -110,13 +110,13 @@ const styles = StyleSheet.create({
     backChevron: {
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 34,
-        color: "#000000",
+        color: "rgba(36,46,19,0.9)",
         lineHeight: 34,
     },
     title: {
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 34,
-        color: "#000000",
+        color: "rgba(36,46,19,0.9)",
     },
     row: {
         flexDirection: "row",
@@ -127,12 +127,12 @@ const styles = StyleSheet.create({
         flex: 1,
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 18,
-        color: "#000000",
+        color: "rgba(36,46,19,0.9)",
     },
     chevron: {
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 22,
-        color: "#000000",
+        color: "rgba(36,46,19,0.9)",
         opacity: 0.75,
         marginLeft: 10,
     },

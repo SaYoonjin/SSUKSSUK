@@ -11,8 +11,8 @@ import {
 
 const GREEN = "#2E5A35";
 const LIGHT_GREEN = "#75A743";
-const BG = "#FFFFFF";
-const RED = "#E04B4B";
+const BG = "#EDEDE9";
+const RED = "#D25353";
 
 export default function ProfileScreen({ navigation }: any) {
     const nickname = "김농부";
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     nickname: {
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 30,
-        color: "#000000",
+        color: "rgba(36,46,19,0.9)",
         letterSpacing: 1,
     },
 
@@ -172,13 +172,13 @@ const styles = StyleSheet.create({
         flex: 1,
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 18,
-        color: "#000000",
+        color: "rgba(36,46,19,0.9)",
     },
 
     chevron: {
         fontFamily: "NeoDunggeunmoPro-Regular",
         fontSize: 22,
-        color: "#000000",
+        color: "rgba(36,46,19,0.9)",
         opacity: 0.75,
         marginLeft: 10,
     },

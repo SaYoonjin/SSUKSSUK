@@ -55,35 +55,35 @@ export default function LoginScreen({ navigation }: any) {
     };
 
     const handleLogin = async () => {
-        navigation.replace("Main"); // MainTabs로 들어감 (RootNavigator의 Main이 MainTabs일 때)
-        return;
-        //
-        // const e = email.trim();
-        // if (!validateEmail(e) || password.length < 1) {
-        //     setErrorMsg(COMMON_ERROR_TEXT);
-        //     return;
-        // }
-        //
-        // setLoading(true);
-        // try {
-        //     const res = await fetch(`${API_BASE_URL}${LOGIN_PATH}`, {
-        //         method: "POST",
-        //         headers: { "Content-Type": "application/json" },
-        //         body: JSON.stringify({ email: e, password, rememberMe }),
-        //     });
-        //     const json: LoginResponse = await res.json();
-        //     if ('success' in json && json.success) {
-        //       setErrorMsg('');
-        //       navigation.replace('Main');
-        //       return;
-        //     }
-        //     setErrorMsg(COMMON_ERROR_TEXT);
-        // } catch (err) {
-        //     console.error(err);
-        //     setErrorMsg(COMMON_ERROR_TEXT);
-        // } finally {
-        //     setLoading(false);
-        // }
+            navigation.replace("Main"); // MainTabs로 들어감 (RootNavigator의 Main이 MainTabs일 때)
+            return;
+    //
+    //     const e = email.trim();
+    //     if (!validateEmail(e) || password.length < 1) {
+    //         setErrorMsg(COMMON_ERROR_TEXT);
+    //         return;
+    //     }
+    //
+    //     setLoading(true);
+    //     try {
+    //         const res = await fetch(`${API_BASE_URL}${LOGIN_PATH}`, {
+    //             method: "POST",
+    //             headers: { "Content-Type": "application/json" },
+    //             body: JSON.stringify({ email: e, password, rememberMe }),
+    //         });
+    //         const json: LoginResponse = await res.json();
+    //         if ('success' in json && json.success) {
+    //           setErrorMsg('');
+    //           navigation.replace('Main');
+    //           return;
+    //         }
+    //         setErrorMsg(COMMON_ERROR_TEXT);
+    //     } catch (err) {
+    //         console.error(err);
+    //         setErrorMsg(COMMON_ERROR_TEXT);
+    //     } finally {
+    //         setLoading(false);
+    //     }
     };
 
     return (
@@ -193,12 +193,12 @@ function PixelInput(props: any) {
 
 const GREEN = "#2E5A35";
 const LIGHT_GREEN = "#75A743";
-const ERROR_RED = "#E04B4B";
+const ERROR_RED = "#D25353";
 const ERROR_BG = "#FFE9E9";
 const PIXEL_SIZE = 4;
 
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: "#FFFFFF" },
+    screen: { flex: 1, backgroundColor: "#EDEDE9" },
     container: { paddingHorizontal: 22, paddingTop: 100, paddingBottom: 30 },
     header: { alignItems: "center", marginBottom: 26 },
     logo: { width: 120, height: 120, marginBottom: 10 },
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
         zIndex: 6 },
 
     // 입력창 스타일
-    pixelInputContainer: { position: "relative", height: 54, justifyContent: "center", paddingHorizontal: 20, backgroundColor: "#FFFFFF", marginHorizontal: PIXEL_SIZE * 2 },
+    pixelInputContainer: { position: "relative", height: 54, justifyContent: "center", paddingHorizontal: 20, backgroundColor: "#edede9", marginHorizontal: PIXEL_SIZE * 2 },
     input: { fontSize: 20, color: GREEN, fontFamily: "NeoDunggeunmoPro-Regular", paddingVertical: 0, zIndex: 10 },
     pixelTop: { position: "absolute", top: -PIXEL_SIZE, left: PIXEL_SIZE, right: PIXEL_SIZE, height: PIXEL_SIZE, backgroundColor: GREEN },
     pixelBottom: { position: "absolute", bottom: -PIXEL_SIZE, left: PIXEL_SIZE, right: PIXEL_SIZE, height: PIXEL_SIZE, backgroundColor: GREEN },
@@ -402,9 +402,9 @@ const styles = StyleSheet.create({
     smallLink: { fontSize: 14, color: GREEN, fontFamily: "NeoDunggeunmoPro-Regular", textDecorationLine: "underline" },
     loginBtn: { marginTop: 18, backgroundColor: LIGHT_GREEN, paddingVertical: 14, alignItems: "center" },
     btnDisabled: { opacity: 0.6 },
-    loginBtnText: { fontSize: 20, color: "#FFFFFF", fontFamily: "NeoDunggeunmoPro-Regular" },
+    loginBtnText: { fontSize: 20, color: "#edede9", fontFamily: "NeoDunggeunmoPro-Regular" },
     divider: { height: 2, backgroundColor: GREEN, marginVertical: 20, opacity: 0.7 },
     helper: { textAlign: "center", fontSize: 16, color: GREEN, fontFamily: "NeoDunggeunmoPro-Regular", marginBottom: 14, lineHeight: 22 },
     signupBtn: { backgroundColor: GREEN, paddingVertical: 14, alignItems: "center" },
-    signupBtnText: { fontSize: 20, color: "#FFFFFF", fontFamily: "NeoDunggeunmoPro-Regular" },
+    signupBtnText: { fontSize: 20, color: "#edede9", fontFamily: "NeoDunggeunmoPro-Regular" },
 });
