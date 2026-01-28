@@ -45,12 +45,12 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/auth/login",
                                 "/auth/signup",
-                                "/auth/refresh"
+                                "/auth/refresh",
+                                "/api/test/**"
                         ).permitAll()
                         .requestMatchers("/auth/logout").authenticated()
                         .anyRequest().authenticated()
