@@ -16,14 +16,16 @@
 #define CMD_REQ_SENSOR      0x02
 #define CMD_LED_ON          0x03
 #define CMD_LED_OFF         0x04
-// #define CMD_SET_MODE_AUTO   0x05
-// #define CMD_SET_MODE_MANUAL 0x06
-#define CMD_PUMP_WATER      0x07
-#define CMD_PUMP_NUTRI      0x08
-#define CMD_PUMP_STOP       0x09
+//#define CMD_SET_MODE_AUTO   0x05
+//#define CMD_SET_MODE_MANUAL 0x06
+//#define CMD_PUMP_WATER      0x07
+//#define CMD_PUMP_NUTRI      0x08
+//#define CMD_PUMP_STOP       0x09
 #define CMD_SET_TH		    0x0A
 #define CMD_PING            0x0B
 #define CMD_PONG            0x0C
+#define CMD_AUTO_RECOVERY = 0x0D
+
 
 // DATA SUBTYPE
 #define DATA_SENSOR         0x01
