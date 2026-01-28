@@ -4,12 +4,17 @@ import com.ssukssuk.common.exception.CustomException;
 import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.auth.User;
 import com.ssukssuk.domain.device.Device;
+import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.device.DeviceClaimResponse;
+import com.ssukssuk.dto.device.DeviceResponse;
 import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.device.DeviceRepository;
+import com.ssukssuk.repository.plant.UserPlantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +23,7 @@ public class DeviceService {
 
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private final UserPlantRepository userPlantRepository;
     private final DeviceControlService deviceControlService;
 
     public DeviceClaimResponse claim(Long userId, String serial) {
@@ -78,5 +84,27 @@ public class DeviceService {
                 "UNCLAIMED",
                 null
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<DeviceResponse> getMyDevices(Long userId) {
+        List<Device> devices = deviceRepository.findAllByUser_IdAndPairingTrue(userId);
+
+        return devices.stream()
+                .map(device -> {
+                    // 이 디바이스에 연결된 식물 찾기
+                    var connectedPlant = userPlantRepository
+                            .findConnectedPlantByDeviceId(device.getDeviceId());
+
+                    return DeviceResponse.builder()
+                            .deviceId(device.getDeviceId())
+                            .serial(device.getSerial())
+                            .paired(true)
+                            .plantConnected(connectedPlant.isPresent())
+                            .connectedPlantId(connectedPlant.map(UserPlant::getPlantId).orElse(null))
+                            .connectedPlantName(connectedPlant.map(UserPlant::getPlantName).orElse(null))
+                            .build();
+                })
+                .toList();
     }
 }

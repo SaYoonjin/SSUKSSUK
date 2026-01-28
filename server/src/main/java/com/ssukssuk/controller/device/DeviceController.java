@@ -3,11 +3,14 @@ package com.ssukssuk.controller.device;
 import com.ssukssuk.common.response.ApiResponse;
 import com.ssukssuk.dto.device.DeviceClaimRequest;
 import com.ssukssuk.dto.device.DeviceClaimResponse;
+import com.ssukssuk.dto.device.DeviceResponse;
 import com.ssukssuk.service.device.DeviceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -15,6 +18,13 @@ import org.springframework.web.bind.annotation.*;
 public class DeviceController {
 
     private final DeviceService deviceService;
+
+    @GetMapping
+    public ApiResponse<List<DeviceResponse>> getMyDevices(
+            @AuthenticationPrincipal Long userId
+    ) {
+        return ApiResponse.ok(deviceService.getMyDevices(userId));
+    }
 
     @PostMapping("/claim")
     public ApiResponse<DeviceClaimResponse> claimDevice(

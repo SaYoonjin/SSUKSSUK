@@ -1,12 +1,18 @@
 package com.ssukssuk.controller.plant;
 
+import com.ssukssuk.common.response.ApiResponse;
 import com.ssukssuk.dto.plant.CreatePlantRequest;
 import com.ssukssuk.dto.plant.CreatePlantResponse;
+import com.ssukssuk.dto.plant.SpeciesResponse;
+import com.ssukssuk.dto.plant.UpdatePlantRequest;
+import com.ssukssuk.service.plant.SpeciesService;
 import com.ssukssuk.service.plant.UserPlantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -14,18 +20,36 @@ import org.springframework.web.bind.annotation.*;
 public class PlantController {
 
     private final UserPlantService userPlantService;
+    private final SpeciesService speciesService;
+
+    @GetMapping("/species")
+    public ApiResponse<List<SpeciesResponse>> getAllSpecies() {
+        return ApiResponse.ok(speciesService.getAllSpecies());
+    }
 
     @PostMapping
-    public CreatePlantResponse createPlant(
+    public ApiResponse<CreatePlantResponse> createPlant(
             @AuthenticationPrincipal Long userId,
-            @RequestBody @Valid CreatePlantRequest request
+            @Valid @RequestBody CreatePlantRequest request
     ) {
-        return userPlantService.createPlant(
-                userId,
-                request.getSpecies(),
-                request.getDeviceId(),
-                request.getName(),
-                request.getIsMain()
+        return ApiResponse.ok(
+                userPlantService.createPlant(
+                        userId,
+                        request.getSpecies(),
+                        request.getDeviceId(),
+                        request.getName(),
+                        request.getIsMain()
+                )
         );
+    }
+
+    @PatchMapping("/{plantId}")
+    public ApiResponse<Void> updatePlant(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long plantId,
+            @RequestBody UpdatePlantRequest request
+    ) {
+        userPlantService.updatePlant(userId, plantId, request);
+        return ApiResponse.ok();
     }
 }

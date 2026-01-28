@@ -62,4 +62,24 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
     """)
     Optional<Long> findActiveUserIdByPlantId(@Param("plantId") Long plantId);
 
+    // 디바이스에 연결된 활성 식물 찾기
+    @Query("""
+        select up from UserPlant up
+        where up.device.deviceId = :deviceId
+          and up.removedAt is null
+          and up.isConnected = true
+    """)
+    Optional<UserPlant> findConnectedPlantByDeviceId(@Param("deviceId") Long deviceId);
+
+    // 특정 식물 조회 (소유자 검증용)
+    @Query("""
+        select up from UserPlant up
+        where up.plantId = :plantId
+          and up.user.id = :userId
+          and up.removedAt is null
+    """)
+    Optional<UserPlant> findByPlantIdAndUserId(
+            @Param("plantId") Long plantId,
+            @Param("userId") Long userId
+    );
 }
