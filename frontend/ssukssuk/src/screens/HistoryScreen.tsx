@@ -57,6 +57,12 @@ export default function HistoryScreen({ navigation }: any) {
         if (photoIndex < photos.length - 1) runSlide(photoIndex + 1);
     };
 
+    // ✅ 훅(useMemo) 쓰지 말고 그냥 계산: Fast Refresh 훅 mismatch 방지
+    const anomalyTotal = dummyAnomaly.map((d) => d.water + d.nutrient + d.tempHum);
+    const anomalyTempHum = dummyAnomaly.map((d) => d.tempHum);
+    const anomalyWater = dummyAnomaly.map((d) => d.water);
+    const anomalyNutrient = dummyAnomaly.map((d) => d.nutrient);
+
     return (
         <SafeAreaView style={styles.screen}>
             <View style={styles.header}>
@@ -175,12 +181,79 @@ export default function HistoryScreen({ navigation }: any) {
                         <View style={[styles.monitorLed, { backgroundColor: ACCENT }]} />
                         <Text style={styles.monitorTitle}>ANOMALY MONITOR</Text>
                     </View>
-                    <AnomalyMonitorChart days={dummyDays} data={dummyAnomaly} width={SCREEN_WIDTH - 80} height={180} />
-                    <View style={styles.monitorFooter}>
-                        <LegendItem label="수위" color="#6495ED" />
-                        <LegendItem label="농도" color="#9ACD32" />
-                        <LegendItem label="온습도" color="#FF6347" />
-                    </View>
+
+                    {/* ✅ 누적막대 제거 → 생장 그래프(라인) 동일 UX / 4페이지 스와이프 */}
+                    <ChartPager
+                        width={SCREEN_WIDTH - 80}
+                        height={180}
+                        pages={[
+                            {
+                                key: "anom_total",
+                                headerLeft: <View />,
+                                titleRight: <LegendItem label="전체(합산)" color={ACCENT} />,
+                                render: ({ onTouchingChange }) => (
+                                    <GrowthLineChartInteractive
+                                        days={dummyDays}
+                                        values={anomalyTotal}
+                                        width={SCREEN_WIDTH - 80 - 34 * 2}
+                                        height={180}
+                                        onTouchingChange={onTouchingChange}
+                                        color={ACCENT}
+                                        fillOpacity={0.1}
+                                    />
+                                ),
+                            },
+                            {
+                                key: "anom_tempHum",
+                                headerLeft: <View />,
+                                titleRight: <LegendItem label="온습도" color={"#FF6347"} />,
+                                render: ({ onTouchingChange }) => (
+                                    <GrowthLineChartInteractive
+                                        days={dummyDays}
+                                        values={anomalyTempHum}
+                                        width={SCREEN_WIDTH - 80 - 34 * 2}
+                                        height={180}
+                                        onTouchingChange={onTouchingChange}
+                                        color={"#FF6347"}
+                                        fillOpacity={0.08}
+                                    />
+                                ),
+                            },
+                            {
+                                key: "anom_water",
+                                headerLeft: <View />,
+                                titleRight: <LegendItem label="수위" color={"#6495ED"} />,
+                                render: ({ onTouchingChange }) => (
+                                    <GrowthLineChartInteractive
+                                        days={dummyDays}
+                                        values={anomalyWater}
+                                        width={SCREEN_WIDTH - 80 - 34 * 2}
+                                        height={180}
+                                        onTouchingChange={onTouchingChange}
+                                        color={"#6495ED"}
+                                        fillOpacity={0.08}
+                                    />
+                                ),
+                            },
+                            {
+                                key: "anom_nutrient",
+                                headerLeft: <View />,
+                                titleRight: <LegendItem label="농도" color={"#9ACD32"} />,
+                                render: ({ onTouchingChange }) => (
+                                    <GrowthLineChartInteractive
+                                        days={dummyDays}
+                                        values={anomalyNutrient}
+                                        width={SCREEN_WIDTH - 80 - 34 * 2}
+                                        height={180}
+                                        onTouchingChange={onTouchingChange}
+                                        color={"#9ACD32"}
+                                        fillOpacity={0.08}
+                                    />
+                                ),
+                            },
+                        ]}
+                    />
+
                 </PixelBox>
 
                 <View style={{ height: 40 }} />
@@ -223,13 +296,13 @@ function clamp(n: number, a: number, b: number) {
 /* ---------------------------
    픽셀 아이콘 느낌 화살표
    - 박스 없음, 아이콘만
+   - 색상 변경: PixelChevron 내부 fill="#B3B3B3" 여기서
 ---------------------------- */
 function PixelChevron({ dir }: { dir: "left" | "right" }) {
-    const s = 4; // 픽셀 크기
-    const w = 5; // 열 개수
-    const h = 7; // 행 개수
+    const s = 4;
+    const w = 5;
+    const h = 7;
 
-    // 1은 픽셀 ON, 0은 OFF
     const LEFT = [
         [0, 0, 1, 0, 0],
         [0, 1, 1, 0, 0],
@@ -310,6 +383,7 @@ function ChartPager({
 
     useEffect(() => {
         goTo(page);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const panResponder = useMemo(
@@ -338,7 +412,7 @@ function ChartPager({
                 },
                 onPanResponderTerminate: () => goTo(page),
             }),
-        [page, chartW, pages.length, chartTouching]
+        [page, chartW, pages.length, chartTouching, translateX]
     );
 
     return (
@@ -394,7 +468,6 @@ function ChartPager({
                         <PixelChevron dir="right" />
                     </Pressable>
                 )}
-
             </View>
         </View>
     );
@@ -675,65 +748,6 @@ function GrowthLineChartInteractive({
     );
 }
 
-function AnomalyMonitorChart({ days, data, width, height }: any) {
-    const p = 25;
-    const maxScale = 6;
-    const barAreaW = width - p * 2;
-    const barW = barAreaW / data.length - 10;
-    const scale = (height - p * 2) / maxScale;
-
-    return (
-        <Svg width={width} height={height}>
-            {[0, 1, 2, 3, 4].map((i) => (
-                <Line
-                    key={i}
-                    x1={p}
-                    y1={p + (i * (height - p * 2)) / 4}
-                    x2={width - p}
-                    y2={p + (i * (height - p * 2)) / 4}
-                    stroke="#D9D9D9"
-                    strokeWidth={1}
-                />
-            ))}
-
-            {data.map((d: any, i: number) => {
-                const x = p + i * (barW + 10) + 5;
-                const h1 = d.water * scale;
-                const h2 = d.nutrient * scale;
-                const h3 = d.tempHum * scale;
-
-                const renderStackedBar = (y: number, h: number, color: string) =>
-                    h > 0 && (
-                        <G>
-                            <Rect x={x} y={y} width={barW} height={h} fill={color} strokeWidth={1} />
-                            <Rect x={x + 1} y={y + 1} width={2} height={Math.max(0, h - 2)} fill="white" fillOpacity={0.2} />
-                        </G>
-                    );
-
-                return (
-                    <G key={i}>
-                        {renderStackedBar(height - p - h1, h1, "#6495ED")}
-                        {renderStackedBar(height - p - h1 - h2, h2, "#9ACD32")}
-                        {renderStackedBar(height - p - h1 - h2 - h3, h3, "#FF6347")}
-                        <SvgText
-                            x={x + barW / 2}
-                            y={height - 5}
-                            fontSize="12"
-                            textAnchor="middle"
-                            fill="#999"
-                            fontFamily="NeoDunggeunmoPro-Regular"
-                        >
-                            {days[i]}
-                        </SvgText>
-                    </G>
-                );
-            })}
-
-            <Line x1={p} y1={height - p} x2={width - p} y2={height - p} stroke={BORDER} strokeWidth={1} />
-        </Svg>
-    );
-}
-
 const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: BG_COLOR },
     content: { paddingHorizontal: 22, paddingBottom: 40, paddingTop: 0 },
@@ -805,10 +819,6 @@ const styles = StyleSheet.create({
         borderWidth: 0,
         zIndex: 30,
     },
-
-    pagerDots: { position: "absolute", bottom: 8, width: "100%", flexDirection: "row", justifyContent: "center", gap: 6 },
-    pagerDot: { width: 6, height: 6, borderWidth: 1, borderColor: BORDER, backgroundColor: "#FFF" },
-    pagerDotActive: { backgroundColor: "#FFD700" },
 });
 
 const dummyDays = ["01.17", "01.18", "01.19", "01.20", "01.21", "01.22", "01.23"];
