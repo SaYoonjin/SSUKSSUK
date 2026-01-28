@@ -17,7 +17,7 @@ public class PlantController {
 
     @PostMapping
     public CreatePlantResponse createPlant(
-            @AuthenticationPrincipal Long userId,   // ✅ JWT에서 꺼냄
+            @AuthenticationPrincipal Long userId,
             @RequestBody @Valid CreatePlantRequest request
     ) {
         return userPlantService.createPlant(

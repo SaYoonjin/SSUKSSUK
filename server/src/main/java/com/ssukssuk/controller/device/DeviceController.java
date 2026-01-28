@@ -6,7 +6,7 @@ import com.ssukssuk.dto.device.DeviceClaimResponse;
 import com.ssukssuk.service.device.DeviceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,14 +18,20 @@ public class DeviceController {
 
     @PostMapping("/claim")
     public ApiResponse<DeviceClaimResponse> claimDevice(
-            Authentication authentication,
-            @RequestBody @Valid DeviceClaimRequest request
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody DeviceClaimRequest request
     ) {
-        // JwtAuthenticationFilter 에서 principal = userId
-        Long userId = (Long) authentication.getPrincipal();
-
         return ApiResponse.ok(
                 deviceService.claim(userId, request.getSerial())
         );
+    }
+
+    @DeleteMapping("/{deviceId}")
+    public ApiResponse<Void> unclaimDevice(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long deviceId
+    ) {
+        deviceService.unclaim(userId, deviceId);
+        return ApiResponse.ok();
     }
 }

@@ -97,6 +97,12 @@ public enum ErrorCode {
             "아직 클레임되지 않은 디바이스입니다."
     ),
 
+    DEVICE_NOT_OWNED(
+            HttpStatus.FORBIDDEN,
+            "DEVICE_NOT_OWNED",
+            "본인 소유의 디바이스가 아닙니다."
+    ),
+
 
 
     SENSOR_LOG_NOT_FOUND(
