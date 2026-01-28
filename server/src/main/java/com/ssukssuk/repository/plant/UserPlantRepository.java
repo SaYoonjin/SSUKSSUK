@@ -82,4 +82,14 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
             @Param("plantId") Long plantId,
             @Param("userId") Long userId
     );
+
+    // 사용자의 활성 식물-디바이스 연결 조회 (모드 변경 시 MQTT 전송용)
+    @Query("""
+        select up from UserPlant up
+        join fetch up.device d
+        where up.user.id = :userId
+          and up.removedAt is null
+          and up.isConnected = true
+    """)
+    List<UserPlant> findActiveConnectionsByUserId(@Param("userId") Long userId);
 }

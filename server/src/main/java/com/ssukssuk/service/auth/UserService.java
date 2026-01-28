@@ -6,13 +6,19 @@ import com.ssukssuk.common.security.JwtTokenProvider;
 import com.ssukssuk.domain.auth.RefreshToken;
 import com.ssukssuk.domain.auth.User;
 import com.ssukssuk.domain.auth.UserMode;
+import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.auth.*;
 import com.ssukssuk.repository.auth.RefreshTokenRepository;
 import com.ssukssuk.repository.auth.UserRepository;
+import com.ssukssuk.repository.plant.UserPlantRepository;
+import com.ssukssuk.service.device.DeviceControlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,8 +26,10 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserPlantRepository userPlantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final DeviceControlService deviceControlService;
 
     /* =========================
         회원가입
@@ -230,5 +238,42 @@ public class UserService {
 
         user.withdraw();
         refreshTokenRepository.revokeAllByUserId(userId);
+    }
+
+    /* =========================
+        모드 변경 (AUTO / MANUAL)
+     ========================= */
+    @Transactional
+    public ModeResponse updateMode(Long userId, ModeChangeRequest req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getRemovedAt() != null) {
+            throw new CustomException(ErrorCode.USER_DELETED);
+        }
+
+        UserMode newMode = req.mode();
+
+        // 같은 모드면 현재 상태 반환
+        if (user.getMode() == newMode) {
+            return new ModeResponse(user.getMode(), user.getUpdatedAt().toString());
+        }
+
+        // 활성 식물-디바이스 연결 조회
+        List<UserPlant> activeConnections = userPlantRepository.findActiveConnectionsByUserId(userId);
+
+        // 1. 모든 디바이스에 MQTT 발송 + ACK 대기 (하나라도 실패하면 예외 발생)
+        for (UserPlant plant : activeConnections) {
+            deviceControlService.sendModeUpdate(
+                    plant.getDevice().getSerial(),
+                    plant.getPlantId(),
+                    newMode.name()
+            );
+        }
+
+        // 2. 모든 ACK 성공 시 DB 업데이트
+        user.changeMode(newMode);
+
+        return new ModeResponse(user.getMode(), user.getUpdatedAt().toString());
     }
 }

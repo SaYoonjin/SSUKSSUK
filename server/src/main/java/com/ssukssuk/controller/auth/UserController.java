@@ -77,4 +77,13 @@ public class UserController {
         userService.withdraw(userId);
         return ApiResponse.ok();
     }
+
+    // ✅ 모드 변경 (AUTO / MANUAL)
+    @PatchMapping("/mode")
+    public ApiResponse<ModeResponse> updateMode(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody ModeChangeRequest req
+    ) {
+        return ApiResponse.ok(userService.updateMode(userId, req));
+    }
 }

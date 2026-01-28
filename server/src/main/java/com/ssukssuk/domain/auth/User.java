@@ -75,5 +75,7 @@ public class User {
         this.removedAt = LocalDateTime.now();
     }
 
-
+    public void changeMode(UserMode mode) {
+        this.mode = mode;
+    }
 }
