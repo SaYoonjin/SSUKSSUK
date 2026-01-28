@@ -41,18 +41,19 @@ public class DeviceService {
             throw new CustomException(ErrorCode.DEVICE_ALREADY_CLAIMED);
         }
 
-        // 최초 클레임
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        device.claim(user);
 
-        // MQTT로 디바이스에 알림
-        deviceControlService.publishClaimUpdate(
+        // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
+        deviceControlService.sendClaimUpdate(
                 serial,
                 userId,
                 "CLAIMED",
                 user.getMode().name()
         );
+
+        // 2. ACK 성공 시 DB 저장
+        device.claim(user);
 
         return DeviceClaimResponse.from(device);
     }
@@ -74,16 +75,16 @@ public class DeviceService {
 
         String serial = device.getSerial();
 
-        // 해지
-        device.unclaim();
-
-        // MQTT로 디바이스에 알림
-        deviceControlService.publishClaimUpdate(
+        // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
+        deviceControlService.sendClaimUpdate(
                 serial,
                 userId,
                 "UNCLAIMED",
                 null
         );
+
+        // 2. ACK 성공 시 DB 업데이트
+        device.unclaim();
     }
 
     @Transactional(readOnly = true)

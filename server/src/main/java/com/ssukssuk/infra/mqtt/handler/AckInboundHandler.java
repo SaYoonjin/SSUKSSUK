@@ -18,7 +18,8 @@ public class AckInboundHandler implements MqttMessageHandler {
 
     @Override
     public void handle(MqttEnvelope envelope) {
-        if (envelope.getDirection() != MqttEnvelope.Direction.CONTROL) return;
+        // ACK은 devices/{serial}/telemetry/ack 토픽으로 들어옴
+        if (envelope.getDirection() != MqttEnvelope.Direction.TELEMETRY) return;
 
         try {
             AckMessage ack = objectMapper.treeToValue(envelope.getPayloadJson(), AckMessage.class);

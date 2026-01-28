@@ -103,6 +103,18 @@ public enum ErrorCode {
             "본인 소유의 디바이스가 아닙니다."
     ),
 
+    DEVICE_ACK_TIMEOUT(
+            HttpStatus.GATEWAY_TIMEOUT,
+            "DEVICE_ACK_TIMEOUT",
+            "디바이스 응답 시간이 초과되었습니다."
+    ),
+
+    DEVICE_ACK_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "DEVICE_ACK_FAILED",
+            "디바이스에서 오류가 발생했습니다."
+    ),
+
 
 
     SENSOR_LOG_NOT_FOUND(

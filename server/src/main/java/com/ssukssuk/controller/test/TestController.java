@@ -1,6 +1,5 @@
 package com.ssukssuk.controller.test;
 
-import com.ssukssuk.infra.mqtt.dto.AckMessage;
 import com.ssukssuk.common.response.ApiResponse;
 import com.ssukssuk.service.device.DeviceControlService;
 import lombok.Data;
@@ -16,43 +15,43 @@ public class TestController {
 
     @PostMapping("/mqtt/claim")
     public ApiResponse<String> publishClaim(@RequestBody ClaimReq req) {
-        String msgId = deviceControlService.publishClaimUpdate(
+        deviceControlService.sendClaimUpdate(
                 req.getSerial(),
                 req.getUserId(),
                 req.getClaimState(),
                 req.getMode()
         );
-        return ApiResponse.ok("published msgId=" + msgId);
+        return ApiResponse.ok("ACK received");
     }
 
     @PostMapping("/mqtt/binding/bound")
     public ApiResponse<String> publishBindingBound(
             @RequestBody BindingBoundReq req
     ) {
-        String msgId = deviceControlService.publishBindingUpdateBound(
+        deviceControlService.sendBindingBound(
                 req.getSerial(),
                 req.getPlantId(),
                 req.getSpecies().longValue()
         );
-        return ApiResponse.ok("published msgId=" + msgId);
+        return ApiResponse.ok("ACK received");
     }
 
     @PostMapping("/mqtt/binding/unbound")
     public ApiResponse<String> publishBindingUnbound(
             @RequestBody BindingUnboundReq req
     ) {
-        String msgId = deviceControlService.publishBindingUpdateUnbound(req.getSerial());
-        return ApiResponse.ok("published msgId=" + msgId);
+        deviceControlService.sendBindingUnbound(req.getSerial());
+        return ApiResponse.ok("ACK received");
     }
 
     @PostMapping("/mqtt/mode")
     public ApiResponse<String> publishMode(@RequestBody ModeReq req) {
-        String msgId = deviceControlService.publishModeUpdate(
+        deviceControlService.sendModeUpdate(
                 req.getSerial(),
                 req.getPlantId(),
                 req.getMode()
         );
-        return ApiResponse.ok("published msgId=" + msgId);
+        return ApiResponse.ok("ACK received");
     }
 
     @Data

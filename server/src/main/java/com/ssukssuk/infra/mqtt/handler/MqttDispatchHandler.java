@@ -51,7 +51,7 @@ public class MqttDispatchHandler {
 
         if (topic.contains("/telemetry/action-result")) return "actionResult";
 
-        if (topic.contains("/control/ack")) return "ack";
+        if (topic.contains("/telemetry/ack")) return "ack";
 
         return null;
     }
