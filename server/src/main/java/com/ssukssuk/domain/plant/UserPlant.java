@@ -78,4 +78,17 @@ public class UserPlant {
     public void changeMain(boolean isMain) {
         this.isMain = isMain;
     }
+
+    public void changeName(String name) {
+        this.plantName = name;
+    }
+
+    public void bindDevice(Device device) {
+        this.device = device;
+        this.isConnected = true;
+    }
+
+    public void unbindDevice() {
+        this.isConnected = false;
+    }
 }

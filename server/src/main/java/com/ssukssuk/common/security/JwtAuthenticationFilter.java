@@ -1,5 +1,8 @@
 package com.ssukssuk.common.security;
 
+import com.ssukssuk.common.exception.CustomException;
+import com.ssukssuk.common.exception.ErrorCode;
+import com.ssukssuk.repository.auth.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,19 +20,27 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtTokenProvider tokenProvider) {
+    public JwtAuthenticationFilter(
+            JwtTokenProvider tokenProvider,
+            UserRepository userRepository
+    ) {
         this.tokenProvider = tokenProvider;
+        this.userRepository = userRepository;
     }
+
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
 
         return path.startsWith("/test/")
-                || path.startsWith("/auth/")
                 || path.startsWith("/swagger-ui/")
-                || path.startsWith("/v3/api-docs/");
+                || path.startsWith("/v3/api-docs/")
+                || path.equals("/auth/login")
+                || path.equals("/auth/signup")
+                || path.equals("/auth/refresh");
     }
 
     @Override
@@ -41,9 +52,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = resolveBearerToken(request);
 
-        // 토큰이 있고 + 유효할 때만 인증 처리
         if (token != null && tokenProvider.validate(token)) {
             Long userId = tokenProvider.getUserId(token);
+
+            if (userRepository.isWithdrawn(userId)) {
+                throw new CustomException(ErrorCode.USER_DELETED);
+            }
+
             boolean isAdmin = tokenProvider.isAdmin(token);
 
             List<SimpleGrantedAuthority> authorities =

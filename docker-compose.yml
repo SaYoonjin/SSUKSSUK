@@ -110,7 +110,7 @@ services:
       - "9001"
     volumes:
       - ./infra/mosquitto/config:/mosquitto/config:ro
-      - mosquitto-data:/mosquitto/data    
+      - mosquitto-data:/mosquitto/data
       - mosquitto-log:/mosquitto/log
     networks:
       - app-network

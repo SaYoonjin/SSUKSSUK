@@ -42,6 +42,10 @@ dependencies {
     // Actuator (healthcheck)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+    //S3
+    implementation platform("software.amazon.awssdk:bom:2.41.16")
+    implementation "software.amazon.awssdk:s3"
+
     // Spring Integration (MQTT)
     implementation 'org.springframework.boot:spring-boot-starter-integration'
     implementation 'org.springframework.integration:spring-integration-mqtt'

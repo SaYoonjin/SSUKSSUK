@@ -1,11 +1,9 @@
 package com.ssukssuk.infra.mqtt.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssukssuk.common.mqtt.dto.AckMessage;
-import com.ssukssuk.common.mqtt.dto.MqttEnvelope;
-import com.ssukssuk.common.mqtt.dto.SensorUplinkMessage;
+import com.ssukssuk.infra.mqtt.dto.MqttEnvelope;
+import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.infra.idempotency.IdempotencyService;
-import com.ssukssuk.infra.mqtt.MqttPublisher;
 import com.ssukssuk.service.device.DeviceBindingValidator;
 import com.ssukssuk.service.history.SensorTelemetryService;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.util.UUID;
+import java.time.ZoneId;
 
 @Slf4j
 @Component("sensors")
@@ -23,9 +21,7 @@ public class SensorTelemetryHandler implements MqttMessageHandler {
 
     private final ObjectMapper objectMapper;
     private final IdempotencyService idempotencyService;
-    private final MqttPublisher mqttPublisher;
     private final DeviceBindingValidator deviceBindingValidator;
-
     private final SensorTelemetryService sensorTelemetryService;
 
     @Override
@@ -51,49 +47,24 @@ public class SensorTelemetryHandler implements MqttMessageHandler {
         }
 
         String serial = envelope.getSerialNum();
-        String ackTopic = MqttPublisher.ackTopic(serial);
-        String ackMsgId = UUID.randomUUID().toString();
 
-        log.info("[MQTT][SENSOR] received. serial={}, msgId={}",
-                serial, msg.getMsgId());
+        log.info("[MQTT][SENSOR] received. serial={}, msgId={}, eventKind={}",
+                serial, msg.getMsgId(), msg.getEventKind());
 
         // 2. plant_id 검증
         if (msg.getPlantId() == null) {
-            mqttPublisher.publish(
-                    ackTopic,
-                    AckMessage.error(
-                            serial,
-                            null,
-                            msg.getMsgId(),
-                            "SENSOR_UPLINK",
-                            ackMsgId,
-                            AckMessage.AckErrorCode.PLANT_NOT_BOUND,
-                            "plant_id is null"
-                    )
-            );
+            log.warn("[MQTT][SENSOR] plant_id is null. serial={}", serial);
             return;
         }
 
         // 3. 멱등 처리
         String idempotencyKey = serial + ":" + msg.getMsgId();
         if (!idempotencyService.markIfFirst(idempotencyKey)) {
-
             log.info("[MQTT][SENSOR] duplicate ignored: {}", idempotencyKey);
-
-            mqttPublisher.publish(
-                    ackTopic,
-                    AckMessage.droppedDuplicate(
-                            serial,
-                            msg.getPlantId(),
-                            msg.getMsgId(),
-                            "SENSOR_UPLINK",
-                            ackMsgId
-                    )
-            );
             return;
         }
 
-        // 4. 실제 처리
+        // 4. 실제 처리 (ACK 없음)
         try {
             // 4-1. 디바이스-식물 검증
             deviceBindingValidator.validate(serial, msg.getPlantId());
@@ -101,60 +72,22 @@ public class SensorTelemetryHandler implements MqttMessageHandler {
             // 4-2. 측정 시각 파싱
             LocalDateTime measuredAt =
                     msg.getSentAt() != null
-                            ? OffsetDateTime.parse(msg.getSentAt()).toLocalDateTime()
+                            ? OffsetDateTime.parse(msg.getSentAt())
+                            .atZoneSameInstant(ZoneId.of("Asia/Seoul"))
+                            .toLocalDateTime()
                             : LocalDateTime.now();
 
             // 4-3. 센서 로그 저장 + 이벤트 처리(OPEN/RESOLVE) 모두 위임
             sensorTelemetryService.handleUplink(msg, measuredAt);
 
-            // 4-4. ACK 성공
-            mqttPublisher.publish(
-                    ackTopic,
-                    AckMessage.ok(
-                            serial,
-                            msg.getPlantId(),
-                            msg.getMsgId(),
-                            "SENSOR_UPLINK",
-                            ackMsgId
-                    )
-            );
+            log.info("[MQTT][SENSOR] processed. serial={}, plantId={}, eventKind={}",
+                    serial, msg.getPlantId(), msg.getEventKind());
 
-            log.info("[MQTT][SENSOR] ACK OK. serial={}, plantId={}",
-                    serial, msg.getPlantId());
-
-        }
-        // 5. 예외 처리
-        catch (IllegalStateException e) {
+        } catch (IllegalStateException e) {
             log.warn("[MQTT][SENSOR] validation failed: {}", e.getMessage());
-
-            mqttPublisher.publish(
-                    ackTopic,
-                    AckMessage.error(
-                            serial,
-                            msg.getPlantId(),
-                            msg.getMsgId(),
-                            "SENSOR_UPLINK",
-                            ackMsgId,
-                            AckMessage.AckErrorCode.PLANT_DEVICE_MISMATCH,
-                            e.getMessage()
-                    )
-            );
-        }
-        catch (Exception e) {
-            log.error("[MQTT][SENSOR] processing error", e);
-
-            mqttPublisher.publish(
-                    ackTopic,
-                    AckMessage.error(
-                            serial,
-                            msg.getPlantId(),
-                            msg.getMsgId(),
-                            "SENSOR_UPLINK",
-                            ackMsgId,
-                            AckMessage.AckErrorCode.SERVER_TEMP_UNAVAILABLE,
-                            e.getMessage()
-                    )
-            );
+        } catch (Exception e) {
+            log.error("[MQTT][SENSOR] processing error. serial={}, msgId={}",
+                    serial, msg.getMsgId(), e);
         }
     }
 }

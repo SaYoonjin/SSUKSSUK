@@ -27,7 +27,6 @@ public class User {
     @Column(nullable = false, length = 255)
     private String email;
 
-    // BCrypt 해시는 보통 60자 내외. 넉넉하게 100 추천.
     @Column(nullable = false, length = 100)
     private String password;
 
@@ -41,7 +40,7 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false, updatable = false)
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @Column(name = "removed_at")
@@ -62,5 +61,21 @@ public class User {
     @PreUpdate
     void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public void changeNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void withdraw() {
+        this.removedAt = LocalDateTime.now();
+    }
+
+    public void changeMode(UserMode mode) {
+        this.mode = mode;
     }
 }

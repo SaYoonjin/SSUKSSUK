@@ -1,6 +1,6 @@
 package com.ssukssuk.infra.mqtt.ack;
 
-import com.ssukssuk.common.mqtt.dto.AckMessage;
+import com.ssukssuk.infra.mqtt.dto.AckMessage;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;

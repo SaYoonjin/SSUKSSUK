@@ -13,6 +13,18 @@ public enum ErrorCode {
             "요청값 검증 실패"
     ),
 
+    INVALID_PASSWORD(
+            HttpStatus.BAD_REQUEST,
+            "INVALID_PASSWORD",
+            "기존 비밀번호가 올바르지 않습니다"
+    ),
+
+    PASSWORD_CONFIRM_MISMATCH(
+            HttpStatus.BAD_REQUEST,
+            "PASSWORD_CONFIRM_MISMATCH",
+            "새 비밀번호 확인이 일치하지 않습니다"
+    ),
+
     // 401
     UNAUTHORIZED(
             HttpStatus.UNAUTHORIZED,
@@ -83,6 +95,24 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "DEVICE_NOT_CLAIMED",
             "아직 클레임되지 않은 디바이스입니다."
+    ),
+
+    DEVICE_NOT_OWNED(
+            HttpStatus.FORBIDDEN,
+            "DEVICE_NOT_OWNED",
+            "본인 소유의 디바이스가 아닙니다."
+    ),
+
+    DEVICE_ACK_TIMEOUT(
+            HttpStatus.GATEWAY_TIMEOUT,
+            "DEVICE_ACK_TIMEOUT",
+            "디바이스 응답 시간이 초과되었습니다."
+    ),
+
+    DEVICE_ACK_FAILED(
+            HttpStatus.BAD_GATEWAY,
+            "DEVICE_ACK_FAILED",
+            "디바이스에서 오류가 발생했습니다."
     ),
 
 

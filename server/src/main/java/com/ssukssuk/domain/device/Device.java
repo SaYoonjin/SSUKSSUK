@@ -34,4 +34,9 @@ public class Device {
         this.claimedAt = LocalDateTime.now();
     }
 
+    public void unclaim() {
+        this.user = null;
+        this.pairing = false;
+        this.claimedAt = null;
+    }
 }

@@ -8,6 +8,7 @@ import com.ssukssuk.domain.plant.PlantStatus;
 import com.ssukssuk.domain.plant.Species;
 import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.plant.CreatePlantResponse;
+import com.ssukssuk.dto.plant.UpdatePlantRequest;
 import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.device.DeviceRepository;
 import com.ssukssuk.repository.plant.PlantStatusRepository;
@@ -47,6 +48,24 @@ public class UserPlantService {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
 
+        // 디바이스 소유자 검증
+        if (device.getUser() == null || !device.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
+        }
+
+        // 이미 다른 식물에 연결된 디바이스인지 확인
+        if (userPlantRepository.findConnectedPlantByDeviceId(deviceId).isPresent()) {
+            throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
+        }
+
+        // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생, DB 저장 안함)
+        deviceControlService.sendBindingBound(
+                device.getSerial(),
+                null,  // plantId는 아직 생성 전이므로 null
+                species.getSpeciesId()
+        );
+
+        // 2. ACK 성공 시 DB 저장
         // 메인 식물이면 기존 메인 해제
         if (Boolean.TRUE.equals(isMain)) {
             userPlantRepository.clearMainPlant(userId);
@@ -69,12 +88,6 @@ public class UserPlantService {
 
         plantStatusRepository.save(plantStatus);
 
-        deviceControlService.publishBindingUpdateBound(
-                device.getSerial(),
-                userPlant.getPlantId(),
-                species.getSpeciesId()
-        );
-
         return CreatePlantResponse.builder()
                 .plantId(userPlant.getPlantId())
                 .name(userPlant.getPlantName())
@@ -82,5 +95,72 @@ public class UserPlantService {
                 .deviceId(device.getDeviceId())
                 .characterCode(0)
                 .build();
+    }
+
+    public void updatePlant(Long userId, Long plantId, UpdatePlantRequest request) {
+
+        UserPlant plant = userPlantRepository.findByPlantIdAndUserId(plantId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+
+        // 1. 이름 변경
+        if (request.getName() != null && !request.getName().isBlank()) {
+            plant.changeName(request.getName());
+        }
+
+        // 2. 디바이스 처리
+        Device currentDevice = plant.getDevice();
+        boolean currentlyConnected = Boolean.TRUE.equals(plant.getIsConnected());
+
+        // 2-1. 디바이스 연결 해제 요청
+        if (Boolean.TRUE.equals(request.getUnbindDevice())) {
+            if (currentlyConnected && currentDevice != null) {
+                // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
+                deviceControlService.sendBindingUnbound(currentDevice.getSerial());
+                // 2. ACK 성공 시 DB 업데이트
+                plant.unbindDevice();
+            }
+            return;
+        }
+
+        // 2-2. 새 디바이스로 변경 요청
+        if (request.getDeviceId() != null) {
+            Long newDeviceId = request.getDeviceId();
+
+            // 같은 디바이스면 무시
+            if (currentDevice != null && currentDevice.getDeviceId().equals(newDeviceId) && currentlyConnected) {
+                return;
+            }
+
+            Device newDevice = deviceRepository.findById(newDeviceId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
+
+            // 새 디바이스 소유자 검증
+            if (newDevice.getUser() == null || !newDevice.getUser().getId().equals(userId)) {
+                throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
+            }
+
+            // 새 디바이스가 이미 다른 식물에 연결되어 있는지 확인
+            var existingPlant = userPlantRepository
+                    .findConnectedPlantByDeviceId(newDeviceId);
+            if (existingPlant.isPresent() && !existingPlant.get().getPlantId().equals(plantId)) {
+                throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
+            }
+
+            // 1. MQTT 발송 + ACK 대기 (모든 MQTT가 성공해야 DB 업데이트)
+            // 기존 디바이스가 있으면 먼저 UNBOUND 전송
+            if (currentlyConnected && currentDevice != null) {
+                deviceControlService.sendBindingUnbound(currentDevice.getSerial());
+            }
+
+            // 새 디바이스에 BOUND 전송
+            deviceControlService.sendBindingBound(
+                    newDevice.getSerial(),
+                    plant.getPlantId(),
+                    plant.getSpecies().getSpeciesId()
+            );
+
+            // 2. 모든 ACK 성공 시 DB 업데이트
+            plant.bindDevice(newDevice);
+        }
     }
 }

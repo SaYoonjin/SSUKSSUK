@@ -1,5 +1,6 @@
 package com.ssukssuk.domain.history;
 
+import com.ssukssuk.domain.plant.UserPlant;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,8 +18,9 @@ public class SensorLog {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long sensorLogId;
 
-    @Column(name = "plant_id", nullable = false)
-    private Long plantId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plant_id", nullable = false)
+    private UserPlant plant;
 
     @Column(name = "measured_at", nullable = false)
     private LocalDateTime measuredAt;
