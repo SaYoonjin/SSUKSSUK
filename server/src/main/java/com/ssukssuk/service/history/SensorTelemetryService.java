@@ -1,10 +1,8 @@
 package com.ssukssuk.service.history;
 
 import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
-import com.ssukssuk.domain.history.ActionLog;
 import com.ssukssuk.domain.history.SensorEvent;
 import com.ssukssuk.domain.notification.Notification;
-import com.ssukssuk.repository.history.ActionLogRepository;
 import com.ssukssuk.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,8 +17,6 @@ public class SensorTelemetryService {
 
     private final SensorLogService sensorLogService;
     private final SensorEventService sensorEventService;
-
-    private final ActionLogRepository actionLogRepository;
     private final NotificationService notificationService;
 
     @Transactional
@@ -40,9 +36,7 @@ public class SensorTelemetryService {
         if (msg.getEventKind() == null) return;
 
         switch (msg.getEventKind()) {
-            case PERIODIC -> {
-                return;
-            }
+            case PERIODIC -> { /* 정상 주기 데이터 - 추가 처리 없음 */ }
 
             case ANOMALY_DETECTED -> {
                 Optional<SensorEvent> createdOpt = sensorEventService.openOrUpdateAndReturnCreated(
@@ -55,7 +49,6 @@ public class SensorTelemetryService {
                 // 처음 이상치(OPEN 생성)일 때만 알림 테이블 insert
                 createdOpt.ifPresent(createdEvent -> {
                     Notification.NotiTitle title = mapTriggerToNotiTitle(msg.getTriggerSensorType());
-
                     notificationService.notifySensorAnomaly(
                             msg.getPlantId(),
                             createdEvent.getEventId(),
@@ -64,36 +57,12 @@ public class SensorTelemetryService {
                 });
             }
 
-            case RECOVERY_DONE -> {
-                Optional<SensorEvent> resolvedOpt = sensorEventService.resolveIfOpenAndReturn(
-                        msg.getPlantId(),
-                        msg.getTriggerSensorType(),
-                        sensorLogId,
-                        measuredAt
-                );
-
-                if (resolvedOpt.isEmpty()) return;
-
-                SensorEvent resolvedEvent = resolvedOpt.get();
-                Long eventId = resolvedEvent.getEventId();
-
-                // 최근 SUCCESS action_log 조회
-                Optional<ActionLog> latestSuccessActionOpt =
-                        actionLogRepository.findTopByEventIdAndResultStatusOrderByCreatedAtDesc(eventId, "SUCCESS");
-
-                if (latestSuccessActionOpt.isEmpty()) return;
-
-                ActionLog actionLog = latestSuccessActionOpt.get();
-
-                // 자동 조치 완료 알림
-                String actionType = actionLog.getActionType();
-                if ("WATER_ADD".equalsIgnoreCase(actionType) || "NUTRIENT_ADD".equalsIgnoreCase(actionType)) {
-                    notificationService.notifyActionDone(
-                            msg.getPlantId(),
-                            eventId
-                    );
-                }
-            }
+            case RECOVERY_DONE -> sensorEventService.resolveIfOpenAndReturn(
+                    msg.getPlantId(),
+                    msg.getTriggerSensorType(),
+                    sensorLogId,
+                    measuredAt
+            );
         }
     }
 

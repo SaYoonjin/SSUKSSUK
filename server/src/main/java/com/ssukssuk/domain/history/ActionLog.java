@@ -20,8 +20,9 @@ public class ActionLog {
     @Column(name = "action_id")
     private Long actionId;
 
-    @Column(name = "event_id", nullable = false)
-    private Long eventId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id", nullable = false)
+    private SensorEvent event;
 
     // WATER_ADD / NUTRIENT_ADD (코드테이블 아직 없으니 문자열로 시작)
     @Column(name = "action_type", nullable = false, length = 30)
@@ -46,7 +47,7 @@ public class ActionLog {
     private LocalDateTime createdAt;
 
     public static ActionLog of(
-            Long eventId,
+            SensorEvent event,
             String actionType,
             String resultStatus,
             Float beforeValue,
@@ -56,7 +57,7 @@ public class ActionLog {
             LocalDateTime createdAt
     ) {
         ActionLog a = new ActionLog();
-        a.eventId = eventId;
+        a.event = event;
         a.actionType = actionType;
         a.resultStatus = resultStatus;
         a.beforeValue = beforeValue;

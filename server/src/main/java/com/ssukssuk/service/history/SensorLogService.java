@@ -3,6 +3,7 @@ package com.ssukssuk.service.history;
 import com.ssukssuk.common.exception.CustomException;
 import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.history.SensorLog;
+import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.history.SensorLogRequest;
 import com.ssukssuk.dto.history.SensorLogResponse;
 import com.ssukssuk.repository.history.SensorLogRepository;
@@ -21,15 +22,13 @@ public class SensorLogService {
     private final SensorLogRepository sensorLogRepository;
     private final UserPlantRepository userPlantRepository;
 
-     // REST API용 (POST /history/sensor-log)
+    // REST API용 (POST /history/sensor-log)
     public void saveSensorLog(SensorLogRequest request) {
-
-        if (!userPlantRepository.existsById(request.getPlantId())) {
-            throw new CustomException(ErrorCode.PLANT_NOT_FOUND);
-        }
+        UserPlant plant = userPlantRepository.findById(request.getPlantId())
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
 
         SensorLog log = SensorLog.builder()
-                .plantId(request.getPlantId())
+                .plant(plant)
                 .measuredAt(
                         request.getMeasuredAt() != null
                                 ? request.getMeasuredAt()
@@ -45,7 +44,7 @@ public class SensorLogService {
         sensorLogRepository.save(log);
     }
 
-    //MQTT 수신용 (SensorTelemetryHandler에서 호출)
+    // MQTT 수신용 (SensorTelemetryHandler에서 호출)
     public void saveFromMqtt(
             Long plantId,
             LocalDateTime measuredAt,
@@ -54,11 +53,12 @@ public class SensorLogService {
             Float waterLevel,
             Float nutrientConc
     ) {
+        UserPlant plant = userPlantRepository.findById(plantId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+
         SensorLog log = SensorLog.builder()
-                .plantId(plantId)
-                .measuredAt(
-                        measuredAt != null ? measuredAt : LocalDateTime.now()
-                )
+                .plant(plant)
+                .measuredAt(measuredAt != null ? measuredAt : LocalDateTime.now())
                 .temperature(temperature)
                 .humidity(humidity)
                 .waterLevel(waterLevel)
@@ -78,8 +78,11 @@ public class SensorLogService {
             Float waterLevel,
             Float nutrientConc
     ) {
+        UserPlant plant = userPlantRepository.findById(plantId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+
         SensorLog log = SensorLog.builder()
-                .plantId(plantId)
+                .plant(plant)
                 .measuredAt(measuredAt != null ? measuredAt : LocalDateTime.now())
                 .temperature(temperature)
                 .humidity(humidity)
@@ -88,18 +91,15 @@ public class SensorLogService {
                 .receivedAt(LocalDateTime.now())
                 .build();
 
-        return sensorLogRepository.save(log).getSensorLogId(); // PK getter명은 엔티티에 맞게!
+        return sensorLogRepository.save(log).getSensorLogId();
     }
 
-    //최신 센서값 조회
+    // 최신 센서값 조회
     @Transactional(readOnly = true)
     public SensorLogResponse getLatestSensor(Long plantId) {
-
         SensorLog log = sensorLogRepository
-                .findTopByPlantIdOrderByMeasuredAtDesc(plantId)
-                .orElseThrow(() ->
-                        new CustomException(ErrorCode.SENSOR_LOG_NOT_FOUND)
-                );
+                .findTopByPlant_PlantIdOrderByMeasuredAtDesc(plantId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SENSOR_LOG_NOT_FOUND));
 
         return SensorLogResponse.builder()
                 .measuredAt(log.getMeasuredAt())

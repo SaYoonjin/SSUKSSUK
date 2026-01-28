@@ -1,5 +1,6 @@
 package com.ssukssuk.domain.history;
 
+import com.ssukssuk.domain.plant.UserPlant;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -14,13 +15,19 @@ public class SensorEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long eventId;
 
-    private Long plantId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plant_id", nullable = false)
+    private UserPlant plant;
 
     private Integer sensorCode;
 
-    private Long firstSensorLogId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "first_sensor_log_id")
+    private SensorLog firstSensorLog;
 
-    private Long lastSensorLogId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "last_sensor_log_id")
+    private SensorLog lastSensorLog;
 
     /**
      * true = OPEN, false = RESOLVED
@@ -36,27 +43,27 @@ public class SensorEvent {
        ======================== */
 
     public static SensorEvent open(
-            Long plantId,
+            UserPlant plant,
             Integer sensorCode,
-            Long firstSensorLogId,
+            SensorLog firstSensorLog,
             LocalDateTime startedAt
     ) {
         SensorEvent e = new SensorEvent();
-        e.plantId = plantId;
+        e.plant = plant;
         e.sensorCode = sensorCode;
-        e.firstSensorLogId = firstSensorLogId;
-        e.lastSensorLogId = firstSensorLogId;
+        e.firstSensorLog = firstSensorLog;
+        e.lastSensorLog = firstSensorLog;
         e.state = true;
         e.startedAt = startedAt;
         return e;
     }
 
-    public void updateLast(Long lastSensorLogId) {
-        this.lastSensorLogId = lastSensorLogId;
+    public void updateLast(SensorLog lastSensorLog) {
+        this.lastSensorLog = lastSensorLog;
     }
 
-    public void resolve(Long lastSensorLogId, LocalDateTime resolvedAt) {
-        this.lastSensorLogId = lastSensorLogId;
+    public void resolve(SensorLog lastSensorLog, LocalDateTime resolvedAt) {
+        this.lastSensorLog = lastSensorLog;
         this.state = false;
         this.resolvedAt = resolvedAt;
     }

@@ -1,5 +1,6 @@
 package com.ssukssuk.domain.history;
 
+import com.ssukssuk.domain.plant.UserPlant;
 import jakarta.persistence.*;
 
 import lombok.AccessLevel;
@@ -23,8 +24,9 @@ public class PlantImage {
     @Column(name = "image_id")
     private Long imageId;
 
-    @Column(name = "plant_id", nullable = false)
-    private Long plantId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plant_id", nullable = false)
+    private UserPlant plant;
 
     @Column(name = "captured_at", nullable = false)
     private LocalDateTime capturedAt;

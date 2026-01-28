@@ -10,8 +10,8 @@ import java.util.Optional;
 @Repository
 public interface SensorLogRepository extends JpaRepository<SensorLog, Long> {
 
-    Optional<SensorLog> findTopByPlantIdOrderByMeasuredAtDesc(Long plantId);
+    Optional<SensorLog> findTopByPlant_PlantIdOrderByMeasuredAtDesc(Long plantId);
 
     // 특정 식물의 전체 센서 로그
-    List<SensorLog> findByPlantIdOrderByMeasuredAtDesc(Long plantId);
+    List<SensorLog> findByPlant_PlantIdOrderByMeasuredAtDesc(Long plantId);
 }

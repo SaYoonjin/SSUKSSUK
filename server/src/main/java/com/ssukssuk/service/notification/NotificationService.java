@@ -1,6 +1,12 @@
 package com.ssukssuk.service.notification;
 
+import com.ssukssuk.domain.auth.User;
+import com.ssukssuk.domain.history.ImageInference;
+import com.ssukssuk.domain.history.SensorEvent;
 import com.ssukssuk.domain.notification.Notification;
+import com.ssukssuk.domain.plant.UserPlant;
+import com.ssukssuk.repository.auth.UserRepository;
+import com.ssukssuk.repository.history.SensorEventRepository;
 import com.ssukssuk.repository.notification.NotificationRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +21,8 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserPlantRepository userPlantRepository;
+    private final UserRepository userRepository;
+    private final SensorEventRepository sensorEventRepository;
 
     @Transactional
     public void notifySensorAnomaly(
@@ -22,14 +30,16 @@ public class NotificationService {
             Long eventId,
             Notification.NotiTitle sensorTitle
     ) {
-        Long userId = resolveActiveUserId(plantId);
+        UserPlant plant = findPlantById(plantId);
+        User user = findActiveUserByPlantId(plantId);
+        SensorEvent event = sensorEventRepository.findById(eventId).orElse(null);
 
         String message = sensorAnomalyMessage(sensorTitle);
 
         Notification n = Notification.of(
-                userId,
-                plantId,
-                eventId,
+                user,
+                plant,
+                event,
                 null,
                 Notification.NotiType.SENSOR,
                 sensorTitle,
@@ -40,17 +50,14 @@ public class NotificationService {
     }
 
     @Transactional
-    public void notifyImageDiscoloration(
-            Long plantId,
-            Long inferenceId
-    ) {
-        Long userId = resolveActiveUserId(plantId);
+    public void notifyImageDiscoloration(UserPlant plant, ImageInference inference) {
+        User user = findActiveUserByPlantId(plant.getPlantId());
 
         Notification n = Notification.of(
-                userId,
-                plantId,
+                user,
+                plant,
                 null,
-                inferenceId,
+                inference,
                 Notification.NotiType.IMAGE,
                 Notification.NotiTitle.DISCOLORATION,
                 "잎 상태에 이상이 감지됐어요"
@@ -64,12 +71,14 @@ public class NotificationService {
             Long plantId,
             Long eventId
     ) {
-        Long userId = resolveActiveUserId(plantId);
+        UserPlant plant = findPlantById(plantId);
+        User user = findActiveUserByPlantId(plantId);
+        SensorEvent event = sensorEventRepository.findById(eventId).orElse(null);
 
         Notification n = Notification.of(
-                userId,
-                plantId,
-                eventId,
+                user,
+                plant,
+                event,
                 null,
                 Notification.NotiType.ACTION_DONE,
                 Notification.NotiTitle.ACTION_DONE,
@@ -81,14 +90,16 @@ public class NotificationService {
 
     @Transactional
     public void create(Long plantId, Long eventId, String notiType, String message) {
-        Long userId = resolveActiveUserId(plantId);
+        UserPlant plant = findPlantById(plantId);
+        User user = findActiveUserByPlantId(plantId);
+        SensorEvent event = eventId != null ? sensorEventRepository.findById(eventId).orElse(null) : null;
 
         ParsedNoti parsed = parseLegacyNotiType(notiType);
 
         Notification n = Notification.of(
-                userId,
-                plantId,
-                eventId,
+                user,
+                plant,
+                event,
                 null,
                 parsed.notiType(),
                 parsed.notiTitle(),
@@ -98,11 +109,18 @@ public class NotificationService {
         notificationRepository.save(n);
     }
 
-    private Long resolveActiveUserId(Long plantId) {
-        return userPlantRepository.findActiveUserIdByPlantId(plantId)
+    private UserPlant findPlantById(Long plantId) {
+        return userPlantRepository.findById(plantId)
+                .orElseThrow(() -> new IllegalStateException("Plant not found: " + plantId));
+    }
+
+    private User findActiveUserByPlantId(Long plantId) {
+        Long userId = userPlantRepository.findActiveUserIdByPlantId(plantId)
                 .orElseThrow(() -> new IllegalStateException(
                         "No active user_plant binding for plantId=" + plantId
                 ));
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found: " + userId));
     }
 
     private String sensorAnomalyMessage(Notification.NotiTitle title) {

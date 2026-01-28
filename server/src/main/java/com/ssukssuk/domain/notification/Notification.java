@@ -1,5 +1,9 @@
 package com.ssukssuk.domain.notification;
 
+import com.ssukssuk.domain.auth.User;
+import com.ssukssuk.domain.history.ImageInference;
+import com.ssukssuk.domain.history.SensorEvent;
+import com.ssukssuk.domain.plant.UserPlant;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -23,17 +27,21 @@ public class Notification {
     @Column(name = "notification_id")
     private Long notificationId;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(name = "plant_id", nullable = false)
-    private Long plantId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plant_id", nullable = false)
+    private UserPlant plant;
 
-    @Column(name = "event_id")
-    private Long eventId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id")
+    private SensorEvent event;
 
-    @Column(name = "inference_id")
-    private Long inferenceId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "inference_id")
+    private ImageInference inference;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "noti_type", nullable = false, length = 20)
@@ -57,19 +65,19 @@ public class Notification {
     }
 
     public static Notification of(
-            Long userId,
-            Long plantId,
-            Long eventId,
-            Long inferenceId,
+            User user,
+            UserPlant plant,
+            SensorEvent event,
+            ImageInference inference,
             NotiType notiType,
             NotiTitle notiTitle,
             String message
     ) {
         Notification n = new Notification();
-        n.userId = require(userId, "userId");
-        n.plantId = require(plantId, "plantId");
-        n.eventId = eventId;
-        n.inferenceId = inferenceId;
+        n.user = require(user, "user");
+        n.plant = require(plant, "plant");
+        n.event = event;
+        n.inference = inference;
         n.notiType = require(notiType, "notiType");
         n.notiTitle = require(notiTitle, "notiTitle");
         n.message = requireText(message, "message");

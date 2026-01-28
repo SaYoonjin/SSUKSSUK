@@ -1,5 +1,6 @@
 package com.ssukssuk.domain.history;
 
+import com.ssukssuk.domain.plant.UserPlant;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,11 +19,13 @@ public class ImageInference {
     @Column(name = "inference_id")
     private Long inferenceId;
 
-    @Column(name = "plant_id")
-    private Long plantId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plant_id")
+    private UserPlant plant;
 
-    @Column(name = "image_id", nullable = false)
-    private Long imageId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "image_id", nullable = false)
+    private PlantImage image;
 
     @Column
     private Double height;

@@ -84,7 +84,7 @@ public class UserService {
 
         refreshTokenRepository.save(
                 RefreshToken.builder()
-                        .userId(user.getId())
+                        .user(user)
                         .token(refreshToken)
                         .expiresAt(jwtTokenProvider.getRefreshTokenExpiry())
                         .build()
@@ -142,7 +142,7 @@ public class UserService {
 
         refreshTokenRepository.save(
                 RefreshToken.builder()
-                        .userId(user.getId())
+                        .user(user)
                         .token(newRefreshToken)
                         .expiresAt(jwtTokenProvider.getRefreshTokenExpiry())
                         .build()
@@ -221,7 +221,7 @@ public class UserService {
      ========================= */
     @Transactional
     public void logout(Long userId) {
-        refreshTokenRepository.deleteByUserId(userId);
+        refreshTokenRepository.deleteByUser_Id(userId);
     }
 
     /* =========================

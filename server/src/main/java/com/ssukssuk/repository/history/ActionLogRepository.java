@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface ActionLogRepository extends JpaRepository<ActionLog, Long> {
 
-    Optional<ActionLog> findTopByEventIdAndResultStatusOrderByCreatedAtDesc(
+    Optional<ActionLog> findTopByEvent_EventIdAndResultStatusOrderByCreatedAtDesc(
             Long eventId,
             String resultStatus
     );

@@ -2,11 +2,13 @@ package com.ssukssuk.service.history;
 
 import com.ssukssuk.domain.history.ImageInference;
 import com.ssukssuk.domain.history.PlantImage;
+import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.history.DeviceImageInferenceRequest;
 import com.ssukssuk.infra.idempotency.IdempotencyService;
 import com.ssukssuk.repository.history.ImageInferenceRepository;
 import com.ssukssuk.repository.history.PlantImageRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
+import com.ssukssuk.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ public class ImageInferenceService {
     private final ImageInferenceRepository imageInferenceRepository;
     private final UserPlantRepository userPlantRepository;
     private final IdempotencyService idempotencyService;
+    private final NotificationService notificationService;
 
     @Transactional
     public void handle(DeviceImageInferenceRequest request) {
@@ -50,59 +53,70 @@ public class ImageInferenceService {
         );
         if (!bound) return;
 
-        // 4. 이미지 유효성
-        boolean hasTop = hasImage(
-                request.getImageKind1(),
-                request.getPublicUrl1(),
-                request.getMeasuredAt1()
-        );
+        UserPlant plant = userPlantRepository.findById(request.getPlantId())
+                .orElse(null);
+        if (plant == null) return;
 
-        boolean hasSide = hasImage(
-                request.getImageKind2(),
-                request.getPublicUrl2(),
-                request.getMeasuredAt2()
-        );
+        // 4. 이미지 유효성: kind + url 필수, measuredAt 없으면 now로 보정
+        boolean hasTop = hasImage(request.getImageKind1(), request.getPublicUrl1());
+        boolean hasSide = hasImage(request.getImageKind2(), request.getPublicUrl2());
 
         if (!hasTop && !hasSide) return;
 
-        // 5. inference 필수값
-        if (request.getHeight() == null
-                || request.getWidth() == null
-                || request.getAnomaly() == null
-                || request.getConfidence() == null) {
+        // 5. inference 필수값: confidence 필수 + (anomaly/height/width 중 최소 1개)
+        if (request.getConfidence() == null) {
+            return;
+        }
+        boolean hasAtLeastOne = request.getAnomaly() != null
+                || request.getHeight() != null
+                || request.getWidth() != null;
+        if (!hasAtLeastOne) {
             return;
         }
 
-        // 6. PlantImage 저장 (한 번만)
+        // 6. measuredAt 보정
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime measuredAt1 = hasTop
+                ? (request.getMeasuredAt1() != null ? request.getMeasuredAt1() : now)
+                : null;
+        LocalDateTime measuredAt2 = hasSide
+                ? (request.getMeasuredAt2() != null ? request.getMeasuredAt2() : now)
+                : null;
+
+        // 7. PlantImage 저장
         PlantImage image = PlantImage.builder()
-                .plantId(request.getPlantId())
+                .plant(plant)
                 .imageUrlTop(hasTop ? request.getPublicUrl1() : null)
                 .imageUrlSide(hasSide ? request.getPublicUrl2() : null)
-                .capturedAt(
-                        hasTop ? request.getMeasuredAt1()
-                                : request.getMeasuredAt2()
-                )
+                .capturedAt(hasTop ? measuredAt1 : measuredAt2)
                 .build();
 
         plantImageRepository.save(image);
 
-        // 7. ImageInference 저장
+        // 8. ImageInference 저장
         ImageInference inference = ImageInference.builder()
-                .plantId(request.getPlantId())
-                .imageId(image.getImageId())
+                .plant(plant)
+                .image(image)
                 .height(request.getHeight())
                 .width(request.getWidth())
-                .anomaly(request.getAnomaly().intValue())
+                .anomaly(request.getAnomaly() != null ? request.getAnomaly().intValue() : null)
                 .confidence(request.getConfidence())
-                .symptomEnum(request.getSymptomEnum()) // DTO에 존재해야 함
-                .inferenceAt(LocalDateTime.now())
+                .symptomEnum(request.getSymptomEnum())
+                .inferenceAt(now)
                 .build();
 
         imageInferenceRepository.save(inference);
+
+        // 9. 이상 감지 시 알람: confidence >= 70 && anomaly >= 3
+        if (request.getConfidence() >= 70
+                && request.getAnomaly() != null
+                && request.getAnomaly() >= 3) {
+            notificationService.notifyImageDiscoloration(plant, inference);
+        }
     }
 
-    private boolean hasImage(String kind, String url, LocalDateTime measuredAt) {
-        return !isBlank(kind) && !isBlank(url) && measuredAt != null;
+    private boolean hasImage(String kind, String url) {
+        return !isBlank(kind) && !isBlank(url);
     }
 
     private boolean isBlank(String s) {

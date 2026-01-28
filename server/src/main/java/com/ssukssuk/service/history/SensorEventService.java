@@ -1,8 +1,14 @@
 package com.ssukssuk.service.history;
 
+import com.ssukssuk.common.exception.CustomException;
+import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.domain.history.SensorEvent;
+import com.ssukssuk.domain.history.SensorLog;
+import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.repository.history.SensorEventRepository;
+import com.ssukssuk.repository.history.SensorLogRepository;
+import com.ssukssuk.repository.plant.UserPlantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +21,8 @@ import java.util.Optional;
 public class SensorEventService {
 
     private final SensorEventRepository sensorEventRepository;
+    private final SensorLogRepository sensorLogRepository;
+    private final UserPlantRepository userPlantRepository;
 
     // ANOMALY_DETECTED
     @Transactional
@@ -31,18 +39,25 @@ public class SensorEventService {
                 .orElse(null);
 
         if (openEvent == null) {
-            SensorEvent created = SensorEvent.open(plantId, sensorCode, sensorLogId, measuredAt);
+            UserPlant plant = userPlantRepository.findById(plantId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+            SensorLog sensorLog = sensorLogRepository.findById(sensorLogId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.SENSOR_LOG_NOT_FOUND));
+
+            SensorEvent created = SensorEvent.open(plant, sensorCode, sensorLog, measuredAt);
             sensorEventRepository.save(created);
             return Optional.of(created);
         } else {
-            openEvent.updateLast(sensorLogId);
+            SensorLog sensorLog = sensorLogRepository.findById(sensorLogId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.SENSOR_LOG_NOT_FOUND));
+            openEvent.updateLast(sensorLog);
             return Optional.empty();
         }
     }
 
     // RECOVERY_DONE
     @Transactional
-    public Optional<SensorEvent> resolveIfOpenAndReturn(
+    public void resolveIfOpenAndReturn(
             Long plantId,
             SensorUplinkMessage.TriggerSensorType triggerType,
             Long sensorLogId,
@@ -53,8 +68,11 @@ public class SensorEventService {
         Optional<SensorEvent> openEventOpt =
                 sensorEventRepository.findOpenByPlantIdAndSensorCode(plantId, sensorCode);
 
-        openEventOpt.ifPresent(event -> event.resolve(sensorLogId, measuredAt));
-        return openEventOpt;
+        openEventOpt.ifPresent(event -> {
+            SensorLog sensorLog = sensorLogRepository.findById(sensorLogId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.SENSOR_LOG_NOT_FOUND));
+            event.resolve(sensorLog, measuredAt);
+        });
     }
 
     public Integer mapToSensorCode(SensorUplinkMessage.TriggerSensorType type) {

@@ -75,21 +75,20 @@ public class ActionResultHandler implements MqttMessageHandler {
             // action_type → sensor_event.sensor_code 매핑
             int sensorCode = mapToSensorCode(msg.getActionType());
 
-            // OPEN 이벤트 찾아서 eventId 확보
-            Long eventId = sensorEventRepository
-                    .findTopByPlantIdAndSensorCodeAndStateOrderByStartedAtDesc(
+            // OPEN 이벤트 찾기
+            var sensorEvent = sensorEventRepository
+                    .findTopByPlant_PlantIdAndSensorCodeAndStateOrderByStartedAtDesc(
                             msg.getPlantId(), sensorCode, true
                     )
                     .orElseThrow(() -> new IllegalStateException(
                             "OPEN sensor_event not found. plantId=" + msg.getPlantId() + ", sensorCode=" + sensorCode
-                    ))
-                    .getEventId();
+                    ));
 
             // action_log INSERT (SUCCESS/FAIL 모두)
-            actionLogService.record(msg, eventId, occurredAt);
+            actionLogService.record(msg, sensorEvent, occurredAt);
 
             log.info("[MQTT][ACTION_RESULT] action_log saved. eventId={}, actionType={}, result={}",
-                    eventId, msg.getActionType(), msg.getResultStatus());
+                    sensorEvent.getEventId(), msg.getActionType(), msg.getResultStatus());
 
         } catch (Exception e) {
             log.error("[MQTT][ACTION_RESULT] processing error", e);
