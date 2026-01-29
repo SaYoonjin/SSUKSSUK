@@ -11,8 +11,10 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+// [추가] 토큰 저장을 위한 라이브러리 임포트
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 1. 서버의 실제 응답 구조에 맞게 타입 정의 수정
+// 1. 서버의 실제 응답 구조에 맞게 타입 정의
 type LoginResponse = {
   success: boolean;
   data: {
@@ -70,7 +72,7 @@ export default function LoginScreen({ navigation }: any) {
     setErrorMsg("");
 
     try {
-      // 2. EC2 서버로 POST 요청 전송
+      // 2. 서버로 POST 요청 전송
       const res = await fetch(`${API_BASE_URL}${LOGIN_PATH}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,9 +86,27 @@ export default function LoginScreen({ navigation }: any) {
 
       // 3. 서버 응답 결과에 따른 분기 처리
       if (json.success && json.data) {
-        // 로그인 성공 시 토큰 및 유저 정보 확인
         console.log("로그인 성공! 유저 ID:", json.data.userId);
-        console.log("액세스 토큰:", json.data.accessToken);
+
+        // [핵심 수정] 로그인 성공 시 AccessToken을 로컬 스토리지에 저장
+        try {
+          await AsyncStorage.setItem("accessToken", json.data.accessToken);
+
+          // RefreshToken도 있다면 저장 (추후 토큰 만료 시 사용)
+          if (json.data.refreshToken) {
+            await AsyncStorage.setItem("refreshToken", json.data.refreshToken);
+          }
+
+          // 아이디 저장 체크 시 이메일도 저장 (선택 사항)
+          if (rememberMe) {
+            await AsyncStorage.setItem("savedEmail", e);
+          } else {
+            await AsyncStorage.removeItem("savedEmail");
+          }
+
+        } catch (storageError) {
+          console.error("토큰 저장 실패:", storageError);
+        }
 
         // 메인 화면으로 이동
         navigation.replace("Main");
