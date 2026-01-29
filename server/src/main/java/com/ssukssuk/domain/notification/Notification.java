@@ -86,13 +86,14 @@ public class Notification {
     }
 
     public enum NotiType {
-        SENSOR, IMAGE, ACTION_DONE
+        SENSOR, IMAGE, ACTION_DONE, ACTION_FAIL
     }
 
     public enum NotiTitle {
         WATER_LEVEL, TEMPERATURE, NUTRIENT_CONC, HUMIDITY,
         DISCOLORATION,
-        ACTION_DONE
+        ACTION_DONE,
+        ACTION_FAIL
     }
 
     private static <T> T require(T v, String f) {

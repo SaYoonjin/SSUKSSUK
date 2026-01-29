@@ -32,10 +32,8 @@ public class SensorEventService {
             Long sensorLogId,
             LocalDateTime measuredAt
     ) {
-        Integer sensorCode = mapToSensorCode(triggerType);
-
         SensorEvent openEvent = sensorEventRepository
-                .findOpenByPlantIdAndSensorCode(plantId, sensorCode)
+                .findOpenByPlantIdAndSensorCode(plantId, triggerType.getCode())
                 .orElse(null);
 
         if (openEvent == null) {
@@ -44,7 +42,7 @@ public class SensorEventService {
             SensorLog sensorLog = sensorLogRepository.findById(sensorLogId)
                     .orElseThrow(() -> new CustomException(ErrorCode.SENSOR_LOG_NOT_FOUND));
 
-            SensorEvent created = SensorEvent.open(plant, sensorCode, sensorLog, measuredAt);
+            SensorEvent created = SensorEvent.open(plant, triggerType.getCode(), sensorLog, measuredAt);
             sensorEventRepository.save(created);
             return Optional.of(created);
         } else {
@@ -63,10 +61,8 @@ public class SensorEventService {
             Long sensorLogId,
             LocalDateTime measuredAt
     ) {
-        Integer sensorCode = mapToSensorCode(triggerType);
-
         Optional<SensorEvent> openEventOpt =
-                sensorEventRepository.findOpenByPlantIdAndSensorCode(plantId, sensorCode);
+                sensorEventRepository.findOpenByPlantIdAndSensorCode(plantId, triggerType.getCode());
 
         openEventOpt.ifPresent(event -> {
             SensorLog sensorLog = sensorLogRepository.findById(sensorLogId)
@@ -75,14 +71,9 @@ public class SensorEventService {
         });
     }
 
-    public Integer mapToSensorCode(SensorUplinkMessage.TriggerSensorType type) {
-        if (type == null) throw new IllegalArgumentException("trigger_sensor_type is null");
-
-        return switch (type) {
-            case TEMPERATURE -> 1;
-            case HUMIDITY -> 2;
-            case WATER_LEVEL -> 3;
-            case NUTRIENT_CONC -> 4;
-        };
+    // ANOMALY_FAIL - 열린 이벤트 ID 조회
+    public Optional<Long> findOpenEventId(Long plantId, SensorUplinkMessage.TriggerSensorType triggerType) {
+        return sensorEventRepository.findOpenByPlantIdAndSensorCode(plantId, triggerType.getCode())
+                .map(SensorEvent::getEventId);
     }
 }

@@ -89,6 +89,28 @@ public class NotificationService {
     }
 
     @Transactional
+    public void notifyActionFail(
+            Long plantId,
+            Long eventId
+    ) {
+        UserPlant plant = findPlantById(plantId);
+        User user = findActiveUserByPlantId(plantId);
+        SensorEvent event = sensorEventRepository.findById(eventId).orElse(null);
+
+        Notification n = Notification.of(
+                user,
+                plant,
+                event,
+                null,
+                Notification.NotiType.ACTION_FAIL,
+                Notification.NotiTitle.ACTION_FAIL,
+                "이상 상태에 대한 자동 조치를 실패했어요"
+        );
+
+        notificationRepository.save(n);
+    }
+
+    @Transactional
     public void create(Long plantId, Long eventId, String notiType, String message) {
         UserPlant plant = findPlantById(plantId);
         User user = findActiveUserByPlantId(plantId);
@@ -129,6 +151,7 @@ public class NotificationService {
             case TEMPERATURE -> "온도가 적정 범위를 벗어났어요";
             case NUTRIENT_CONC -> "영양분 농도가 정상 범위를 벗어났어요";
             case HUMIDITY -> "습도가 적정 범위를 벗어났어요";
+            case ACTION_FAIL -> "이상 상태에 대한 자동 조치를 실패했어요";
             case DISCOLORATION, ACTION_DONE ->
                     throw new IllegalArgumentException("Invalid sensor title: " + title);
         };

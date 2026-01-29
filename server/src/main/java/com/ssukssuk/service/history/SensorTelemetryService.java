@@ -63,6 +63,13 @@ public class SensorTelemetryService {
                     sensorLogId,
                     measuredAt
             );
+
+            case ANOMALY_FAIL -> sensorEventService.findOpenEventId(
+                    msg.getPlantId(),
+                    msg.getTriggerSensorType()
+            ).ifPresent(eventId ->
+                    notificationService.notifyActionFail(msg.getPlantId(), eventId)
+            );
         }
     }
 
@@ -71,9 +78,9 @@ public class SensorTelemetryService {
 
         return switch (triggerType) {
             case WATER_LEVEL -> Notification.NotiTitle.WATER_LEVEL;
-            case TEMPERATURE -> Notification.NotiTitle.TEMPERATURE;
             case NUTRIENT_CONC -> Notification.NotiTitle.NUTRIENT_CONC;
-            case HUMIDITY -> Notification.NotiTitle.HUMIDITY;
+
+
         };
     }
 }

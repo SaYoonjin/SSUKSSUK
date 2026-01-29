@@ -59,7 +59,15 @@ public class SensorUplinkMessage {
         private Float nutrientConc;
     }
 
-    public enum EventKind { PERIODIC, ANOMALY_DETECTED, RECOVERY_DONE }
-    public enum TriggerSensorType { WATER_LEVEL, NUTRIENT_CONC, TEMPERATURE, HUMIDITY }
-    public enum SensorStatus { OK, BAD }
+    public enum EventKind { PERIODIC, ANOMALY_DETECTED, RECOVERY_DONE, ANOMALY_FAIL }
+    public enum TriggerSensorType {
+        WATER_LEVEL(1),
+        NUTRIENT_CONC(2);
+
+        private final int code;
+
+        TriggerSensorType(int code) { this.code = code; }
+        public int getCode() { return code; }
+    }
+    public enum SensorStatus { OK, UP, DOWN }
 }
