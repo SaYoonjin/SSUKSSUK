@@ -35,7 +35,7 @@ public class UserService {
         회원가입
      ========================= */
     @Transactional
-    public UserResponse signUp(SignUpRequest req) {
+    public SignupResponse signUp(SignUpRequest req) {
         if (userRepository.existsByEmail(req.email())) {
             throw new CustomException(ErrorCode.EMAIL_DUPLICATE);
         }
@@ -50,11 +50,8 @@ public class UserService {
 
         User saved = userRepository.save(user);
 
-        return new UserResponse(
-                saved.getId(),
-                saved.getEmail(),
-                saved.getNickname(),
-                saved.isAdmin()
+        return new SignupResponse(
+                saved.getId()
         );
     }
 

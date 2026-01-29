@@ -16,7 +16,7 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/signup")
-    public ApiResponse<UserResponse> signUp(@Valid @RequestBody SignUpRequest req) {
+    public ApiResponse<SignupResponse> signUp(@Valid @RequestBody SignUpRequest req) {
         return ApiResponse.ok(userService.signUp(req));
     }
 

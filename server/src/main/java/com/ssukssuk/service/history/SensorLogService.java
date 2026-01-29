@@ -4,7 +4,6 @@ import com.ssukssuk.common.exception.CustomException;
 import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.history.SensorLog;
 import com.ssukssuk.domain.plant.UserPlant;
-import com.ssukssuk.dto.history.SensorLogRequest;
 import com.ssukssuk.dto.history.SensorLogResponse;
 import com.ssukssuk.repository.history.SensorLogRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
@@ -21,28 +20,6 @@ public class SensorLogService {
 
     private final SensorLogRepository sensorLogRepository;
     private final UserPlantRepository userPlantRepository;
-
-    // REST API용 (POST /history/sensor-log)
-    public void saveSensorLog(SensorLogRequest request) {
-        UserPlant plant = userPlantRepository.findById(request.getPlantId())
-                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
-
-        SensorLog log = SensorLog.builder()
-                .plant(plant)
-                .measuredAt(
-                        request.getMeasuredAt() != null
-                                ? request.getMeasuredAt()
-                                : LocalDateTime.now()
-                )
-                .temperature(request.getTemperature())
-                .humidity(request.getHumidity())
-                .waterLevel(request.getWaterLevel())
-                .nutrientConc(request.getNutrientConc())
-                .receivedAt(LocalDateTime.now())
-                .build();
-
-        sensorLogRepository.save(log);
-    }
 
     // MQTT 수신용 (SensorTelemetryHandler에서 호출)
     public void saveFromMqtt(
