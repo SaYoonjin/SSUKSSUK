@@ -13,15 +13,23 @@ import {
   Animated,
   ActivityIndicator,
 } from 'react-native';
-// [추가] 토큰 로드용
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 상수 설정
-const API_BASE_URL = 'https://i14a103.p.ssafy.io/api';
+// [변경] Axios 클라이언트 임포트
+import client from '../api';
+
+// 상수 설정 (API_BASE_URL 제거됨)
 const PIXEL_SIZE = 4;
 const GREEN = '#2E5A35';
 const LIGHT_GREEN = '#75A743';
 const CARD_BG = '#fafaf6';
+
+// 응답 타입 정의
+type PasswordChangeResponse = {
+  success: boolean;
+  error?: {
+    message: string;
+  };
+};
 
 export default function PasswordEditScreen({ navigation }: any) {
   const [currentPw, setCurrentPw] = useState('');
@@ -29,15 +37,7 @@ export default function PasswordEditScreen({ navigation }: any) {
   const [newPwConfirm, setNewPwConfirm] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // [함수] 토큰 가져오기
-  const getToken = async () => {
-    try {
-      return await AsyncStorage.getItem('accessToken');
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
-  };
+  // [삭제] getToken 함수 불필요 (Axios 인터셉터가 처리)
 
   const handleSubmit = async () => {
     // 1. 클라이언트 유효성 검사
@@ -60,27 +60,15 @@ export default function PasswordEditScreen({ navigation }: any) {
     // 2. 서버 통신 시작
     setLoading(true);
     try {
-      const token = await getToken();
-      if (!token) {
-        Alert.alert('오류', '로그인 정보가 없습니다.');
-        navigation.goBack();
-        return;
-      }
-
-      const res = await fetch(`${API_BASE_URL}/auth/password`, {
-        method: 'PATCH', // 비밀번호 변경은 보통 PATCH 사용 (명세서 확인 필요)
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          currentPassword: currentPw,
-          newPassword: newPw,
-          confirmPassword: newPwConfirm,
-        }),
+      // [변경] Axios 사용: PATCH 메서드
+      // 헤더 설정, JSON 변환 자동 처리
+      const res = await client.patch<PasswordChangeResponse>('/auth/password', {
+        currentPassword: currentPw,
+        newPassword: newPw,
+        confirmPassword: newPwConfirm,
       });
 
-      const json = await res.json();
+      const json = res.data;
 
       if (json.success) {
         Alert.alert('완료', '비밀번호가 성공적으로 변경되었습니다.', [
@@ -90,15 +78,25 @@ export default function PasswordEditScreen({ navigation }: any) {
           },
         ]);
       } else {
-        // 비밀번호 불일치 등 서버 에러 메시지 출력
+        // 200 OK지만 성공하지 못한 경우 (비즈니스 로직 에러)
         Alert.alert(
           '변경 실패',
           json.error?.message || '비밀번호 변경에 실패했습니다.',
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      Alert.alert('통신 오류', '서버와 연결할 수 없습니다.');
+      // [변경] Axios 에러 핸들링
+      if (error.response && error.response.data) {
+        // 서버에서 보낸 에러 메시지가 있는 경우
+        const msg =
+          error.response.data.error?.message ||
+          error.response.data.message ||
+          '비밀번호 변경에 실패했습니다.';
+        Alert.alert('변경 실패', msg);
+      } else {
+        Alert.alert('통신 오류', '서버와 연결할 수 없습니다.');
+      }
     } finally {
       setLoading(false);
     }
@@ -187,7 +185,7 @@ export default function PasswordEditScreen({ navigation }: any) {
   );
 }
 
-// ---------------- 픽셀 UI 컴포넌트 ----------------
+// ---------------- 픽셀 UI 컴포넌트 (기존과 동일) ----------------
 
 function PixelBox({ children, style }: any) {
   return (
@@ -315,7 +313,7 @@ function PixelButton({ text, onPress, disabled }: any) {
   );
 }
 
-// ---------------- 스타일 시트 ----------------
+// ---------------- 스타일 시트 (기존과 동일) ----------------
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#EDEDE9' },

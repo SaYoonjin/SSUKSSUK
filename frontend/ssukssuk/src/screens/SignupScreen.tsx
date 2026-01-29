@@ -13,13 +13,17 @@ import {
   Alert,
 } from 'react-native';
 
+// [변경] Axios 클라이언트 임포트 (파일 경로에 맞춰 수정하세요)
+import client from '../api';
+
 const LOGO = require('../assets/logo.png');
 
+// 응답 타입 정의
 type SignupResponse =
   | { success: true; message: string }
   | { code: string; message: string; details?: { field?: string } };
 
-const API_BASE_URL = 'https://i14a103.p.ssafy.io/api';
+// [변경] 상수는 client에 설정되어 있으므로 경로만 남김
 const SIGNUP_PATH = '/auth/signup';
 
 export default function SignupScreen({ navigation }: any) {
@@ -30,7 +34,7 @@ export default function SignupScreen({ navigation }: any) {
 
   const [errorMsg, setErrorMsg] = useState<string>('');
 
-  // 1. 유효성 검사 로직
+  // 1. 유효성 검사 로직 (기존과 동일)
 
   // 이메일 유효성 검사
   const isEmailValid = useMemo(() => {
@@ -47,12 +51,12 @@ export default function SignupScreen({ navigation }: any) {
     return /\d/.test(password);
   }, [password]);
 
-  // [조건 3] 특수문자 포함 (기존 프론트엔드 로직에 있던 특수문자셋 기준)
+  // [조건 3] 특수문자 포함
   const isPwHasSpecial = useMemo(() => {
     return /[!@#$%^&*?_~-]/.test(password);
   }, [password]);
 
-  // 비밀번호 최종 유효성 (세 가지 조건 모두 만족 시 true)
+  // 비밀번호 최종 유효성
   const isPasswordValid = isPwLenValid && isPwHasNumber && isPwHasSpecial;
 
   // 닉네임 유효성
@@ -65,7 +69,6 @@ export default function SignupScreen({ navigation }: any) {
       return;
     }
 
-    // 비밀번호 유효성 세부 피드백
     if (!isPasswordValid) {
       if (!isPwLenValid) {
         Alert.alert('알림', '비밀번호는 8~20자 사이여야 합니다.');
@@ -89,30 +92,43 @@ export default function SignupScreen({ navigation }: any) {
     setErrorMsg('');
 
     try {
-      const res = await fetch(`${API_BASE_URL}${SIGNUP_PATH}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-          nickname: nickname.trim(),
-        }),
+      // [변경] Axios 사용
+      // Content-Type 헤더나 JSON.stringify 불필요 (자동 처리됨)
+      const res = await client.post<SignupResponse>(SIGNUP_PATH, {
+        email: email.trim(),
+        password,
+        nickname: nickname.trim(),
       });
-      const json: SignupResponse = await res.json();
 
+      const json = res.data;
+
+      // Axios는 200대 상태코드면 여기로 옴.
+      // 서버 로직상 success 필드를 체크
       if ('success' in json && json.success) {
         Alert.alert('환영합니다!', '회원가입이 완료되었습니다.', [
           {
             text: '로그인하러 가기',
-            onPress: () => navigation.navigate('Login'),
+            onPress: () => navigation.navigate('Login'), // 혹은 navigation.goBack()
           },
         ]);
         return;
       }
-      setErrorMsg(json.message || '회원가입 중 오류가 발생했습니다.');
-    } catch (error) {
+
+      // 200 OK지만 success가 false인 경우 (비즈니스 로직 에러)
+      // 타입 가드 등을 통해 message 접근
+      const msg = (json as any).message || '회원가입 중 오류가 발생했습니다.';
+      setErrorMsg(msg);
+    } catch (error: any) {
       console.error(error);
-      setErrorMsg('서버와의 통신에 실패했습니다.');
+
+      // [변경] Axios 에러 핸들링
+      if (error.response && error.response.data) {
+        // 서버에서 400, 409 등을 리턴하며 에러 메시지를 보낸 경우
+        const serverMsg = error.response.data.message;
+        setErrorMsg(serverMsg || '회원가입 실패');
+      } else {
+        setErrorMsg('서버와의 통신에 실패했습니다.');
+      }
     } finally {
       setLoading(false);
     }
@@ -153,10 +169,10 @@ export default function SignupScreen({ navigation }: any) {
           onChangeText={setPassword}
           placeholder="비밀번호"
           secureTextEntry
-          maxLength={20} // 백엔드 최대 길이 제한
+          maxLength={20}
         />
 
-        {/* [수정] 비밀번호 조건 체크리스트 (3가지 항목) */}
+        {/* 비밀번호 조건 체크리스트 */}
         <View style={styles.criteriaContainer}>
           <CriteriaItem satisfied={isPwLenValid} text="8~20자 이내" />
           <CriteriaItem satisfied={isPwHasNumber} text="숫자 포함" />
@@ -169,7 +185,7 @@ export default function SignupScreen({ navigation }: any) {
           value={nickname}
           onChangeText={setNickname}
           placeholder="닉네임"
-          maxLength={50} // 닉네임 최대 길이 제한
+          maxLength={50}
         />
 
         {/* 가입하기 버튼 */}
@@ -193,7 +209,7 @@ export default function SignupScreen({ navigation }: any) {
   );
 }
 
-// ---------------- 컴포넌트 및 스타일 정의 ----------------
+// ---------------- 컴포넌트 및 스타일 정의 (기존과 동일) ----------------
 
 function CriteriaItem({
   satisfied,
