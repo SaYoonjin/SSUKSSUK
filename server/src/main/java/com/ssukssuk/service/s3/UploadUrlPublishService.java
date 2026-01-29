@@ -27,9 +27,19 @@ public class UploadUrlPublishService {
             );
 
             String topic = MqttPublisher.controlTopic(serialNum, TOPIC_CHANNEL);
+
+            log.info("[UploadUrl] Generating presigned URLs: serial={}, plantId={}, date={}, slot={}",
+                    serialNum, plantId, date, slot);
+
+            for (var item : payload.getItems()) {
+                log.info("[UploadUrl] Item: viewType={}, objectKey={}", item.getViewType(), item.getObjectKey());
+                log.debug("[UploadUrl] URL: {}", item.getUploadUrl());
+            }
+
             mqttPublisher.publish(topic, payload);
 
-            log.info("[UploadUrl] Published to serial={}, plantId={}, slot={}", serialNum, plantId, slot);
+            log.info("[UploadUrl] Published to topic={}, serial={}, plantId={}, slot={}, expiresIn={}s",
+                    topic, serialNum, plantId, slot, payload.getExpiresInSec());
         } catch (Exception e) {
             log.error("[UploadUrl] Failed to publish: serial={}, plantId={}, slot={}", serialNum, plantId, slot, e);
         }

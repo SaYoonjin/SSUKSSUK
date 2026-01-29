@@ -53,6 +53,9 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
       - mqtt.broker-uri=tcp://mosquitto:1883
       - TZ=Asia/Seoul
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-ap-northeast-2}
     depends_on:
       mysql:
         condition: service_healthy

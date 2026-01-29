@@ -28,14 +28,31 @@ public class S3PresignService {
     private static final String CONTENT_TYPE = "image/jpeg";
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter ISO_OFFSET = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+    private static final String S3_URL_FORMAT = "https://%s.s3.%s.amazonaws.com/%s";
 
     private final S3Presigner s3Presigner;
 
     @Value("${aws.s3.bucket}")
     private String bucket;
 
+    @Value("${aws.region:ap-northeast-2}")
+    private String region;
+
     @Value("${aws.s3.presign-expiration-sec:900}")
     private int defaultExpirationSec;
+
+    /**
+     * S3 object key를 public URL로 변환
+     *
+     * @param objectKey S3 object key (예: plants/42/images/2026/01/27/0600/top.jpg)
+     * @return public URL (예: https://bucket.s3.ap-northeast-2.amazonaws.com/plants/42/...)
+     */
+    public String toPublicUrl(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) {
+            return null;
+        }
+        return String.format(S3_URL_FORMAT, bucket, region, objectKey);
+    }
 
     public UploadUrlPayload generateUploadUrlPayload(
             String serialNum,
