@@ -5,9 +5,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#define RELAY_LED_PORT GPIOB
-#define RELAY_LED_PIN  GPIO_PIN_0
-
 static uint8_t rx_buf[64];
 static uint8_t idx = 0;
 static uint8_t expected_len = 0;
@@ -16,6 +13,12 @@ static bool stm_ready = false;
 static void handle_packet(uint8_t type, uint8_t subtype,
                           const uint8_t *payload, uint8_t len);
 
+//void test_relay_boot(void)
+//{
+//    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+//    HAL_Delay(1000);
+//    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+//}
 
 void uart_poll(void)
 {
@@ -115,15 +118,32 @@ void handle_packet(uint8_t type, uint8_t subtype,
 
     else if (type == TYPE_CMD && subtype == CMD_LED_ON) {
         // Active LOW 릴레이 기준 (켜기), GPIO output level: high
-        HAL_GPIO_WritePin(RELAY_LED_PORT, RELAY_LED_PIN, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
         // Reset -> low -> 릴레이 ON -> NO 닫힘
     }
 
     else if (type == TYPE_CMD && subtype == CMD_LED_OFF) {
         // 끄기
-        HAL_GPIO_WritePin(RELAY_LED_PORT, RELAY_LED_PIN, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
     }
 
+    else if (type == TYPE_CMD && subtype == CMD_AUTO_RECOVERY) {
+    	// 자동 모드 복구 돌입
+    }
+    // [테스트용] 펌프 두개 작동&중지 테스트용임 이거 실제 사용하지 않음
+    else if(type==TYPE_CMD && subtype == CMD_PUMP_WATER) {
+    	HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_RESET);
+    }
 
+    else if(type==TYPE_CMD && subtype == CMD_PUMP_WATER_STOP) {
+        	HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_SET);
+    }
+    else if(type==TYPE_CMD && subtype == CMD_PUMP_NUTRI) {
+		HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_RESET);
+	}
+
+	else if(type==TYPE_CMD && subtype == CMD_PUMP_NUTRI_STOP) {
+		HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_SET);
+	}
 }
 

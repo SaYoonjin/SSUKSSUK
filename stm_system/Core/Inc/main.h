@@ -57,8 +57,12 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define RELAY_Pin GPIO_PIN_0
-#define RELAY_GPIO_Port GPIOB
+#define LED_Pin GPIO_PIN_0
+#define LED_GPIO_Port GPIOB
+#define WATER_PUMP_Pin GPIO_PIN_1
+#define WATER_PUMP_GPIO_Port GPIOB
+#define NUTRI_PUMP_Pin GPIO_PIN_10
+#define NUTRI_PUMP_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
