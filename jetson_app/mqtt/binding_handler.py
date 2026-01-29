@@ -1,10 +1,12 @@
+# mqtt/binding_handler.py
+
 from pathlib import Path
 import time
 from struct import pack
+
 from config_loader import load_json, save_json
 from mqtt.ack_builder import build_ack
 from uart.packet import CMD_SET_TH
-from uart.packet import CMD_REQ_SENSOR
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SETTING_PATH = BASE_DIR / "setting.json"
@@ -12,18 +14,18 @@ SETTING_PATH = BASE_DIR / "setting.json"
 
 def handle_binding_update(payload: dict, uart):
     """
-    BINDING_UPDATE 처리
+    BINDING_UPDATE 처리 (BOUND / UNBOUND 모두)
 
-    동작:
-    - setting.json 갱신
-    - STM32에 CMD_SET_TH 전송 (항상)
-    - 신규 바인딩일 때만 ACK 생성
-
-    return:
-      ack (dict | None)
+    정책:
+    - plant_id 정합성 검증 ❌ (서버 책임)
+    - setting.json 무조건 반영
+    - BOUND일 때만 STM32 제어
+    - 내부 오류만 ERROR ACK
     """
 
-    # 1️⃣ payload 검증
+    # =========================
+    # 1) payload 기본 검증
+    # =========================
     if payload.get("type") != "BINDING_UPDATE":
         raise ValueError("Invalid message type")
 
@@ -31,70 +33,82 @@ def handle_binding_update(payload: dict, uart):
     if binding_state not in ("BOUND", "UNBOUND"):
         raise ValueError("Invalid binding_state")
 
-    # 2️⃣ 기존 setting 로드
-    setting = load_json(SETTING_PATH)
+    incoming_plant_id = payload.get("plant_id")
 
-    prev_plant_id = setting["binding"].get("plant_id")
-    new_plant_id = payload.get("plant_id")
+    try:
+        # =========================
+        # 2) 기존 setting 로드
+        # =========================
+        setting = load_json(SETTING_PATH)
 
-    # 신규 바인딩 여부 판단
-    is_new_binding = (binding_state == "BOUND" and prev_plant_id != new_plant_id)
+        # =========================
+        # 3) setting.json 갱신
+        # =========================
+        if binding_state == "BOUND":
+            setting["binding"]["plant_id"] = incoming_plant_id
+            setting["binding"]["binding_state"] = "BOUND"
+            setting["binding"]["species"] = payload.get("species")
 
-    # 3️⃣ setting.json 갱신
-    if binding_state == "BOUND":
-        setting["binding"]["plant_id"] = new_plant_id
-        setting["binding"]["binding_state"] = "BOUND"
-        setting["binding"]["species"] = payload.get("species")
+            # ideal_ranges 반영
+            for key, value in payload.get("ideal_ranges", {}).items():
+                if key in setting["binding"]["ideal_ranges"]:
+                    setting["binding"]["ideal_ranges"][key]["min"] = value.get("min")
+                    setting["binding"]["ideal_ranges"][key]["max"] = value.get("max")
 
-        for key, value in payload.get("ideal_ranges", {}).items():
-            if key in setting["binding"]["ideal_ranges"]:
-                setting["binding"]["ideal_ranges"][key]["min"] = value.get("min")
-                setting["binding"]["ideal_ranges"][key]["max"] = value.get("max")
-                
-        # BOUND 처리 내부에 추가
-        led_time = payload.get("led_time")
-        if led_time:
+            # led_time 반영
+            led_time = payload.get("led_time") or {}
             setting["binding"]["led_time"]["start"] = led_time.get("start")
             setting["binding"]["led_time"]["end"] = led_time.get("end")
 
+            save_json(SETTING_PATH, setting)
 
-    else:  # UNBOUND
-        setting["binding"]["plant_id"] = None
-        setting["binding"]["binding_state"] = "UNBOUND"
-        setting["binding"]["species"] = None
+            # =========================
+            # 4) BOUND일 때만 STM32 제어
+            # =========================
+            ir = setting["binding"]["ideal_ranges"]
+            payload_th = pack(
+                "<ffff",
+                float(ir["water_level"]["min"]),
+                float(ir["water_level"]["max"]),
+                float(ir["nutrient_conc"]["min"]),
+                float(ir["nutrient_conc"]["max"]),
+            )
 
-        for key in setting["binding"]["ideal_ranges"]:
-            setting["binding"]["ideal_ranges"][key]["min"] = None
-            setting["binding"]["ideal_ranges"][key]["max"] = None
-            
-        setting["binding"]["led_time"]["start"] = None
-        setting["binding"]["led_time"]["end"] = None
+            uart.send_cmd(CMD_SET_TH, payload_th)
+            print("[UART] CMD_SET_THRESHOLD sent")
 
-    save_json(SETTING_PATH, setting)
+            time.sleep(0.05)
 
-    # 4️⃣ STM32 threshold 전송 (BOUND일 때만)
-    if binding_state == "BOUND":
-        ir = setting["binding"]["ideal_ranges"]
 
-        payload_th = pack(
-            "<ffff",
-            ir["water_level"]["min"],
-            ir["water_level"]["max"],
-            ir["nutrient_conc"]["min"],
-            ir["nutrient_conc"]["max"],
+        else:  # UNBOUND
+            setting["binding"]["plant_id"] = None
+            setting["binding"]["binding_state"] = "UNBOUND"
+            setting["binding"]["species"] = None
+
+            for key in setting["binding"]["ideal_ranges"]:
+                setting["binding"]["ideal_ranges"][key]["min"] = None
+                setting["binding"]["ideal_ranges"][key]["max"] = None
+
+            setting["binding"]["led_time"]["start"] = None
+            setting["binding"]["led_time"]["end"] = None
+
+            save_json(SETTING_PATH, setting)
+
+            # STM32 안전 제어는 main.py에서 처리
+            # (LED OFF / PUMP STOP)
+
+    except Exception as e:
+        print(f"[ERROR][BINDING] internal failure: {e}")
+        return build_ack(
+            ref_payload=payload,
+            status="ERROR",
+            error_code="INTERNAL_ERROR"
         )
 
-        uart.send_cmd(CMD_SET_TH, payload_th)
-        print("[UART] CMD_SET_THRESHOLD sent")
-        
-        time.sleep(0.05)
-        
-        uart.send_cmd(CMD_REQ_SENSOR)
-        print("[UART] CMD_REQ_SENSOR sent (initial sensing)")
-
-    # 5️⃣ ACK는 "신규 바인딩"일 때만
-    if is_new_binding:
-        ack = build_ack(ref_payload=payload, status="OK")
-        return ack
-    else:
-        return None
+    # =========================
+    # 5) 정상 처리 ACK
+    # =========================
+    return build_ack(
+        ref_payload=payload,
+        status="OK"
+    )

@@ -11,7 +11,7 @@ class UARTManager:
     def send_cmd(self, cmd_subtype, payload=b""):
         pkt = build_packet(0x01, cmd_subtype, payload)
         self.ser.write(pkt)
-        print("[TX]", pkt)
+        # print("[TX]", pkt)
 
     def poll(self):
       try:

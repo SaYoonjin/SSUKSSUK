@@ -7,6 +7,10 @@ class LEDScheduler:
     def __init__(self, uart):
         self.uart = uart
         self.last_state = None  # "ON" | "OFF"
+        
+    def reset(self):
+        # 외부에서 LED 상태를 강제로 바꿨을 때 호출
+        self.last_state = None
 
     def _in_window(self, hour, start, end):
         if start is None or end is None:

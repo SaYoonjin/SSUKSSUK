@@ -12,9 +12,13 @@ def handle_mode_update(payload: dict) -> dict:
     """
     MODE_UPDATE 처리
     - setting.json의 mode 갱신
-    - ACK 반환
+    - setting 저장 실패 시 INTERNAL_ERROR ACK
+    - 항상 ACK 반환
     """
 
+    # =========================
+    # 1) payload 검증 (입력 오류)
+    # =========================
     if payload.get("type") != "MODE_UPDATE":
         raise ValueError("Invalid message type")
 
@@ -22,19 +26,38 @@ def handle_mode_update(payload: dict) -> dict:
     if mode not in ("AUTO", "MANUAL"):
         raise ValueError("Invalid mode")
 
-    setting = load_json(SETTING_PATH)
+    # =========================
+    # 2) 실제 상태 변경 (내부 오류 가능)
+    # =========================
+    try:
+        setting = load_json(SETTING_PATH)
 
-    # 이미 같은 모드면 ACK만 (멱등)
-    if setting.get("mode") == mode:
-        return build_ack(ref_payload=payload, status="OK")
+        # 멱등 처리: 이미 같은 모드
+        if setting.get("mode") == mode:
+            return build_ack(
+                ref_payload=payload,
+                status="OK"
+            )
 
-    # mode 갱신
-    setting["mode"] = mode
-    save_json(SETTING_PATH, setting)
+        # mode 갱신
+        setting["mode"] = mode
+        save_json(SETTING_PATH, setting)
 
-    ack = build_ack(
+    except Exception as e:
+        # =========================
+        # 내부 오류 → 500 ACK
+        # =========================
+        print(f"[ERROR][MODE] internal failure: {e}")
+        return build_ack(
+            ref_payload=payload,
+            status="ERROR",
+            error_code="INTERNAL_ERROR"
+        )
+
+    # =========================
+    # 3) 정상 처리 ACK
+    # =========================
+    return build_ack(
         ref_payload=payload,
         status="OK"
     )
-
-    return ack

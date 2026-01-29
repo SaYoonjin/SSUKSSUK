@@ -29,10 +29,10 @@
 
     "retain": {
       "telemetry": false,
-      "control_claim": true,
-      "control_binding": true,
-      "control_mode": true,
-      "control_upload_url": true,
+      "control_claim": false,
+      "control_binding": false,
+      "control_mode": false,
+      "control_upload_url": false,
       "control_ack": false,
       "control_action": false
     },
@@ -47,7 +47,8 @@
           "action-result",
           "upload-url-request",
           "image-uploaded",
-          "image-inference"
+          "image-inference",
+          "ack"
         ]
       },
 

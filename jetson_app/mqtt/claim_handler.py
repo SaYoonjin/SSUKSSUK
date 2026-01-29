@@ -2,8 +2,6 @@
 
 from pathlib import Path
 from config_loader import load_json, save_json
-from uart.packet import CMD_READY
-from mqtt.envelope import build_envelope, generate_msg_id
 from mqtt.ack_builder import build_ack
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,41 +10,82 @@ SETTING_PATH = BASE_DIR / "setting.json"
 
 def handle_claim_update(payload: dict, uart) -> dict:
     """
-    UNCLAIMED 상태에서 CLAIM_UPDATE 처리
+    CLAIM_UPDATE 처리 (CLAIMED / UNCLAIMED 모두)
+
     - setting.json 업데이트
-    - STM32 CMD_READY 전송
-    - 공통 Envelope 기반 ACK 생성
+    - CLAIMED일 때만 STM32 CMD_READY 전송
+    - setting 저장 실패 시 INTERNAL_ERROR ACK
+    - 항상 ACK 반환
     """
 
-    # 1️⃣ payload 기본 검증
+    # =========================
+    # 1) payload 검증 (입력 오류)
+    # =========================
     if payload.get("type") != "CLAIM_UPDATE":
         raise ValueError("Invalid message type")
 
-    if payload.get("claim_state") != "CLAIMED":
+    claim_state = payload.get("claim_state")
+    if claim_state not in ("CLAIMED", "UNCLAIMED"):
         raise ValueError("Invalid claim_state")
 
-    # 2️⃣ setting.json 로드
-    setting = load_json(SETTING_PATH)
+    # =========================
+    # 2) 실제 상태 변경 (내부 오류 가능)
+    # =========================
+    try:
+        setting = load_json(SETTING_PATH)
 
-    if setting["claim"]["claim_state"] == "CLAIMED":
-        raise ValueError("Already claimed")
+        if claim_state == "CLAIMED":
+            # 멱등 허용
+            setting["claim"]["claim_state"] = "CLAIMED"
+            setting["claim"]["user_id"] = payload.get("user_id")
 
-    # 3️⃣ setting.json 업데이트
-    setting["claim"]["claim_state"] = "CLAIMED"
-    setting["claim"]["user_id"] = payload.get("user_id")
+            # mode가 null일 수도 있으니 fallback
+            setting["mode"] = (
+                payload.get("mode")
+                or setting.get("mode")
+                or "MANUAL"
+            )
 
-    setting["mode"] = payload.get("mode", "MANUAL")
+            save_json(SETTING_PATH, setting)
 
-    save_json(SETTING_PATH, setting)
 
-    # 4️⃣ STM32 READY 전송
-    uart.send_cmd(CMD_READY)
-    
-    # 5️⃣ ACK 생성 (공통 Envelope 규칙)
-    ack = build_ack(
-			ref_payload=payload,
-			status="OK"
-			)
+        else:  # UNCLAIMED
+            # 기기 해제 시 전체 안전 초기화
+            setting["claim"]["claim_state"] = "UNCLAIMED"
+            setting["claim"]["user_id"] = None
+            setting["mode"] = "AUTO"  # 정책값
 
-    return ack
+            setting["binding"]["binding_state"] = "UNBOUND"
+            setting["binding"]["plant_id"] = None
+            setting["binding"]["species"] = None
+            setting["binding"]["led_time"]["start"] = None
+            setting["binding"]["led_time"]["end"] = None
 
+            for k in setting["binding"]["ideal_ranges"]:
+                setting["binding"]["ideal_ranges"][k]["min"] = None
+                setting["binding"]["ideal_ranges"][k]["max"] = None
+
+            save_json(SETTING_PATH, setting)
+
+            # 여기서 안전 명령 필요하면 추가 가능
+            # uart.send_cmd(CMD_LED_OFF)
+            # uart.send_cmd(CMD_PUMP_STOP)
+
+    except Exception as e:
+        # =========================
+        # 🚨 내부 오류 → 500 ACK
+        # =========================
+        print(f"[ERROR][CLAIM] internal failure: {e}")
+        return build_ack(
+            ref_payload=payload,
+            status="ERROR",
+            error_code="INTERNAL_ERROR"
+        )
+
+    # =========================
+    # 3) 정상 처리 ACK
+    # =========================
+    return build_ack(
+        ref_payload=payload,
+        status="OK"
+    )
