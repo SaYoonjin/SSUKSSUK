@@ -61,7 +61,7 @@ public class UserPlant {
         this.species = species;
         this.device = device;
         this.plantName = plantName;
-        this.isMain = isMain;
+        this.isMain = (isMain != null) ? isMain : false;
         this.isConnected = true;
         this.createdAt = LocalDateTime.now();
     }
