@@ -75,6 +75,13 @@ public class DeviceService {
 
         String serial = device.getSerial();
 
+        // 연결된 식물이 있으면 먼저 바인딩 해제
+        userPlantRepository.findConnectedPlantByDeviceId(deviceId)
+                .ifPresent(plant -> {
+                    deviceControlService.sendBindingUnbound(serial);
+                    plant.unbindDevice();
+                });
+
         // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
         deviceControlService.sendClaimUpdate(
                 serial,
