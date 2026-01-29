@@ -19,7 +19,7 @@ type SignupResponse =
   | { success: true; message: string }
   | { code: string; message: string; details?: { field?: string } };
 
-const API_BASE_URL = 'http://YOUR_SERVER_URL';
+const API_BASE_URL = 'https://i14a103.p.ssafy.io/api';
 const SIGNUP_PATH = '/auth/signup';
 
 export default function SignupScreen({ navigation }: any) {
