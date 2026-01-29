@@ -182,7 +182,7 @@ export default function HistoryScreen({ navigation }: any) {
                         <Text style={styles.monitorTitle}>ANOMALY MONITOR</Text>
                     </View>
 
-                    {/* ✅ 누적막대 제거 → 생장 그래프(라인) 동일 UX / 4페이지 스와이프 */}
+                    {/* 누적막대 제거 → 생장 그래프(라인) 동일 UX / 4페이지 스와이프 */}
                     <ChartPager
                         width={SCREEN_WIDTH - 80}
                         height={180}
@@ -190,7 +190,7 @@ export default function HistoryScreen({ navigation }: any) {
                             {
                                 key: "anom_total",
                                 headerLeft: <View />,
-                                titleRight: <LegendItem label="전체(합산)" color={ACCENT} />,
+                                titleRight: <LegendItem label="전체(합산)" color="#FF3131" />,
                                 render: ({ onTouchingChange }) => (
                                     <GrowthLineChartInteractive
                                         days={dummyDays}
@@ -198,7 +198,7 @@ export default function HistoryScreen({ navigation }: any) {
                                         width={SCREEN_WIDTH - 80 - 34 * 2}
                                         height={180}
                                         onTouchingChange={onTouchingChange}
-                                        color={ACCENT}
+                                        color="#FF3131"
                                         fillOpacity={0.1}
                                     />
                                 ),
@@ -206,7 +206,7 @@ export default function HistoryScreen({ navigation }: any) {
                             {
                                 key: "anom_tempHum",
                                 headerLeft: <View />,
-                                titleRight: <LegendItem label="온습도" color={"#FF6347"} />,
+                                titleRight: <LegendItem label="온습도" color={"#fd7848"} />,
                                 render: ({ onTouchingChange }) => (
                                     <GrowthLineChartInteractive
                                         days={dummyDays}
@@ -214,7 +214,7 @@ export default function HistoryScreen({ navigation }: any) {
                                         width={SCREEN_WIDTH - 80 - 34 * 2}
                                         height={180}
                                         onTouchingChange={onTouchingChange}
-                                        color={"#FF6347"}
+                                        color={"#fd7848"}
                                         fillOpacity={0.08}
                                     />
                                 ),
@@ -296,7 +296,7 @@ function clamp(n: number, a: number, b: number) {
 /* ---------------------------
    픽셀 아이콘 느낌 화살표
    - 박스 없음, 아이콘만
-   - 색상 변경: PixelChevron 내부 fill="#B3B3B3" 여기서
+   - 색상 변경: PixelChevron 내부 fill="#B3B3B3"
 ---------------------------- */
 function PixelChevron({ dir }: { dir: "left" | "right" }) {
     const s = 4;
