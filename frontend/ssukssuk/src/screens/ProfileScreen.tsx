@@ -10,7 +10,6 @@ import {
 } from "react-native";
 
 const GREEN = "#2E5A35";
-const LIGHT_GREEN = "#75A743";
 const BG = "#EDEDE9";
 const RED = "#D25353";
 
@@ -65,19 +64,25 @@ export default function ProfileScreen({ navigation }: any) {
 
     return (
         <SafeAreaView style={styles.root}>
-            {/* 상단 프로필 카드 */}
-            <View style={styles.card}>
+            {/* 상단 로고만 중앙 */}
+            <View style={styles.header}>
                 <Image
                     source={require("../assets/logo.png")}
                     style={styles.logo}
                     resizeMode="contain"
                 />
-                <Text style={styles.nickname}>{nickname}</Text>
             </View>
 
-            {/* 메뉴 영역 (사진처럼 섹션 단위로 라인) */}
             <View style={styles.menu}>
+                {/* 닉네임이 메뉴의 헤더처럼 */}
+                <Text style={styles.nickname}>
+                    {nickname}
+                    <Text style={styles.nicknameSub}>님, 안녕하세요!</Text>
+                </Text>
+
+                {/* 닉네임 바로 아래 선 */}
                 <Line />
+
                 <MenuRow
                     label="닉네임 변경하기"
                     onPress={() => navigation.navigate("NicknameChange")}
@@ -86,9 +91,11 @@ export default function ProfileScreen({ navigation }: any) {
                     label="비밀번호 변경하기"
                     onPress={() => navigation.navigate("PasswordChange")}
                 />
+
                 <Line />
 
                 <MenuRow label="설정" onPress={() => navigation.navigate("Settings")} />
+
                 <Line />
 
                 <MenuRow label="로그아웃" onPress={onLogout} danger />
@@ -129,18 +136,23 @@ const styles = StyleSheet.create({
         paddingTop: 40,
     },
 
-    /* 상단 카드 */
-    card: {
+    // 로고 영역: 위쪽 중앙에만
+    header: {
         alignItems: "center",
         justifyContent: "center",
-        paddingVertical: 34,
-        marginBottom: 22,
+        paddingTop: 6,
+        marginTop: 40,
+        paddingBottom: 18,
     },
 
     logo: {
         width: 96,
         height: 96,
-        marginBottom: 25,
+    },
+
+    // 메뉴 영역
+    menu: {
+        backgroundColor: BG,
     },
 
     nickname: {
@@ -148,12 +160,16 @@ const styles = StyleSheet.create({
         fontSize: 30,
         color: "rgba(36,46,19,0.9)",
         letterSpacing: 1,
+        alignSelf: "flex-start",
+        marginTop: 50,
+        marginBottom: 10,
     },
 
-    /* 메뉴 */
-    menu: {
-        backgroundColor: BG,
+    nicknameSub: {
+        fontSize: 20,
+        opacity: 0.7,
     },
+
 
     line: {
         height: 2,
