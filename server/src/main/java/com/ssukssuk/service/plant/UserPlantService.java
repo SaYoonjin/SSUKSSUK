@@ -65,12 +65,13 @@ public class UserPlantService {
         );
 
         // 2. ACK 성공 시 DB 저장
-
+        // 유저가 가지고 있는 식물들 중에서 main이 있었다면 해지하는 로직 추가
         UserPlant userPlant = UserPlant.builder()
                 .user(user)
                 .species(species)
                 .device(device)
                 .plantName(plantName)
+                .isMain(Boolean.TRUE)
                 .build();
 
         userPlantRepository.save(userPlant);
