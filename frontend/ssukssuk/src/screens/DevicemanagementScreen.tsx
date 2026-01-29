@@ -33,79 +33,79 @@ export default function DeviceManagementScreen({ navigation }: any) {
   // 디바이스 삭제 핸들러
   const handleDelete = (id: string) => {
     Alert.alert(
-        '디바이스 삭제',
-        '정말로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
-        [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '삭제',
-            style: 'destructive',
-            onPress: () => {
-              setDevices(prev => prev.filter(d => d.id !== id));
-            },
+      '디바이스 삭제',
+      '정말로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => {
+            setDevices(prev => prev.filter(d => d.id !== id));
           },
-        ],
+        },
+      ],
     );
   };
 
   return (
-      <View style={styles.screen}>
-        {/* 상단 고정: ScrollView 밖 */}
-        <View style={styles.header}>
-          <Pressable
-              onPress={() => navigation.goBack()}
-              hitSlop={10}
-              style={styles.backBtn}
-          >
-            <Text style={styles.backChevron}>‹</Text>
-          </Pressable>
+    <View style={styles.screen}>
+      {/* 상단 고정: ScrollView 밖 */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          hitSlop={10}
+          style={styles.backBtn}
+        >
+          <Text style={styles.backChevron}>‹</Text>
+        </Pressable>
 
-          <Text style={styles.headerTitle}>디바이스 관리</Text>
-        </View>
-
-        {/* 스크롤 영역 */}
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* 1. 기기 목록 (기본 높이 유지) */}
-          {devices.map(device => (
-              <PixelCard key={device.id}>
-                <View style={styles.deviceInfo}>
-                  <Text style={styles.deviceName}>{device.name}</Text>
-                  <Text
-                      style={[
-                        styles.plantName,
-                        !device.plantName && styles.noConnection,
-                      ]}
-                  >
-                    {device.plantName ? device.plantName : '연결 없음'}
-                  </Text>
-                </View>
-                <View style={styles.actionButtons}>
-                  <PixelMiniButton
-                      label="해제"
-                      color={GREEN}
-                      onPress={() => handleDisconnect(device.id)}
-                      disabled={!device.plantName}
-                  />
-                  <View style={{ width: 8 }} />
-                  <PixelMiniButton
-                      label="삭제"
-                      color={ERROR_RED}
-                      onPress={() => handleDelete(device.id)}
-                  />
-                </View>
-              </PixelCard>
-          ))}
-
-          {/* 2. [+ 디바이스 추가] 버튼 (높이 줄임 - compact 적용) */}
-          <View style={styles.addButtonContainer}>
-            <Pressable onPress={() => navigation.navigate('DeviceAdd')}>
-              <PixelCard centerContent compact>
-                <Text style={styles.addText}>+ 디바이스 추가</Text>
-              </PixelCard>
-            </Pressable>
-          </View>
-        </ScrollView>
+        <Text style={styles.headerTitle}>디바이스 관리</Text>
       </View>
+
+      {/* 스크롤 영역 */}
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* 1. 기기 목록 (기본 높이 유지) */}
+        {devices.map(device => (
+          <PixelCard key={device.id}>
+            <View style={styles.deviceInfo}>
+              <Text style={styles.deviceName}>{device.name}</Text>
+              <Text
+                style={[
+                  styles.plantName,
+                  !device.plantName && styles.noConnection,
+                ]}
+              >
+                {device.plantName ? device.plantName : '연결 없음'}
+              </Text>
+            </View>
+            <View style={styles.actionButtons}>
+              <PixelMiniButton
+                label="해제"
+                color={GREEN}
+                onPress={() => handleDisconnect(device.id)}
+                disabled={!device.plantName}
+              />
+              <View style={{ width: 8 }} />
+              <PixelMiniButton
+                label="삭제"
+                color={ERROR_RED}
+                onPress={() => handleDelete(device.id)}
+              />
+            </View>
+          </PixelCard>
+        ))}
+
+        {/* 2. [+ 디바이스 추가] 버튼 (높이 줄임 - compact 적용) */}
+        <View style={styles.addButtonContainer}>
+          <Pressable onPress={() => navigation.navigate('DeviceAdd')}>
+            <PixelCard centerContent compact>
+              <Text style={styles.addText}>+ 디바이스 추가</Text>
+            </PixelCard>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -113,45 +113,49 @@ export default function DeviceManagementScreen({ navigation }: any) {
  * - compact: true일 경우 높이를 줄임
  */
 function PixelCard({
-                     children,
-                     centerContent,
-                     compact,
-                   }: {
+  children,
+  centerContent,
+  compact,
+}: {
   children: React.ReactNode;
   centerContent?: boolean;
   compact?: boolean;
 }) {
   return (
-      <View style={styles.cardContainer}>
-        <View style={styles.borderTop} />
-        <View style={styles.borderBottom} />
-        <View style={styles.borderLeft} />
-        <View style={styles.borderRight} />
-        <View style={styles.cornerTL} />
-        <View style={styles.cornerTR} />
-        <View style={styles.cornerBL} />
-        <View style={styles.cornerBR} />
-
-        <View
-            style={[
-              styles.cardInner,
-              centerContent && styles.cardCenter,
-              compact && styles.cardCompact,
-            ]}
-        >
-          {children}
-        </View>
+    <View style={styles.cardContainer}>
+      {/* 1. 배경이 되는 내부 콘텐츠를 먼저 그립니다 (가장 밑바닥) */}
+      <View
+        style={[
+          styles.cardInner,
+          centerContent && styles.cardCenter,
+          compact && styles.cardCompact,
+        ]}
+      >
+        {children}
       </View>
+
+      {/* 2. 테두리와 코너를 그 위에 덧그립니다 (상단 레이어) */}
+      <View style={styles.borderTop} />
+      <View style={styles.borderBottom} />
+      <View style={styles.borderLeft} />
+      <View style={styles.borderRight} />
+
+      {/* 이제 코너 픽셀이 흰 배경 위에 나타납니다 */}
+      <View style={styles.cornerTL} />
+      <View style={styles.cornerTR} />
+      <View style={styles.cornerBL} />
+      <View style={styles.cornerBR} />
+    </View>
   );
 }
 
 /** 작은 픽셀 버튼 (해제/삭제) */
 function PixelMiniButton({
-                           label,
-                           color,
-                           onPress,
-                           disabled,
-                         }: {
+  label,
+  color,
+  onPress,
+  disabled,
+}: {
   label: string;
   color: string;
   onPress: () => void;
@@ -159,24 +163,32 @@ function PixelMiniButton({
 }) {
   const btnColor = disabled ? '#AAAAAA' : color;
   return (
-      <Pressable
-          onPress={onPress}
-          disabled={disabled}
-          style={styles.miniBtnContainer}
-      >
-        <View style={[styles.borderTop, { backgroundColor: btnColor }]} />
-        <View style={[styles.borderBottom, { backgroundColor: btnColor }]} />
-        <View style={[styles.borderLeft, { backgroundColor: btnColor }]} />
-        <View style={[styles.borderRight, { backgroundColor: btnColor }]} />
-        <View style={styles.miniBtnInner}>
-          <Text style={[styles.miniBtnText, { color: btnColor }]}>{label}</Text>
-        </View>
-      </Pressable>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={styles.miniBtnContainer}
+    >
+      <View style={[styles.borderTop, { backgroundColor: btnColor }]} />
+      <View style={[styles.borderBottom, { backgroundColor: btnColor }]} />
+      <View style={[styles.borderLeft, { backgroundColor: btnColor }]} />
+      <View style={[styles.borderRight, { backgroundColor: btnColor }]} />
+
+      {/* [수정] 버튼에도 계단형 코너 추가 */}
+      <View style={[styles.cornerTL, { backgroundColor: btnColor }]} />
+      <View style={[styles.cornerTR, { backgroundColor: btnColor }]} />
+      <View style={[styles.cornerBL, { backgroundColor: btnColor }]} />
+      <View style={[styles.cornerBR, { backgroundColor: btnColor }]} />
+
+      <View style={styles.miniBtnInner}>
+        <Text style={[styles.miniBtnText, { color: btnColor }]}>{label}</Text>
+      </View>
+    </Pressable>
   );
 }
 
-const GREEN = '#2E5A35';
+const BORDER = '#300e08';
 const LIGHT_GREEN = '#75A743';
+const GREEN = '#2E5A35';
 const ERROR_RED = '#E04B4B';
 const PIXEL = 4;
 
@@ -274,46 +286,48 @@ const styles = StyleSheet.create({
   },
   miniBtnText: { fontSize: 16, fontFamily: 'NeoDunggeunmoPro-Regular' },
 
-  // 픽셀 테두리 스타일
+  // [수정됨] 픽셀 테두리 스타일 - 계단형(Beveled) 적용
+  // 기본 색상을 #000에서 GREEN으로 변경하여 카드 기본 테두리 색상 적용
   borderTop: {
     position: 'absolute',
     top: 0,
-    left: PIXEL,
-    right: PIXEL,
+    left: PIXEL * 2, // 양 끝을 2칸 띄움
+    right: PIXEL * 2,
     height: PIXEL,
-    backgroundColor: '#000',
+    backgroundColor: BORDER,
   },
   borderBottom: {
     position: 'absolute',
     bottom: 0,
-    left: PIXEL,
-    right: PIXEL,
+    left: PIXEL * 2,
+    right: PIXEL * 2,
     height: PIXEL,
-    backgroundColor: '#000',
+    backgroundColor: BORDER,
   },
   borderLeft: {
     position: 'absolute',
-    top: PIXEL,
-    bottom: PIXEL,
+    top: PIXEL * 2, // 상하를 2칸 띄움
+    bottom: PIXEL * 2,
     left: 0,
     width: PIXEL,
-    backgroundColor: '#000',
+    backgroundColor: BORDER,
   },
   borderRight: {
     position: 'absolute',
-    top: PIXEL,
-    bottom: PIXEL,
+    top: PIXEL * 2,
+    bottom: PIXEL * 2,
     right: 0,
     width: PIXEL,
-    backgroundColor: '#000',
+    backgroundColor: BORDER,
   },
+  // 코너: 테두리와 테두리 사이 징검다리 위치 (1칸 띄움)
   cornerTL: {
     position: 'absolute',
     top: PIXEL,
     left: PIXEL,
     width: PIXEL,
     height: PIXEL,
-    backgroundColor: '#000',
+    backgroundColor: BORDER,
   },
   cornerTR: {
     position: 'absolute',
@@ -321,7 +335,7 @@ const styles = StyleSheet.create({
     right: PIXEL,
     width: PIXEL,
     height: PIXEL,
-    backgroundColor: '#000',
+    backgroundColor: BORDER,
   },
   cornerBL: {
     position: 'absolute',
@@ -329,7 +343,7 @@ const styles = StyleSheet.create({
     left: PIXEL,
     width: PIXEL,
     height: PIXEL,
-    backgroundColor: '#000',
+    backgroundColor: BORDER,
   },
   cornerBR: {
     position: 'absolute',
@@ -337,6 +351,6 @@ const styles = StyleSheet.create({
     right: PIXEL,
     width: PIXEL,
     height: PIXEL,
-    backgroundColor: '#000',
+    backgroundColor: BORDER,
   },
 });

@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: PIXEL_SIZE,
     bottom: PIXEL_SIZE,
-    left: -PIXEL_SIZE * 2,
+    left: -PIXEL_SIZE,
     width: PIXEL_SIZE,
     backgroundColor: BORDER_COLOR,
   },
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: PIXEL_SIZE,
     bottom: PIXEL_SIZE,
-    right: -PIXEL_SIZE * 2,
+    right: -PIXEL_SIZE,
     width: PIXEL_SIZE,
     backgroundColor: BORDER_COLOR,
   },
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   cornerTL: {
     position: 'absolute',
     top: 0,
-    left: -PIXEL_SIZE,
+    left: 0,
     width: PIXEL_SIZE,
     height: PIXEL_SIZE,
     backgroundColor: BORDER_COLOR,
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   cornerTR: {
     position: 'absolute',
     top: 0,
-    right: -PIXEL_SIZE,
+    right: 0,
     width: PIXEL_SIZE,
     height: PIXEL_SIZE,
     backgroundColor: BORDER_COLOR,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   cornerBL: {
     position: 'absolute',
     bottom: 0,
-    left: -PIXEL_SIZE,
+    left: 0,
     width: PIXEL_SIZE,
     height: PIXEL_SIZE,
     backgroundColor: BORDER_COLOR,
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   cornerBR: {
     position: 'absolute',
     bottom: 0,
-    right: -PIXEL_SIZE,
+    right: 0,
     width: PIXEL_SIZE,
     height: PIXEL_SIZE,
     backgroundColor: BORDER_COLOR,
