@@ -260,6 +260,10 @@ public class UserService {
         List<UserPlant> activeConnections = userPlantRepository.findActiveConnectionsByUserId(userId);
 
         // 1. 모든 디바이스에 MQTT 발송 + ACK 대기 (하나라도 실패하면 예외 발생)
+
+
+
+
         for (UserPlant plant : activeConnections) {
             deviceControlService.sendModeUpdate(
                     plant.getDevice().getSerial(),

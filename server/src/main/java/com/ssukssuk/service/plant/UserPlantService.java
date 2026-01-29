@@ -35,8 +35,7 @@ public class UserPlantService {
             Long userId,
             Long speciesId,
             Long deviceId,
-            String plantName,
-            Boolean isMain
+            String plantName
     ) {
 
         User user = userRepository.findById(userId)
@@ -66,17 +65,12 @@ public class UserPlantService {
         );
 
         // 2. ACK 성공 시 DB 저장
-        // 메인 식물이면 기존 메인 해제
-        if (Boolean.TRUE.equals(isMain)) {
-            userPlantRepository.clearMainPlant(userId);
-        }
 
         UserPlant userPlant = UserPlant.builder()
                 .user(user)
                 .species(species)
                 .device(device)
                 .plantName(plantName)
-                .isMain(Boolean.TRUE.equals(isMain))
                 .build();
 
         userPlantRepository.save(userPlant);

@@ -15,7 +15,4 @@ public class CreatePlantRequest {
 
     @NotNull
     private Long deviceId;
-
-    @NotNull
-    private Boolean isMain;
 }

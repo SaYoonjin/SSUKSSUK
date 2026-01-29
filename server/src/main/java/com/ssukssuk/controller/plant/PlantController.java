@@ -37,8 +37,7 @@ public class PlantController {
                         userId,
                         request.getSpecies(),
                         request.getDeviceId(),
-                        request.getName(),
-                        request.getIsMain()
+                        request.getName()
                 )
         );
     }
