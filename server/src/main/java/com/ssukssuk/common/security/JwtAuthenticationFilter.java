@@ -7,6 +7,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,6 +20,8 @@ import java.io.IOException;
 import java.util.List;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
@@ -35,7 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
 
-        return path.startsWith("/test/")
+        boolean skip = path.startsWith("/test/")
                 || path.startsWith("/api/test/")
                 || path.startsWith("/swagger-ui/")
                 || path.startsWith("/v3/api-docs/")
@@ -43,6 +47,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.equals("/api/auth/login")
                 || path.equals("/api/auth/signup")
                 || path.equals("/api/auth/refresh");
+
+        log.debug("[JwtFilter] path={}, shouldNotFilter={}", path, skip);
+        return skip;
     }
 
     @Override
@@ -52,7 +59,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        log.debug("[JwtFilter] doFilterInternal called for path={}", request.getRequestURI());
+
         String token = resolveBearerToken(request);
+        log.debug("[JwtFilter] token present={}", token != null);
 
         if (token != null && tokenProvider.validate(token)) {
             Long userId = tokenProvider.getUserId(token);
