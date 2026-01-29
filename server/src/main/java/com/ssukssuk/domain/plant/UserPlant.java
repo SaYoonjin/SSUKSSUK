@@ -41,7 +41,7 @@ public class UserPlant {
     @Column(name = "is_connected", nullable = false)
     private Boolean isConnected;
 
-    @Column(name = "is_main", nullable = false)
+    @Column(name = "is_main")
     private Boolean isMain;
 
     @Column(name = "created_at", nullable = false)

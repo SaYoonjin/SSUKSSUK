@@ -11,22 +11,6 @@ import java.util.Optional;
 
 public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
 
-    // 유저의 모든 식물 조회 (삭제되지 않은 것만)
-    List<UserPlant> findAllByUser_IdAndRemovedAtIsNull(Long userId);
-
-    // 현재 메인 식물 조회
-    Optional<UserPlant> findByUser_IdAndIsMainTrueAndRemovedAtIsNull(Long userId);
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-        update UserPlant up
-        set up.isMain = false
-        where up.user.id = :userId
-          and up.isMain = true
-          and up.removedAt is null
-    """)
-    void clearMainPlant(@Param("userId") Long userId);
-
     @Query("""
         select (count(up) > 0)
         from UserPlant up
