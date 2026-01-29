@@ -215,7 +215,6 @@ const styles = StyleSheet.create({
         marginHorizontal: PIXEL_SIZE * 2,
     },
 
-    // 색칠 덜 된 부분(왼쪽/오른쪽 끝)을 메우기 위한 언더레이
     alertBgUnderlay: {
         position: "absolute",
         top: 0,
