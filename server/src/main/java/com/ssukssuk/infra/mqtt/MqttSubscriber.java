@@ -22,6 +22,8 @@ public class MqttSubscriber {
         String topic = String.valueOf(message.getHeaders().get("mqtt_receivedTopic"));
         String payload = String.valueOf(message.getPayload());
 
+        log.info("[MQTT][SUB] topic={}, payload={}", topic, payload);
+
         try {
             MqttEnvelope envelope = MqttEnvelope.from(topic, payload, objectMapper);
 

@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class DeviceControlService {
 
-    private static final Duration ACK_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration ACK_TIMEOUT = Duration.ofSeconds(15);
 
     private final MqttPublisher mqttPublisher;
     private final PendingAckStore pendingAckStore;
