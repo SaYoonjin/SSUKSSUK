@@ -13,7 +13,7 @@ const updateTokenToServer = async (token: string) => {
     await client.post('/fcm/token', {
       token: token,
       platform: 'ANDROID',
-      deviceId: deviceId,
+      mobileDeviceId: deviceId,
     });
     console.log('FCM 토큰 서버 전송 성공:', token);
   } catch (error) {

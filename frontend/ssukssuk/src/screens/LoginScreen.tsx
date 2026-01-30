@@ -15,10 +15,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import client from '../api';
 
-// 👇 [추가] FCM 초기화 함수 임포트
+// FCM 초기화 함수 임포트
 import { initFCM } from '../utils/fcm';
 
-// 1. 서버 응답 타입 정의
+// 1. 서버 응답 타입 정의 (isInitialized 추가)
 type LoginResponse = {
   success: boolean;
   data: {
@@ -27,6 +27,7 @@ type LoginResponse = {
     isAdmin: boolean;
     accessToken: string;
     refreshToken: string;
+    isInitialized: boolean;
   } | null;
   error: {
     code: string;
@@ -99,16 +100,24 @@ export default function LoginScreen({ navigation }: any) {
             await AsyncStorage.removeItem('savedEmail');
           }
 
-          // 👇 [추가] 로그인 성공 & 토큰 저장 후 FCM 초기화 실행!
-          // (권한 요청 -> 토큰 발급 -> 서버 전송 -> 리스너 등록)
+          // FCM 초기화 (권한 요청 및 토큰 전송)
           await initFCM();
           console.log('🔔 FCM 초기화 완료');
+
+          // 👇 [화면 분기 로직]
+          // 초기 설정(isInitialized)이 true면 메인으로, false면 초기 설정 화면으로
+          if (json.data.isInitialized) {
+            navigation.replace('Main');
+          } else {
+            navigation.replace('InitialSetup');
+          }
+
         } catch (storageError) {
           console.error('토큰 저장 또는 FCM 등록 실패:', storageError);
+          // 에러가 나도 로그인이 성공했다면 일단 메인으로 보내거나 처리가 필요함
+          navigation.replace('Main');
         }
 
-        // 메인 화면으로 이동
-        navigation.replace('Main');
       } else {
         // 서버 응답은 왔지만 success가 false인 경우
         setErrorMsg(json.error?.message || COMMON_ERROR_TEXT);
@@ -117,11 +126,9 @@ export default function LoginScreen({ navigation }: any) {
       console.error('로그인 에러:', err);
 
       if (err.response && err.response.data) {
-        // 서버에서 명시적으로 에러 메시지를 보낸 경우
         const serverMsg = err.response.data.error?.message;
         setErrorMsg(serverMsg || COMMON_ERROR_TEXT);
       } else {
-        // 네트워크 연결 실패 등
         setErrorMsg('서버와 통신할 수 없습니다.');
       }
     } finally {
@@ -208,8 +215,7 @@ export default function LoginScreen({ navigation }: any) {
   );
 }
 
-// --- 하단 디자인 컴포넌트 및 스타일 (기존 코드 유지) ---
-
+// --- 하단 디자인 컴포넌트 (기존과 동일) ---
 function PixelAlert({ text }: { text: string }) {
   return (
     <View style={styles.pixelAlertContainer}>

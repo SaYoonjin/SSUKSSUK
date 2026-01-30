@@ -149,55 +149,55 @@ export default function MainScreen({ navigation }: any) {
 
             </ImageBackground>
 
-            <BottomSheet
-                ref={sheetRef}
-                index={0}
-                snapPoints={snapPoints}
-                enablePanDownToClose={false}
-                backgroundComponent={PixelSheetBackground}
-                handleStyle={styles.handleArea}
-                handleIndicatorStyle={styles.handleIndicator}
-            >
-                <BottomSheetView style={styles.sheetContent}>
-                    <View style={styles.sheetHeader}>
-                        <View style={styles.headerLeft}>
-                            <Text style={styles.plantName}>토토</Text>
-                            <Text style={styles.plantType}>(방울토마토)</Text>
-                        </View>
-                        <View style={styles.dDayPill}>
-                            <Text style={styles.dDayText}>D+45</Text>
-                        </View>
-                    </View>
+            {/*<BottomSheet*/}
+            {/*    ref={sheetRef}*/}
+            {/*    index={0}*/}
+            {/*    snapPoints={snapPoints}*/}
+            {/*    enablePanDownToClose={false}*/}
+            {/*    backgroundComponent={PixelSheetBackground}*/}
+            {/*    handleStyle={styles.handleArea}*/}
+            {/*    handleIndicatorStyle={styles.handleIndicator}*/}
+            {/*>*/}
+            {/*    <BottomSheetView style={styles.sheetContent}>*/}
+            {/*        <View style={styles.sheetHeader}>*/}
+            {/*            <View style={styles.headerLeft}>*/}
+            {/*                <Text style={styles.plantName}>토토</Text>*/}
+            {/*                <Text style={styles.plantType}>(방울토마토)</Text>*/}
+            {/*            </View>*/}
+            {/*            <View style={styles.dDayPill}>*/}
+            {/*                <Text style={styles.dDayText}>D+45</Text>*/}
+            {/*            </View>*/}
+            {/*        </View>*/}
 
-                    <PixelBox style={styles.statusPanel} bgColor="#F2F7ED" cardThin>
-                        <Text style={styles.panelTitle}>현재 상태</Text>
-                        <View style={styles.barTrack}>
-                            <View style={[styles.barFill, { width: "80%" }]} />
-                        </View>
-                        <Text style={[styles.panelTitle, { marginTop: 12 }]}>성장 상태</Text>
-                        <View style={styles.barTrack}>
-                            <View style={[styles.barFillDark, { width: "65%" }]} />
-                        </View>
-                    </PixelBox>
+            {/*        <PixelBox style={styles.statusPanel} bgColor="#F2F7ED" cardThin>*/}
+            {/*            <Text style={styles.panelTitle}>현재 상태</Text>*/}
+            {/*            <View style={styles.barTrack}>*/}
+            {/*                <View style={[styles.barFill, { width: "80%" }]} />*/}
+            {/*            </View>*/}
+            {/*            <Text style={[styles.panelTitle, { marginTop: 12 }]}>성장 상태</Text>*/}
+            {/*            <View style={styles.barTrack}>*/}
+            {/*                <View style={[styles.barFillDark, { width: "65%" }]} />*/}
+            {/*            </View>*/}
+            {/*        </PixelBox>*/}
 
-                    <Text style={styles.sectionTitle}>현재 기기 상태</Text>
+            {/*        <Text style={styles.sectionTitle}>현재 기기 상태</Text>*/}
 
-                    <View style={styles.cardRow}>
-                        <PixelBox style={styles.card} bgColor="#BFD1F1" cardThin>
-                            <Text style={styles.cardTitle}>수위</Text>
-                            <Text style={styles.cardDesc}>충분함</Text>
-                        </PixelBox>
-                        <PixelBox style={styles.card} bgColor="#E7CF90" cardThin>
-                            <Text style={styles.cardTitle}>농도</Text>
-                            <Text style={styles.cardDesc}>적당함</Text>
-                        </PixelBox>
-                        <PixelBox style={styles.card} bgColor="#DDE8C8" cardThin>
-                            <Text style={styles.cardTitle}>기온/습도</Text>
-                            <Text style={styles.cardDesc}>25도 / 58%</Text>
-                        </PixelBox>
-                    </View>
-                </BottomSheetView>
-            </BottomSheet>
+            {/*        <View style={styles.cardRow}>*/}
+            {/*            <PixelBox style={styles.card} bgColor="#BFD1F1" cardThin>*/}
+            {/*                <Text style={styles.cardTitle}>수위</Text>*/}
+            {/*                <Text style={styles.cardDesc}>충분함</Text>*/}
+            {/*            </PixelBox>*/}
+            {/*            <PixelBox style={styles.card} bgColor="#E7CF90" cardThin>*/}
+            {/*                <Text style={styles.cardTitle}>농도</Text>*/}
+            {/*                <Text style={styles.cardDesc}>적당함</Text>*/}
+            {/*            </PixelBox>*/}
+            {/*            <PixelBox style={styles.card} bgColor="#DDE8C8" cardThin>*/}
+            {/*                <Text style={styles.cardTitle}>기온/습도</Text>*/}
+            {/*                <Text style={styles.cardDesc}>25도 / 58%</Text>*/}
+            {/*            </PixelBox>*/}
+            {/*        </View>*/}
+            {/*    </BottomSheetView>*/}
+            {/*</BottomSheet>*/}
         </View>
     );
 }

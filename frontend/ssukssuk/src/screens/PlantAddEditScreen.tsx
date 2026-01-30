@@ -19,7 +19,6 @@ const PIXEL = 4;
 const BORDER_COLOR = '#300E08';
 const CARD_BG = '#F6F6F6';
 
-// [수정 1] 서버 응답 데이터 타입 정의 (에러 로그 기반 수정)
 type PlantSpecies = {
   speciesId: number;
   name: string;
@@ -41,17 +40,20 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
-  const [type, setType] = useState(isEdit ? plantData.type : '');
+  // 식물 종류 (ID or Name)
+  const [type, setType] = useState<string | number>(
+    isEdit ? plantData.type : '',
+  );
   const [nickname, setNickname] = useState(isEdit ? plantData.nickname : '');
 
+  // [수정] 초기값: 수정 모드면 기존 ID, 추가 모드면 null (선택 안 함)
   const [selectedDevice, setSelectedDevice] = useState<string | null>(
-    isEdit && plantData.deviceId ? String(plantData.deviceId) : 'none',
+    isEdit && plantData.deviceId ? String(plantData.deviceId) : null,
   );
 
   const [speciesList, setSpeciesList] = useState<PlantSpecies[]>([]);
   const [deviceList, setDeviceList] = useState<DeviceData[]>([]);
 
-  // 초기 데이터 로드
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -61,7 +63,6 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
         ]);
 
         if (speciesRes.data.success) {
-          // 데이터가 배열인지 확인 후 세팅
           setSpeciesList(speciesRes.data.data || []);
         }
 
@@ -79,7 +80,7 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
     fetchData();
   }, []);
 
-  // 디바이스 드롭다운 아이템
+  // [수정] 드롭다운 아이템 생성 로직
   const dropdownDeviceItems = useMemo(() => {
     const items = deviceList.map(d => {
       const isMyDevice = isEdit && d.connectedPlantId === currentPlantId;
@@ -95,35 +96,39 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
       };
     });
 
-    items.push({
-      label: '연결 해제 (기기 없이 등록)',
-      value: 'none',
-      active: true,
-      statusText: '',
-    });
+    // ❌ [삭제] '연결 해제' 옵션 제거 (NOT NULL 제약조건 때문)
+    // items.push({ label: '연결 해제', value: 'none', ... });
 
     return items;
   }, [deviceList, isEdit, currentPlantId]);
 
-  // 저장 핸들러
   const handleSave = async () => {
+    // 1. 식물 종류 체크
     if (!type) {
       Alert.alert('알림', '식물 종류를 선택해주세요.');
       return;
     }
+    // 2. 닉네임 체크
     if (!nickname.trim()) {
       Alert.alert('알림', '식물 닉네임을 입력해주세요.');
+      return;
+    }
+    // 3. [추가] 디바이스 선택 강제 (NOT NULL 대응)
+    if (!selectedDevice || selectedDevice === 'none') {
+      Alert.alert(
+        '알림',
+        '연결할 디바이스를 선택해주세요.\n(식물 등록 시 필수입니다)',
+      );
       return;
     }
 
     setLoading(true);
 
     try {
-      const deviceIdPayload =
-        selectedDevice === 'none' ? null : Number(selectedDevice);
+      const deviceIdPayload = Number(selectedDevice);
 
       if (isEdit) {
-        // [수정] PATCH
+        // [수정 모드]
         const res = await client.patch(`/plants/${currentPlantId}`, {
           nickname: nickname.trim(),
           deviceId: deviceIdPayload,
@@ -137,11 +142,11 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
           Alert.alert('실패', res.data.message || '수정에 실패했습니다.');
         }
       } else {
-        // [추가] POST
+        // [추가 모드]
         const res = await client.post('/plants', {
-          species: type, // 식물 종류 이름 전송
-          nickname: nickname.trim(),
-          deviceId: deviceIdPayload,
+          name: nickname.trim(),
+          species: Number(type),
+          deviceId: deviceIdPayload, // 무조건 숫자 전송
         });
 
         if (res.data.success) {
@@ -153,7 +158,13 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
         }
       }
     } catch (error: any) {
-      console.error('식물 저장 에러:', error);
+      console.error('식물 저장 에러 상세:', error);
+
+      if (error.response) {
+        console.log('서버 응답 데이터:', error.response.data);
+        console.log('서버 응답 상태:', error.response.status);
+      }
+
       const msg =
         error.response?.data?.message || '서버 통신 중 오류가 발생했습니다.';
       Alert.alert('오류', msg);
@@ -208,14 +219,13 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
           ) : (
             <PixelDropdown
               placeholder="식물 종류 선택"
-              // [수정 2] 객체에서 name을 꺼내서 매핑
               items={speciesList.map(t => ({
                 label: t.name,
-                value: t.name,
+                value: t.speciesId,
                 active: true,
               }))}
               selectedValue={type}
-              onSelect={(val: string) => setType(val)}
+              onSelect={(val: any) => setType(val)}
             />
           )}
         </View>
@@ -239,7 +249,7 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
             selectedValue={selectedDevice}
             onSelect={(val: string) => setSelectedDevice(val)}
             items={dropdownDeviceItems}
-            hasSeparateItem={true}
+            hasSeparateItem={false} // 분리선 불필요
           />
         </View>
 
@@ -605,6 +615,7 @@ const styles = StyleSheet.create({
     color: '#555',
     fontSize: 16,
   },
+  // PixelBox 스타일 (기존 유지)
   pixelBoxContainer: {
     position: 'relative',
     marginHorizontal: PIXEL * 2,
