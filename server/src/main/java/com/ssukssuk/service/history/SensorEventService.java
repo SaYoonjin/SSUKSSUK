@@ -36,6 +36,7 @@ public class SensorEventService {
                 .findOpenByPlantIdAndSensorCode(plantId, triggerType.getCode())
                 .orElse(null);
 
+        // 열린 이벤트 없으면 이벤트 생성 / 있으면 갱신만
         if (openEvent == null) {
             UserPlant plant = userPlantRepository.findById(plantId)
                     .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
@@ -55,25 +56,30 @@ public class SensorEventService {
 
     // RECOVERY_DONE
     @Transactional
-    public void resolveIfOpenAndReturn(
+    public Optional<SensorEvent> resolveIfOpenAndReturn(
             Long plantId,
             SensorUplinkMessage.TriggerSensorType triggerType,
             Long sensorLogId,
             LocalDateTime measuredAt
     ) {
+        // 이벤트 찾아서
         Optional<SensorEvent> openEventOpt =
-                sensorEventRepository.findOpenByPlantIdAndSensorCode(plantId, triggerType.getCode());
+                sensorEventRepository.findOpenByPlantIdAndSensorCode(
+                        plantId, triggerType.getCode()
+                );
 
-        openEventOpt.ifPresent(event -> {
-            SensorLog sensorLog = sensorLogRepository.findById(sensorLogId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.SENSOR_LOG_NOT_FOUND));
-            event.resolve(sensorLog, measuredAt);
-        });
-    }
+        // 없으면 empty 반환
+        if (openEventOpt.isEmpty()) {
+            return Optional.empty();
+        }
 
-    // ANOMALY_FAIL - 열린 이벤트 ID 조회
-    public Optional<Long> findOpenEventId(Long plantId, SensorUplinkMessage.TriggerSensorType triggerType) {
-        return sensorEventRepository.findOpenByPlantIdAndSensorCode(plantId, triggerType.getCode())
-                .map(SensorEvent::getEventId);
+        // 있으면 이벤트 닫고 이벤트 Id 반환
+        SensorEvent event = openEventOpt.get();
+
+        SensorLog sensorLog = sensorLogRepository.findById(sensorLogId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SENSOR_LOG_NOT_FOUND));
+        event.resolve(sensorLog, measuredAt);
+
+        return Optional.of(event);
     }
 }

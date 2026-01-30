@@ -55,6 +55,11 @@ public class DeviceService {
         // 2. ACK 성공 시 DB 저장
         device.claim(user);
 
+        // 초기 세팅 완료 처리
+        if (!user.isInitialized()) {
+            user.markInitialized();
+        }
+
         return DeviceClaimResponse.from(device);
     }
 

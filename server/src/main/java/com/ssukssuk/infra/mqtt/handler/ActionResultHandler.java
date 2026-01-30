@@ -7,6 +7,7 @@ import com.ssukssuk.infra.idempotency.IdempotencyService;
 import com.ssukssuk.repository.history.SensorEventRepository;
 import com.ssukssuk.service.device.DeviceBindingValidator;
 import com.ssukssuk.service.history.ActionLogService;
+import com.ssukssuk.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,7 +17,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 
 @Slf4j
-@Component("actionResult")
+@Component("action-result")
 @RequiredArgsConstructor
 public class ActionResultHandler implements MqttMessageHandler {
 
@@ -29,6 +30,7 @@ public class ActionResultHandler implements MqttMessageHandler {
 
     private final SensorEventRepository sensorEventRepository;
     private final ActionLogService actionLogService;
+    private final NotificationService notificationService;
 
     @Override
     public void handle(MqttEnvelope envelope) {
@@ -87,7 +89,13 @@ public class ActionResultHandler implements MqttMessageHandler {
             // action_log INSERT (SUCCESS/FAIL 모두)
             actionLogService.record(msg, sensorEvent, occurredAt);
 
-            log.info("[MQTT][ACTION_RESULT] action_log saved. eventId={}, actionType={}, result={}",
+            if ("SUCCESS".equalsIgnoreCase(msg.getResultStatus())) {
+                notificationService.notifyActionDone(msg.getPlantId(), sensorEvent.getEventId());
+            } else {
+                notificationService.notifyActionFail(msg.getPlantId(), sensorEvent.getEventId());
+            }
+
+            log.info("[MQTT][ACTION_RESULT] action_log saved. eventId={},  actionType={}, result={}",
                     sensorEvent.getEventId(), msg.getActionType(), msg.getResultStatus());
 
         } catch (Exception e) {

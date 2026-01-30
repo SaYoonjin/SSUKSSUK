@@ -1,9 +1,13 @@
 package com.ssukssuk.controller.history;
 
+import com.ssukssuk.common.response.ApiResponse;
+import com.ssukssuk.dto.history.GetPlantImagesResponse;
 import com.ssukssuk.dto.history.SensorLogResponse;
+import com.ssukssuk.service.history.PlantImageQueryService;
 import com.ssukssuk.service.history.SensorLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -12,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class HistoryController {
 
     private final SensorLogService sensorLogService;
+    private final PlantImageQueryService plantImageQueryService;
 
     @GetMapping("/plants/{plantId}/sensor/latest")
     public ResponseEntity<SensorLogResponse> getLatestSensor(
@@ -22,4 +27,12 @@ public class HistoryController {
         );
     }
 
+    @GetMapping("/plants/{plantId}/images")
+    public ResponseEntity<ApiResponse<GetPlantImagesResponse>> getPlantImages(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long plantId
+    ) {
+        GetPlantImagesResponse data = plantImageQueryService.getRecent14DaysImages(plantId);
+        return ResponseEntity.ok(ApiResponse.ok(data));
+    }
 }

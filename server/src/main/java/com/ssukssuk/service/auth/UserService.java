@@ -91,6 +91,7 @@ public class UserService {
                 user.getId(),
                 user.getEmail(),
                 user.isAdmin(),
+                user.isInitialized(),
                 accessToken,
                 refreshToken
         );
