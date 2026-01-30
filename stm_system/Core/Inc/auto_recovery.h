@@ -11,5 +11,5 @@ void auto_recovery_start_if_needed(void);
 /* main loop에서 주기적으로 호출 */
 void auto_recovery_fsm(void);
 
-/* 자동조치 진행 중인지 여부 */
+/* 자동조치 진행 중인지 여부 확인 */
 bool auto_recovery_is_active(void);
