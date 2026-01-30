@@ -13,9 +13,10 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// [중요] 작성하신 api.ts 파일 경로에 맞춰 임포트해주세요.
-// 예: LoginScreen이 src/screens/에 있고, api.ts가 src/에 있다면 "../api"
 import client from '../api';
+
+// 👇 [추가] FCM 초기화 함수 임포트
+import { initFCM } from '../utils/fcm';
 
 // 1. 서버 응답 타입 정의
 type LoginResponse = {
@@ -73,20 +74,19 @@ export default function LoginScreen({ navigation }: any) {
     setErrorMsg('');
 
     try {
-      // [변경] Axios 사용: url의 뒷부분만 작성하면 됩니다.
+      // 로그인 요청
       const res = await client.post<LoginResponse>('/auth/login', {
         email: e,
         password: password,
       });
 
-      // Axios는 응답 데이터를 .data에 담아줍니다.
       const json = res.data;
 
       if (json.success && json.data) {
         console.log('로그인 성공! 유저 ID:', json.data.userId);
 
         try {
-          // [중요] 토큰 저장 (이후 api.ts가 이 토큰을 자동으로 사용함)
+          // 토큰 저장
           await AsyncStorage.setItem('accessToken', json.data.accessToken);
 
           if (json.data.refreshToken) {
@@ -98,10 +98,16 @@ export default function LoginScreen({ navigation }: any) {
           } else {
             await AsyncStorage.removeItem('savedEmail');
           }
+
+          // 👇 [추가] 로그인 성공 & 토큰 저장 후 FCM 초기화 실행!
+          // (권한 요청 -> 토큰 발급 -> 서버 전송 -> 리스너 등록)
+          await initFCM();
+          console.log('🔔 FCM 초기화 완료');
         } catch (storageError) {
-          console.error('토큰 저장 실패:', storageError);
+          console.error('토큰 저장 또는 FCM 등록 실패:', storageError);
         }
 
+        // 메인 화면으로 이동
         navigation.replace('Main');
       } else {
         // 서버 응답은 왔지만 success가 false인 경우
@@ -110,9 +116,8 @@ export default function LoginScreen({ navigation }: any) {
     } catch (err: any) {
       console.error('로그인 에러:', err);
 
-      // [변경] Axios 에러 핸들링
       if (err.response && err.response.data) {
-        // 서버에서 명시적으로 에러 메시지를 보낸 경우 (예: 400 Bad Request)
+        // 서버에서 명시적으로 에러 메시지를 보낸 경우
         const serverMsg = err.response.data.error?.message;
         setErrorMsg(serverMsg || COMMON_ERROR_TEXT);
       } else {
@@ -203,7 +208,7 @@ export default function LoginScreen({ navigation }: any) {
   );
 }
 
-// --- 하단 디자인 컴포넌트 및 스타일 (기존과 동일) ---
+// --- 하단 디자인 컴포넌트 및 스타일 (기존 코드 유지) ---
 
 function PixelAlert({ text }: { text: string }) {
   return (
