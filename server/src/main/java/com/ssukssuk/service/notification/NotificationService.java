@@ -111,6 +111,32 @@ public class NotificationService {
     }
 
     @Transactional
+    public void notifySensorRecovery(
+            Long plantId,
+            Long eventId,
+            Notification.NotiTitle sensorTitle
+    ) {
+        UserPlant plant = findPlantById(plantId);
+        User user = findActiveUserByPlantId(plantId);
+        SensorEvent event = sensorEventRepository.findById(eventId)
+                .orElse(null);
+
+        String message = sensorRecoveryMessage(sensorTitle);
+
+        Notification n = Notification.of(
+                user,
+                plant,
+                event,
+                null,
+                Notification.NotiType.RECOVERY,
+                sensorTitle,
+                message
+        );
+
+        notificationRepository.save(n);
+    }
+
+    @Transactional
     public void create(Long plantId, Long eventId, String notiType, String message) {
         UserPlant plant = findPlantById(plantId);
         User user = findActiveUserByPlantId(plantId);
@@ -156,6 +182,16 @@ public class NotificationService {
                     throw new IllegalArgumentException("Invalid sensor title: " + title);
         };
     }
+
+    private String sensorRecoveryMessage(Notification.NotiTitle title) {
+        return switch (title) {
+            case WATER_LEVEL -> "수위가 정상으로 돌아왔어요.";
+            case NUTRIENT_CONC -> "영양분 농도가 정상 범위로 복구됐어요.";
+            case HUMIDITY, TEMPERATURE, ACTION_FAIL, ACTION_DONE, DISCOLORATION ->
+                    throw new IllegalArgumentException("Invalid sensor title: " + title);
+        };
+    }
+
 
     private ParsedNoti parseLegacyNotiType(String notiTypeRaw) {
         if (notiTypeRaw == null || notiTypeRaw.isBlank()) {

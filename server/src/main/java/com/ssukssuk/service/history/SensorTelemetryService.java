@@ -48,7 +48,9 @@ public class SensorTelemetryService {
 
                 // 처음 이상치(OPEN 생성)일 때만 알림 테이블 insert
                 createdOpt.ifPresent(createdEvent -> {
-                    Notification.NotiTitle title = mapTriggerToNotiTitle(msg.getTriggerSensorType());
+                    Notification.NotiTitle title =
+                            mapTriggerToNotiTitle(msg.getTriggerSensorType());
+
                     notificationService.notifySensorAnomaly(
                             msg.getPlantId(),
                             createdEvent.getEventId(),
@@ -57,19 +59,30 @@ public class SensorTelemetryService {
                 });
             }
 
-            case RECOVERY_DONE -> sensorEventService.resolveIfOpenAndReturn(
-                    msg.getPlantId(),
-                    msg.getTriggerSensorType(),
-                    sensorLogId,
-                    measuredAt
-            );
+            case RECOVERY_DONE -> {
+                Optional<SensorEvent> resolvedOpt =
+                        sensorEventService.resolveIfOpenAndReturn(
+                            msg.getPlantId(),
+                            msg.getTriggerSensorType(),
+                            sensorLogId,
+                            measuredAt
+                        );
 
-            case ANOMALY_FAIL -> sensorEventService.findOpenEventId(
-                    msg.getPlantId(),
-                    msg.getTriggerSensorType()
-            ).ifPresent(eventId ->
-                    notificationService.notifyActionFail(msg.getPlantId(), eventId)
-            );
+                // 열려있는 이벤트 있으면 종료하고 -> 복구 알림 생성
+                // 없으면 아무것도 안함
+                resolvedOpt.ifPresent(resolvedEvent -> {
+                    Notification.NotiTitle title =
+                            mapTriggerToRecoveryTitle(msg.getTriggerSensorType());
+
+                    notificationService.notifySensorRecovery(
+                            msg.getPlantId(),
+                            resolvedEvent.getEventId(),
+                            title
+                    );
+                });
+
+
+            }
         }
     }
 
@@ -79,8 +92,17 @@ public class SensorTelemetryService {
         return switch (triggerType) {
             case WATER_LEVEL -> Notification.NotiTitle.WATER_LEVEL;
             case NUTRIENT_CONC -> Notification.NotiTitle.NUTRIENT_CONC;
-
-
         };
+    }
+
+    private Notification.NotiTitle mapTriggerToRecoveryTitle(SensorUplinkMessage.TriggerSensorType triggerType) {
+
+        if (triggerType == null) throw new IllegalArgumentException("trigger_sensor_type is null");
+
+        return switch (triggerType) {
+            case WATER_LEVEL -> Notification.NotiTitle.WATER_LEVEL;
+            case NUTRIENT_CONC -> Notification.NotiTitle.NUTRIENT_CONC;
+        };
+
     }
 }
