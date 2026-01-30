@@ -41,6 +41,7 @@ from uart.uart_manager import UARTManager
 from mqtt.claim_handler import handle_claim_update
 from mqtt.binding_handler import handle_binding_update
 from mqtt.mode_handler import handle_mode_update
+from mqtt.upload_url_handler import handle_upload_url
 
 from telemetry.sensor_uplink import build_sensor_uplink
 from telemetry.action_uplink import build_action_uplink
@@ -192,7 +193,18 @@ def main():
                 ack = handle_mode_update(payload)
                 client.publish(f"{telemetry_base}/ack", json.dumps(ack), qos=1)
                 setting = load_json(SETTING_PATH)
-            
+
+            # ======================================================
+            # UPLOAD_URL
+            # ======================================================
+            elif topic == f"{control_base}/upload-url":
+                # ACK은 보내지 않음, IMAGE_INFERENCE만 발행 (handler 내부에서 처리)
+                handle_upload_url(
+                    payload,
+                    mqtt_client=client,
+                    telemetry_base=telemetry_base
+                )
+
             else:
                 # 예상 못 한 토픽은 그냥 무시
                 print(f"[MQTT][WARN] unexpected topic ignored: {topic}")

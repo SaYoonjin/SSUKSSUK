@@ -84,6 +84,26 @@
   "storage": {
     "data_dir": "/home/orin/jetson_app/data",
     "logs_dir": "/home/orin/jetson_app/logs"
+  },
+
+  "camera": {
+    "top": {
+      "device_id": 0,
+      "width": 1920,
+      "height": 1080
+    },
+    "side": {
+      "device_id": 1,
+      "width": 1920,
+      "height": 1080
+    },
+    "capture_timeout_sec": 5
+  },
+
+  "upload": {
+    "timeout_sec": 30,
+    "retry_count": 3,
+    "retry_delay_sec": 1
   }
 }
 
