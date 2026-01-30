@@ -86,4 +86,14 @@ public class UserController {
     ) {
         return ApiResponse.ok(userService.updateMode(userId, req));
     }
+
+    // 초기 온보딩(스킵/디바이스 등록) 완료 시 호출되는 API
+    @PatchMapping("/initialize")
+    public ApiResponse<Void> completeInitialization(
+            @AuthenticationPrincipal Long userId
+    ) {
+        userService.completeInitialization(userId);
+        return ApiResponse.ok();
+    }
+
 }
