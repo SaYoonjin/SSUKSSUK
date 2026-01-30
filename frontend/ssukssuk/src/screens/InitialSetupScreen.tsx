@@ -45,7 +45,7 @@ export default function InitialSetupScreen({ navigation }: any) {
 
     const onSubmit = () => {
         if (!canSubmit) return;
-        Alert.alert("초기 등록 완료", "설정이 완료되었습니다 🌱", [
+        Alert.alert("기기 등록 완료", "설정이 완료되었습니다 🌱", [
             { text: "메인으로", onPress: () => navigation.replace("Main") },
         ]);
     };
@@ -82,25 +82,25 @@ export default function InitialSetupScreen({ navigation }: any) {
 
                 <View style={{ height: 30 * scale }} />
 
-                <PixelCard title="식물 등록" scale={scale}>
-                    <Text style={[styles.label, { fontSize: 15 * scale }]}>식물 닉네임</Text>
-                    <PixelInput
-                        scale={scale}
-                        value={plantNick}
-                        onChangeText={setPlantNick}
-                        placeholder="예: 도망이"
-                        returnKeyType="next"
-                    />
-                    <View style={{ height: 12 * scale }} />
-                    <Text style={[styles.label, { fontSize: 15 * scale }]}>식물 종류</Text>
-                    <PixelInput
-                        scale={scale}
-                        value={plantType}
-                        onChangeText={setPlantType}
-                        placeholder="예: 토마토"
-                        returnKeyType="done"
-                    />
-                </PixelCard>
+                {/*<PixelCard title="식물 등록" scale={scale}>*/}
+                {/*    <Text style={[styles.label, { fontSize: 15 * scale }]}>식물 닉네임</Text>*/}
+                {/*    <PixelInput*/}
+                {/*        scale={scale}*/}
+                {/*        value={plantNick}*/}
+                {/*        onChangeText={setPlantNick}*/}
+                {/*        placeholder="예: 도망이"*/}
+                {/*        returnKeyType="next"*/}
+                {/*    />*/}
+                {/*    <View style={{ height: 12 * scale }} />*/}
+                {/*    <Text style={[styles.label, { fontSize: 15 * scale }]}>식물 종류</Text>*/}
+                {/*    <PixelInput*/}
+                {/*        scale={scale}*/}
+                {/*        value={plantType}*/}
+                {/*        onChangeText={setPlantType}*/}
+                {/*        placeholder="예: 토마토"*/}
+                {/*        returnKeyType="done"*/}
+                {/*    />*/}
+                {/*</PixelCard>*/}
 
                 <View style={{ height: 22 * scale }} />
                 <PixelButton

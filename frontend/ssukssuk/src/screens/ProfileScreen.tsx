@@ -170,6 +170,14 @@ export default function ProfileScreen({ navigation }: any) {
 
         <MenuRow label="로그아웃" onPress={onLogout} danger />
         <MenuRow label="탈퇴하기" onPress={onWithdraw} danger />
+
+        {/*/!* 👇 [추가] UI 확인용 임시 버튼 *!/*/}
+        {/*<Line />*/}
+        {/*<MenuRow*/}
+        {/*  label="[테스트] 초기 설정 화면"*/}
+        {/*  onPress={() => navigation.navigate('InitialSetup')}*/}
+        {/*/>*/}
+
       </View>
     </SafeAreaView>
   );
