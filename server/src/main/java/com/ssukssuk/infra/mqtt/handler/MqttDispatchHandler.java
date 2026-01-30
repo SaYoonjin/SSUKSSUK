@@ -29,30 +29,6 @@ public class MqttDispatchHandler {
             log.warn("[MQTT][DISPATCH] no handler for channel={}, available={}", channel, handlers.keySet());
         }
 
-        String fallbackKey = resolveHandlerKeyByTopic(topic);
-        if (fallbackKey == null) {
-            log.warn("[MQTT][DISPATCH] unknown topic. topic={}", topic);
-            return;
-        }
-
-        MqttMessageHandler fallbackHandler = handlers.get(fallbackKey);
-        if (fallbackHandler == null) {
-            log.warn("[MQTT][DISPATCH] fallback handler not found. key={}, available={}", fallbackKey, handlers.keySet());
-            return;
-        }
-
-        fallbackHandler.handle(envelope);
     }
 
-    private String resolveHandlerKeyByTopic(String topic) {
-        if (topic == null) return null;
-
-        if (topic.contains("/telemetry/sensors")) return "sensors";
-
-        if (topic.contains("/telemetry/action-result")) return "actionResult";
-
-        if (topic.contains("/telemetry/ack")) return "ack";
-
-        return null;
-    }
 }
