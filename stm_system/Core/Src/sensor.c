@@ -11,19 +11,25 @@
 // 전역 상태
 // =======================
 
+typedef enum {
+    SENSOR_NORMAL = 0,
+    SENSOR_LOW,
+    SENSOR_HIGH
+} SensorAbnormalState;
+
+
+static SensorAbnormalState water_state = SENSOR_NORMAL;
+static SensorAbnormalState ec_state    = SENSOR_NORMAL;
+
 Threshold_t g_threshold = {
-    .water_min = 0.0f,
-    .water_max = 100.0f,
+    .water_min = 10.0f,
+    .water_max = 50.0f,
     .ec_min    = 0.0f,
     .ec_max    = 2000.0f
 };
 
 
 SensorData_t g_sensor = {0};
-
-static bool water_abnormal = false;
-static bool ec_abnormal = false;
-
 // =======================
 // 내부 유틸
 // =======================
@@ -71,54 +77,72 @@ void sensor_check_threshold(void)
      * WATER LEVEL
      * =============================== */
 
-    // 정상 → 이상
-    if (!water_abnormal &&
-        g_sensor.water_level < g_threshold.water_min)
-    {
-        water_abnormal = true;
+    if (water_state == SENSOR_NORMAL) {
 
-        proto_send_event_sensor(
-            EVENT_WATER_LOW,
-            temp_x10, humi_x10, ec, water
-        );
+        if (g_sensor.water_level < g_threshold.water_min) {
+            water_state = SENSOR_LOW;
+
+            proto_send_event_sensor(
+                EVENT_WATER_LOW,
+                temp_x10, humi_x10, ec, water
+            );
+        }
+        else if (g_sensor.water_level > g_threshold.water_max) {
+            water_state = SENSOR_HIGH;
+
+            proto_send_event_sensor(
+                EVENT_WATER_HIGH,
+                temp_x10, humi_x10, ec, water
+            );
+        }
     }
+    else {
+        // LOW 또는 HIGH 상태 → 정상 복귀 판단
+        if (g_sensor.water_level >= g_threshold.water_min &&
+            g_sensor.water_level <= g_threshold.water_max)
+        {
+            water_state = SENSOR_NORMAL;
 
-    // 이상 → 정상
-    else if (water_abnormal &&
-             g_sensor.water_level >= g_threshold.water_min)
-    {
-        water_abnormal = false;
-
-        proto_send_event_sensor(
-            EVENT_RECOVERY_DONE,
-            temp_x10, humi_x10, ec, water
-        );
+            proto_send_event_sensor(
+                EVENT_WATER_RECOVERY_DONE,
+                temp_x10, humi_x10, ec, water
+            );
+        }
     }
-
 
     /* ===============================
      * EC
      * =============================== */
 
-    if (!ec_abnormal &&
-        g_sensor.ec < g_threshold.ec_min)
-    {
-        ec_abnormal = true;
+    if (ec_state == SENSOR_NORMAL) {
 
-        proto_send_event_sensor(
-            EVENT_EC_LOW,
-            temp_x10, humi_x10, ec, water
-        );
+        if (g_sensor.ec < g_threshold.ec_min) {
+            ec_state = SENSOR_LOW;
+
+            proto_send_event_sensor(
+                EVENT_EC_LOW,
+                temp_x10, humi_x10, ec, water
+            );
+        }
+        else if (g_sensor.ec > g_threshold.ec_max) {
+            ec_state = SENSOR_HIGH;
+
+            proto_send_event_sensor(
+                EVENT_EC_HIGH,
+                temp_x10, humi_x10, ec, water
+            );
+        }
     }
-    else if (ec_abnormal &&
-             g_sensor.ec >= g_threshold.ec_min)
-    {
-        ec_abnormal = false;
+    else {
+        if (g_sensor.ec >= g_threshold.ec_min &&
+            g_sensor.ec <= g_threshold.ec_max)
+        {
+            ec_state = SENSOR_NORMAL;
 
-        proto_send_event_sensor(
-            EVENT_RECOVERY_DONE,
-            temp_x10, humi_x10, ec, water
-        );
+            proto_send_event_sensor(
+                EVENT_NUTRI_RECOVERY_DONE,
+                temp_x10, humi_x10, ec, water
+            );
+        }
     }
-
 }
