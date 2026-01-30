@@ -27,6 +27,7 @@ public class HistoryController {
         );
     }
 
+    // 특정 식물의 최근 14일간 촬영된 이미지 목록 조회 (소유자 검증 포함)
     @GetMapping("/plants/{plantId}/images")
     public ResponseEntity<ApiResponse<GetPlantImagesResponse>> getPlantImages(
             @AuthenticationPrincipal Long userId,

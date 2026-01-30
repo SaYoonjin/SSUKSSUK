@@ -28,7 +28,9 @@ public class PlantImageQueryService {
     private final S3PresignService s3PresignService;
     private final UserPlantRepository userPlantRepository;
 
+    // 특정 식물의 최근 14일간 이미지 조회 (사용자 소유 여부 검증 포함)
     public GetPlantImagesResponse getRecent14DaysImages(Long userId, Long plantId) {
+        // // 사용자-식물 소유 관계 검증
         if (!userPlantRepository.existsByPlantIdAndUserId(userId, plantId)) {
             throw new CustomException(ErrorCode.PLANT_ACCESS_DENIED);
         }
