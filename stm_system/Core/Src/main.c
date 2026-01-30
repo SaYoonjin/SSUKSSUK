@@ -106,7 +106,7 @@ int main(void)
 	 sensor_read_all(); // 센서 값을 읽는다
 	 sensor_check_threshold(); // 이상치를 확인하고 있으면 처리한다.
 
-	 // auto_recovery_fsm();
+	 auto_recovery_fsm();
 
 	 for (int i = 0; i < 10; i++) {
 	     uart_poll();

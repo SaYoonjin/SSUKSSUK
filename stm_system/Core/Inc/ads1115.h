@@ -13,4 +13,4 @@ HAL_StatusTypeDef ADS1115_ReadSingleEnded(
     int16_t *result
 );
 
-#endif
+#endif // __ADS1115_H
