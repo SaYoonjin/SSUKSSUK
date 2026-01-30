@@ -48,6 +48,11 @@ public enum ErrorCode {
             "FORBIDDEN",
             "접근 권한이 없습니다"
     ),
+    PLANT_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "PLANT_ACCESS_DENIED",
+            "해당 식물에 대한 접근 권한이 없습니다"
+    ),
 
     // 404
     NOT_FOUND(
