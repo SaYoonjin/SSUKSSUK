@@ -198,16 +198,11 @@ def main():
             # UPLOAD_URL
             # ======================================================
             elif topic == f"{control_base}/upload-url":
-                ack = handle_upload_url(
+                # ACK은 보내지 않음, IMAGE_INFERENCE만 발행 (handler 내부에서 처리)
+                handle_upload_url(
                     payload,
                     mqtt_client=client,
                     telemetry_base=telemetry_base
-                )
-                client.publish(
-                    f"{telemetry_base}/ack",
-                    json.dumps(ack),
-                    qos=1,
-                    retain=False,
                 )
 
             else:
