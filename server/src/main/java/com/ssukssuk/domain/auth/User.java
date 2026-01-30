@@ -49,6 +49,9 @@ public class User {
     @Column(name = "is_admin", nullable = false)
     private boolean isAdmin;
 
+    @Column(name = "is_initialized", nullable = false)
+    private boolean isInitialized;
+
     @PrePersist
     void prePersist() {
         LocalDateTime now = LocalDateTime.now();
@@ -56,6 +59,7 @@ public class User {
         this.updatedAt = now;
         if (this.mode == null) this.mode = UserMode.AUTO; // 기본값
         // isAdmin은 기본 false
+        this.isInitialized = false;
     }
 
     @PreUpdate
@@ -78,4 +82,6 @@ public class User {
     public void changeMode(UserMode mode) {
         this.mode = mode;
     }
+
+    public void markInitialized() { this.isInitialized = true; }
 }
