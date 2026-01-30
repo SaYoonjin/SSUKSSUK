@@ -3,10 +3,11 @@
 import uuid
 from datetime import datetime
 
+
 def iso_now():
     # 로컬 시간 기준 ISO8601 (timezone 포함)
     return datetime.now().astimezone().isoformat()
-    
+
 
 def build_status(values: dict, ideal_ranges: dict):
     """
@@ -18,6 +19,11 @@ def build_status(values: dict, ideal_ranges: dict):
     }
 
     ideal_ranges: setting["binding"]["ideal_ranges"]
+
+    status value:
+      - "UP"    : value > max
+      - "DOWN"  : value < min
+      - "OK"    : min <= value <= max (또는 기준 없음)
     """
 
     status = {}
@@ -26,19 +32,24 @@ def build_status(values: dict, ideal_ranges: dict):
         range_cfg = ideal_ranges.get(key)
 
         if not range_cfg:
-            # 기준 없으면 OK로 간주
+            # 기준 없으면 OK
             status[key] = "OK"
             continue
 
         min_v = range_cfg.get("min")
         max_v = range_cfg.get("max")
 
+        # min 기준
         if min_v is not None and value < min_v:
-            status[key] = "BAD"
-        elif max_v is not None and value > max_v:
-            status[key] = "BAD"
-        else:
-            status[key] = "OK"
+            status[key] = "DOWN"
+            continue
+
+        # max 기준
+        if max_v is not None and value > max_v:
+            status[key] = "UP"
+            continue
+
+        status[key] = "OK"
 
     return status
 
@@ -50,7 +61,7 @@ def build_sensor_uplink(
     values: dict,
     ideal_ranges: dict,
     event_kind: str = "PERIODIC",
-    trigger_sensor_type = None
+    trigger_sensor_type=None
 ):
     """
     values = {
@@ -60,7 +71,7 @@ def build_sensor_uplink(
         "nutrient_conc": float
     }
     """
-    
+
     status = build_status(values, ideal_ranges)
 
     payload = {
@@ -69,13 +80,12 @@ def build_sensor_uplink(
         "serial_num": serial_num,
         "plant_id": plant_id,
         "type": "SENSOR_UPLINK",
-    
+
         "event_kind": event_kind,
         "trigger_sensor_type": trigger_sensor_type,
-    
+
         "values": values,
         "status": status
     }
 
     return payload
-
