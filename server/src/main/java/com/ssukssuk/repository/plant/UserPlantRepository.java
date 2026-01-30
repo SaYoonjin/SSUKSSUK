@@ -76,4 +76,17 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
           and up.isConnected = true
     """)
     List<UserPlant> findActiveConnectionsByUserId(@Param("userId") Long userId);
+
+    @Query("""
+    select (count(up) > 0)
+    from UserPlant up
+    where up.plantId = :plantId
+      and up.user.id = :userId
+      and up.removedAt is null
+""")
+    boolean existsByPlantIdAndUserId(
+            @Param("plantId") Long plantId,
+            @Param("userId") Long userId
+    );
+
 }

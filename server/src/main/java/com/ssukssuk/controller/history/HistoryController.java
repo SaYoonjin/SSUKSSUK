@@ -32,7 +32,7 @@ public class HistoryController {
             @AuthenticationPrincipal Long userId,
             @PathVariable Long plantId
     ) {
-        GetPlantImagesResponse data = plantImageQueryService.getRecent14DaysImages(plantId);
+        GetPlantImagesResponse data = plantImageQueryService.getRecent14DaysImages(userId, plantId);
         return ResponseEntity.ok(ApiResponse.ok(data));
     }
 }
