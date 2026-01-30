@@ -37,7 +37,7 @@ public class DeviceController {
     }
 
     @DeleteMapping("/{deviceId}")
-    public ApiResponse<Void> unclaimDevice(
+    public ApiResponse<Void> nclaimDevuice(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long deviceId
     ) {
