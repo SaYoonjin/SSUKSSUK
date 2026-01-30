@@ -87,7 +87,7 @@ public class ActionResultHandler implements MqttMessageHandler {
             // action_log INSERT (SUCCESS/FAIL 모두)
             actionLogService.record(msg, sensorEvent, occurredAt);
 
-            log.info("[MQTT][ACTION_RESULT] action_log saved. eventId={}, actionType={}, result={}",
+            log.info("[MQTT][ACTION_RESULT] action_log saved. eventId={},  actionType={}, result={}",
                     sensorEvent.getEventId(), msg.getActionType(), msg.getResultStatus());
 
         } catch (Exception e) {
