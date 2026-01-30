@@ -12,13 +12,28 @@ from uart.packet import (
     CMD_READY,
     CMD_REQ_SENSOR,
     TYPE_EVENT,
+
     EVENT_WATER_LOW,
+    EVENT_WATER_HIGH,
     EVENT_EC_LOW,
-    EVENT_RECOVERY_DONE,
+    EVENT_EC_HIGH,
+
+    EVENT_WATER_RECOVERY_DONE,
+    EVENT_NUTRI_RECOVERY_DONE,
+
+    EVENT_WATER_ACTION_SUCCESS,
+    EVENT_NUTRI_ACTION_SUCCESS,
+
+    EVENT_WATER_PUMP_FAIL,
+    EVENT_NUTRI_PUMP_FAIL,
+    EVENT_SENSOR_FAIL,
+
     CMD_LED_OFF,
     CMD_PUMP_WATER_STOP,
-    CMD_PUMP_NUTRI_STOP
+    CMD_PUMP_NUTRI_STOP,
+    CMD_AUTO_RECOVERY,
 )
+
 
 from uart.uart_manager import UARTManager
 from mqtt.claim_handler import handle_claim_update
@@ -27,6 +42,7 @@ from mqtt.mode_handler import handle_mode_update
 from mqtt.upload_url_handler import handle_upload_url
 
 from telemetry.sensor_uplink import build_sensor_uplink
+from telemetry.action_uplink import build_action_uplink
 from led_scheduler import LEDScheduler
 from config_loader import load_json
 
@@ -34,7 +50,6 @@ from config_loader import load_json
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 SETTING_PATH = BASE_DIR / "setting.json"
-
 
 def main():
     # 초기 센서 1회 전송 제어
@@ -84,24 +99,16 @@ def main():
         nonlocal setting
     
         # claim은 항상 구독
-        topic = f"{control_base}/claim"
-        client.subscribe(topic, qos=1)
-        print(f"[MQTT] subscribed: {topic}")
+        client.subscribe(f"{control_base}/claim", qos=1)
+        print(f"[MQTT] subscribed: claim")
     
         # CLAIMED일 때만 운영 토픽 추가 구독
         if setting["claim"]["claim_state"] == "CLAIMED":
-            topics = [
-                f"{control_base}/binding",
-                f"{control_base}/mode",
-                f"{control_base}/upload-url",
-            ]
+            client.subscribe(f"{control_base}/binding", qos=1)
+            client.subscribe(f"{control_base}/mode", qos=1)
+            client.subscribe(f"{control_base}/upload-url", qos=1)
     
-            for t in topics:
-                client.subscribe(t, qos=1)
-    
-            print("[MQTT] subscribed: binding/mode/upload-url")
-
-
+            print("[MQTT] subscribed: binding, mode, upload-url")
 
     # ==========================================================
     # MQTT 콜백
@@ -138,12 +145,7 @@ def main():
             # ======================================================
             if topic == f"{control_base}/claim":
                 ack = handle_claim_update(payload, uart)
-                client.publish(
-                    f"{telemetry_base}/ack",
-                    json.dumps(ack),
-                    qos=1,
-                    retain=False,
-                )
+                client.publish(f"{telemetry_base}/ack", json.dumps(ack), qos=1)
     
                 setting = load_json(SETTING_PATH)
                 subscribe_by_state()
@@ -161,12 +163,7 @@ def main():
             # ======================================================
             elif topic == f"{control_base}/binding":
                 ack = handle_binding_update(payload, uart)
-                client.publish(
-                    f"{telemetry_base}/ack",
-                    json.dumps(ack),
-                    qos=1,
-                    retain=False,
-                )
+                client.publish(f"{telemetry_base}/ack", json.dumps(ack), qos=1)
     
                 setting = load_json(SETTING_PATH)
     
@@ -192,12 +189,7 @@ def main():
             # ======================================================
             elif topic == f"{control_base}/mode":
                 ack = handle_mode_update(payload)
-                client.publish(
-                    f"{telemetry_base}/ack",
-                    json.dumps(ack),
-                    qos=1,
-                    retain=False,
-                )
+                client.publish(f"{telemetry_base}/ack", json.dumps(ack), qos=1)
                 setting = load_json(SETTING_PATH)
 
             # ======================================================
@@ -254,6 +246,7 @@ def main():
 
             claim_state = setting["claim"]["claim_state"]
             binding_state = setting["binding"]["binding_state"]
+            mode = setting["mode"]
 
             # ==================================================
             # LED 스케줄 (BOUND 상태만)
@@ -285,14 +278,16 @@ def main():
                 pkt_type = pkt["type"]
                 pkt_sub = pkt["subtype"]
                 raw = pkt["payload"]
+                
+                
 
                 # ---------------- SENSOR (BOUND일 때만 uplink) ----------------
                 if pkt_type == 0x02 and pkt_sub == 0x01:
                     if binding_state != "BOUND" or claim_state != "CLAIMED":
                         continue
-
+                    
                     temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
-
+                    
                     uplink = build_sensor_uplink(
                         serial_num=serial,
                         plant_id=setting["binding"]["plant_id"],
@@ -307,27 +302,51 @@ def main():
                         trigger_sensor_type=None,
                     )
 
-                    client.publish(
-                        f"{telemetry_base}/sensors",
-                        json.dumps(uplink),
-                        qos=1,
-                        retain=False,
-                    )
+                    client.publish(f"{telemetry_base}/sensors", json.dumps(uplink), qos=1)
                     print("[MQTT] SENSOR_UPLINK sent")
+                    continue
 
-                # ---------------- EVENT (절대 수정 안 함) ----------------
-                elif pkt_type == TYPE_EVENT:
+                # ================= EVENT =================
+                if pkt_type != TYPE_EVENT:
+                    continue
+                
+                if binding_state != "BOUND" or claim_state != "CLAIMED":
+                    continue
+
+                # ---- ACTION SUCCESS ----
+                if pkt_sub in (EVENT_WATER_ACTION_SUCCESS, EVENT_NUTRI_ACTION_SUCCESS):
+                    action_type = (
+                        "WATER_ADD"
+                        if pkt_sub == EVENT_WATER_ACTION_SUCCESS
+                        else "NUTRI_ADD"
+                    )
+                
+                    action_uplink = build_action_uplink(
+                        serial_num=serial,
+                        plant_id=setting["binding"]["plant_id"],
+                        action_type=action_type,
+                        result_status="SUCCESS",
+                        error_code=None,
+                        error_message=None,
+                    )
+                
+                    client.publish(
+                        f"{telemetry_base}/action-result",
+                        json.dumps(action_uplink),
+                        qos=1,
+                    )
+                    print("[ACTION_RESULT] SUCCESS sent:", action_type)
+                    continue
+
+                    
+                # ---- RECOVERY DONE ----
+                if pkt_sub in (EVENT_WATER_RECOVERY_DONE, EVENT_NUTRI_RECOVERY_DONE):
+                    trigger = (
+                        "WATER_LEVEL"
+                        if pkt_sub == EVENT_WATER_RECOVERY_DONE
+                        else "NUTRIENT_CONC"
+                    )
                     temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
-
-                    if pkt_sub == EVENT_WATER_LOW:
-                        kind, trigger = "ANOMALY_DETECTED", "WATER_LEVEL"
-                    elif pkt_sub == EVENT_EC_LOW:
-                        kind, trigger = "ANOMALY_DETECTED", "NUTRIENT_CONC"
-                    elif pkt_sub == EVENT_RECOVERY_DONE:
-                        kind, trigger = "RECOVERY_DONE", None
-                    else:
-                        continue
-
                     uplink = build_sensor_uplink(
                         serial_num=serial,
                         plant_id=setting["binding"]["plant_id"],
@@ -338,18 +357,94 @@ def main():
                             "nutrient_conc": float(ec),
                         },
                         ideal_ranges=ideal_ranges,
-                        event_kind=kind,
+                        event_kind="RECOVERY_DONE",
                         trigger_sensor_type=trigger,
                     )
+                
+                    client.publish(
+                        f"{telemetry_base}/sensors",
+                        json.dumps(uplink),
+                        qos=1,
+                    )
+                    print("[EVENT] RECOVERY_DONE sent:", trigger)
+                    continue
 
-                    if mqtt_connected and claim_state == "CLAIMED":
-                        client.publish(
-                            f"{telemetry_base}/sensors",
-                            json.dumps(uplink),
-                            qos=1,
-                            retain=False,
-                        )
-                        print("[MQTT] EVENT uplink sent", kind)
+                    
+                # ---- ACTION FAIL ----
+                if pkt_sub in (
+                    EVENT_WATER_PUMP_FAIL,
+                    EVENT_NUTRI_PUMP_FAIL,
+                ):
+                    if pkt_sub == EVENT_WATER_PUMP_FAIL:
+                        action_type = "WATER_ADD"
+                    elif pkt_sub == EVENT_NUTRI_PUMP_FAIL:
+                        action_type = "NUTRI_ADD"
+                    else:
+                        continue
+                
+                    action_uplink = build_action_uplink(
+                        serial_num=serial,
+                        plant_id=setting["binding"]["plant_id"],
+                        action_type=action_type,
+                        result_status="FAIL",
+                        error_code=int(pkt_sub),
+                        error_message="auto recovery failed",
+                    )
+                
+                    client.publish(
+                        f"{telemetry_base}/action-result",
+                        json.dumps(action_uplink),
+                        qos=1,
+                    )
+                    print("[ACTION_RESULT] FAIL sent:", action_type)
+                    continue
+                    
+                if pkt_sub == EVENT_SENSOR_FAIL:
+                    print("[WARN] SENSOR_FAIL ignored (not an action result)")
+                    continue
+                
+                # ---- WATER / EC LOW or HIGH ----
+                if pkt_sub not in (
+                    EVENT_WATER_LOW, 
+                    EVENT_WATER_HIGH, 
+                    EVENT_EC_LOW, 
+                    EVENT_EC_HIGH,
+                ):
+                    continue
+            
+                if pkt_sub in (EVENT_WATER_LOW, EVENT_WATER_HIGH):
+                    trigger = "WATER_LEVEL"
+                else:
+                    trigger = "NUTRIENT_CONC"
+
+                temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
+                
+                uplink = build_sensor_uplink(
+                    serial_num=serial,
+                    plant_id=setting["binding"]["plant_id"],
+                    values={
+                            "temperature": temp_x10 / 10.0,
+                            "humidity": humi_x10 / 10.0,
+                            "water_level": float(water),
+                            "nutrient_conc": float(ec),
+                    },
+                    ideal_ranges=ideal_ranges,
+                    event_kind="ANOMALY_DETECTED",
+                    trigger_sensor_type=trigger,
+                )
+                client.publish(
+                    f"{telemetry_base}/sensors",
+                    json.dumps(uplink),
+                    qos=1,
+                )
+                print("[EVENT] ANOMALY_DETECTED sent:", trigger)
+                    
+                # AUTO면 센서 이벤트마다 허가(STM이 내부에서 개별 처리/무시/큐잉)
+                is_low_event = pkt_sub in (EVENT_WATER_LOW, EVENT_EC_LOW)
+
+                if mode == "AUTO" and is_low_event:
+                    uart.send_cmd(CMD_AUTO_RECOVERY)
+                    print("[AUTO] CMD_AUTO_RECOVERY sent for", trigger)
 
             # ==================================================
             # 정기 센서 (1시간)

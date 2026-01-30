@@ -2,11 +2,10 @@
 
 from pathlib import Path
 import time
-from struct import pack
 
 from config_loader import load_json, save_json
 from mqtt.ack_builder import build_ack
-from uart.packet import CMD_SET_TH
+from uart.threshold_sync import send_threshold
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SETTING_PATH = BASE_DIR / "setting.json"
@@ -63,20 +62,10 @@ def handle_binding_update(payload: dict, uart):
             save_json(SETTING_PATH, setting)
 
             # =========================
-            # 4) BOUND일 때만 STM32 제어
+            # 4) STM threshold 동기화 (단일 책임)
             # =========================
-            ir = setting["binding"]["ideal_ranges"]
-            payload_th = pack(
-                "<ffff",
-                float(ir["water_level"]["min"]),
-                float(ir["water_level"]["max"]),
-                float(ir["nutrient_conc"]["min"]),
-                float(ir["nutrient_conc"]["max"]),
-            )
 
-            uart.send_cmd(CMD_SET_TH, payload_th)
-            print("[UART] CMD_SET_THRESHOLD sent")
-
+            send_threshold(uart, setting["binding"]["ideal_ranges"])
             time.sleep(0.05)
 
 
