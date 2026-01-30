@@ -4,6 +4,7 @@
 
 /*
  * 프레임 포맷
+ *
  * [STX][TYPE][SUBTYPE][LEN][PAYLOAD...][CHK][ETX]
  */
 

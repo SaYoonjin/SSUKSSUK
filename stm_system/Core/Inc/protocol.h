@@ -67,5 +67,6 @@ HAL_StatusTypeDef proto_send(uint8_t type, uint8_t subtype,
 
 // 자주 쓰는 메시지 헬퍼
 HAL_StatusTypeDef proto_send_pong(void);
+
 HAL_StatusTypeDef proto_send_sensor_data(uint16_t temp_x10, uint16_t humi_x10,
 		uint16_t ec, uint16_t water);

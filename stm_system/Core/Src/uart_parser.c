@@ -1,10 +1,10 @@
 // uart_parser.c
 #include "uart_parser.h"
+#include "auto_recovery.h"
 #include "protocol.h"
 #include "sensor.h"
 #include "gpio.h"   // GPIO 제어용
 #include "usart.h"
-#include "auto_recovery.h"
 
 #include <string.h>
 #include <stdio.h>

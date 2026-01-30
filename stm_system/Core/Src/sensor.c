@@ -92,7 +92,6 @@ void sensor_read_all(void)
 // =======================
 // 임계치 체크
 // =======================
-
 void sensor_check_threshold(void)
 {
     if (sensor_check_suspended) return;

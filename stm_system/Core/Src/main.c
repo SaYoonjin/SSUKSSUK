@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include "sensor.h"
 #include "uart_parser.h"
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

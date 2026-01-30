@@ -12,5 +12,4 @@ HAL_StatusTypeDef ADS1115_ReadSingleEnded(
     uint8_t channel,
     int16_t *result
 );
-
 #endif // __ADS1115_H

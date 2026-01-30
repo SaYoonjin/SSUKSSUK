@@ -2,7 +2,6 @@
 #pragma once
 #ifndef SENSOR_H
 #define SENSOR_H
-
 #include <stdint.h>
 #include <stdbool.h>
 
