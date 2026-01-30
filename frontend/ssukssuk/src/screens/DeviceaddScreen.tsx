@@ -8,20 +8,106 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import client from '../api';
+
+// 서버 응답 타입 정의
+type DeviceAddResponse = {
+  success: boolean;
+  message: string;
+  data?: {
+    deviceId: string;
+    serial: string;
+    paired: boolean;
+    claimedAt: string;
+  };
+};
 
 export default function DeviceAddScreen({ navigation }: any) {
   const [serialNum, setSerialNum] = useState('');
+  const [loading, setLoading] = useState(false);
 
   // 입력값을 항상 대문자로 변환
   const handleChange = (text: string) => {
     setSerialNum(text.toUpperCase());
   };
 
-  const handleAdd = () => {
-    // 여기에 API 통신 로직 추가 (예: 서버로 serialNum 전송)
-    console.log('Add Device:', serialNum);
-    navigation.goBack(); // 완료 후 이전 화면으로 이동
+  const handleAdd = async () => {
+    if (!serialNum.trim()) return;
+
+    setLoading(true);
+    try {
+      // API 호출 (POST /devices/claim)
+      const res = await client.post<DeviceAddResponse>('/devices/claim', {
+        serial: serialNum,
+      });
+
+      const json = res.data;
+
+      if (json.success) {
+        Alert.alert('등록 성공', '디바이스가 성공적으로 등록되었습니다.', [
+          {
+            text: '확인',
+            onPress: () => navigation.goBack(),
+          },
+        ]);
+      } else {
+        // 200 OK지만 success가 false인 경우
+        Alert.alert(
+          '등록 실패',
+          json.message || '디바이스 등록에 실패했습니다.',
+        );
+      }
+    } catch (error: any) {
+      console.error('디바이스 등록 에러:', error);
+
+      if (error.response) {
+        const status = error.response.status;
+        let alertMsg = '알 수 없는 오류가 발생했습니다.';
+
+        // [핵심 수정] 상태 코드별 에러 메시지 분기 처리
+        switch (status) {
+          case 404:
+            alertMsg =
+              '존재하지 않는 디바이스 번호입니다.\n시리얼 넘버를 다시 확인해주세요.';
+            break;
+          case 409:
+            alertMsg = '이미 다른 사용자에게 등록된 디바이스입니다.';
+            break;
+          case 400:
+            alertMsg = '잘못된 요청입니다.\n입력 형식을 확인해주세요.';
+            break;
+          case 401:
+            alertMsg = '인증 정보가 만료되었습니다.\n다시 로그인해주세요.';
+            break;
+          case 500:
+            alertMsg =
+              '서버 내부 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.';
+            break;
+          case 504:
+            alertMsg =
+              '서버 응답 시간이 초과되었습니다.\n디바이스가 켜져 있는지 확인하거나\n잠시 후 다시 시도해주세요.';
+            break;
+          default:
+            // 그 외의 경우 서버에서 보낸 메시지가 있다면 사용
+            if (error.response.data && error.response.data.message) {
+              alertMsg = error.response.data.message;
+            }
+            break;
+        }
+
+        Alert.alert('등록 실패', alertMsg);
+      } else {
+        Alert.alert(
+          '통신 오류',
+          '서버와 연결할 수 없습니다.\n네트워크 상태를 확인해주세요.',
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,6 +115,13 @@ export default function DeviceAddScreen({ navigation }: any) {
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* 로딩 인디케이터 오버레이 */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#2E5A35" />
+        </View>
+      )}
+
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>디바이스 추가</Text>
@@ -43,22 +136,26 @@ export default function DeviceAddScreen({ navigation }: any) {
           <PixelInput
             value={serialNum}
             onChangeText={handleChange}
-            placeholder="DEV-00001234"
+            placeholder="SSUKSSUK-001"
             width={260}
           />
         </View>
 
         {/* 추가하기 버튼 */}
         <Pressable
-          style={[styles.addBtn, !serialNum && styles.disabledBtn]}
+          style={[styles.addBtn, (!serialNum || loading) && styles.disabledBtn]}
           onPress={handleAdd}
-          disabled={!serialNum}
+          disabled={!serialNum || loading}
         >
           <Text style={styles.addBtnText}>추가하기</Text>
         </Pressable>
 
         {/* 취소(뒤로가기) 버튼 */}
-        <Pressable onPress={() => navigation.goBack()} style={styles.cancelBtn}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.cancelBtn}
+          disabled={loading}
+        >
           <Text style={styles.cancelBtnText}>취소</Text>
         </Pressable>
       </ScrollView>
@@ -68,7 +165,6 @@ export default function DeviceAddScreen({ navigation }: any) {
 
 /**
  * 픽셀 스타일 입력창 컴포넌트
- * - width props를 통해 너비 조절 가능
  */
 function PixelInput({ width, ...props }: any) {
   const containerStyle = width
@@ -77,13 +173,10 @@ function PixelInput({ width, ...props }: any) {
 
   return (
     <View style={containerStyle}>
-      {/* 픽셀 테두리 */}
       <View style={styles.pixelTop} />
       <View style={styles.pixelBottom} />
       <View style={styles.pixelLeft} />
       <View style={styles.pixelRight} />
-
-      {/* 픽셀 모서리 */}
       <View style={styles.cornerTL} />
       <View style={styles.cornerTR} />
       <View style={styles.cornerBL} />
@@ -94,7 +187,7 @@ function PixelInput({ width, ...props }: any) {
         style={styles.input}
         placeholderTextColor="#AAA"
         autoCapitalize="characters"
-        selectionColor="#2E5A35" // 커서 색상 (진한 녹색)
+        selectionColor="#2E5A35"
       />
     </View>
   );
@@ -106,6 +199,15 @@ const BORDER_COLOR = 'rgba(36,46,19,0.9)';
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#EDEDE9' },
+
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+
   container: {
     flexGrow: 1,
     paddingHorizontal: 22,
@@ -131,7 +233,6 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
 
-  // 버튼 스타일
   addBtn: {
     backgroundColor: GREEN,
     paddingVertical: 14,
@@ -154,13 +255,11 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 
-  // PixelInput 스타일
   pixelInputContainer: {
     position: 'relative',
     height: 54,
     justifyContent: 'center',
     backgroundColor: '#EDEDE9',
-    // marginHorizontal은 width prop이 없을 때만 사용되거나 상위에서 제어
   },
   input: {
     fontSize: 20,
@@ -168,13 +267,10 @@ const styles = StyleSheet.create({
     fontFamily: 'NeoDunggeunmoPro-Regular',
     paddingVertical: 0,
     zIndex: 10,
-
-    // [수정됨] 입력창 내부 정렬 강제
     width: '100%',
     textAlign: 'center',
   },
 
-  // 테두리 조각들
   pixelTop: {
     position: 'absolute',
     top: -PIXEL_SIZE,
@@ -207,7 +303,6 @@ const styles = StyleSheet.create({
     width: PIXEL_SIZE,
     backgroundColor: BORDER_COLOR,
   },
-
   cornerTL: {
     position: 'absolute',
     top: 0,

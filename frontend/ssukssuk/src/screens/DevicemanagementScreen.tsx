@@ -11,7 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import client from '../api'; // Axios 클라이언트 임포트
 
-// 1. 서버 응답 데이터 타입 정의
+// 1. 서버 응답 데이터 타입 정의 (기존 동일)
 type DeviceData = {
   deviceId: number;
   serial: string;
@@ -30,8 +30,10 @@ type DeviceListResponse = {
 export default function DeviceManagementScreen({ navigation }: any) {
   const [devices, setDevices] = useState<DeviceData[]>([]);
   const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(true); // 테스트용 로딩 상태
+  // const devices: DeviceData[] = []; // 테스트용 빈 데이터
 
-  // 2. 화면이 포커스될 때마다 목록 새로고침 (추가 화면에서 돌아올 때 등)
+  // 화면 포커스 시 목록 새로고침 (기존 동일)
   useFocusEffect(
     useCallback(() => {
       fetchDevices();
@@ -45,18 +47,17 @@ export default function DeviceManagementScreen({ navigation }: any) {
       if (res.data.success) {
         setDevices(res.data.data);
       } else {
-        // success가 false인 경우 처리
         console.log('디바이스 목록 조회 실패:', res.data.error);
       }
     } catch (error) {
       console.error('디바이스 목록 로드 에러:', error);
-      Alert.alert('오류', '디바이스 목록을 불러오지 못했습니다.');
+      // Alert.alert('오류', '디바이스 목록을 불러오지 못했습니다.'); // 필요 시 주석 해제
     } finally {
       setLoading(false);
     }
   };
 
-  // 연결 해제 핸들러 (DELETE /devices/{id}/claim)
+  // 연결 해제 핸들러 (기존 동일)
   const handleDisconnect = (id: number) => {
     Alert.alert('연결 해제', '디바이스와의 연결을 해제하시겠습니까?', [
       { text: '취소', style: 'cancel' },
@@ -67,7 +68,7 @@ export default function DeviceManagementScreen({ navigation }: any) {
             const res = await client.delete(`/devices/${id}/claim`);
             if (res.data.success) {
               Alert.alert('완료', '연결이 해제되었습니다.');
-              fetchDevices(); // 목록 갱신
+              fetchDevices();
             } else {
               Alert.alert('실패', res.data.error?.message || '해제 실패');
             }
@@ -80,7 +81,7 @@ export default function DeviceManagementScreen({ navigation }: any) {
     ]);
   };
 
-  // 디바이스 삭제 핸들러 (DELETE /devices/{id})
+  // 디바이스 삭제 핸들러 (기존 동일)
   const handleDelete = (id: number) => {
     Alert.alert(
       '디바이스 삭제',
@@ -95,7 +96,7 @@ export default function DeviceManagementScreen({ navigation }: any) {
               const res = await client.delete(`/devices/${id}`);
               if (res.data.success) {
                 Alert.alert('완료', '디바이스가 삭제되었습니다.');
-                fetchDevices(); // 목록 갱신
+                fetchDevices();
               } else {
                 Alert.alert('실패', res.data.error?.message || '삭제 실패');
               }
@@ -109,9 +110,10 @@ export default function DeviceManagementScreen({ navigation }: any) {
     );
   };
 
+  // --- 메인 렌더링 ---
   return (
     <View style={styles.screen}>
-      {/* 상단 고정: ScrollView 밖 */}
+      {/* 1. 상단 헤더 (고정) */}
       <View style={styles.header}>
         <Pressable
           onPress={() => navigation.goBack()}
@@ -120,70 +122,72 @@ export default function DeviceManagementScreen({ navigation }: any) {
         >
           <Text style={styles.backChevron}>‹</Text>
         </Pressable>
-
         <Text style={styles.headerTitle}>디바이스 관리</Text>
       </View>
 
-      {/* 로딩 인디케이터 */}
-      {loading && devices.length === 0 ? (
-        <View style={styles.centerLoading}>
-          <ActivityIndicator size="large" color={GREEN} />
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* 1. 기기 목록 (서버 데이터 매핑) */}
-          {devices.map(device => (
-            <PixelCard key={device.deviceId}>
-              <View style={styles.deviceInfo}>
-                {/* 시리얼 넘버를 이름으로 표시 */}
-                <Text style={styles.deviceName}>{device.serial}</Text>
-                <Text
-                  style={[
-                    styles.plantName,
-                    !device.plantConnected && styles.noConnection,
-                  ]}
-                >
-                  {device.plantConnected
-                    ? device.connectedPlantName || '이름 없는 식물'
-                    : '연결 없음'}
-                </Text>
-              </View>
-              <View style={styles.actionButtons}>
-                {/* 식물 연결 해제 버튼 */}
-                <PixelMiniButton
-                  label="해제"
-                  color={GREEN}
-                  onPress={() => handleDisconnect(device.deviceId)}
-                  disabled={!device.plantConnected} // 식물 연결 안 되어 있으면 비활성화
-                />
-                <View style={{ width: 8 }} />
-                {/* 기기 삭제 버튼 */}
-                <PixelMiniButton
-                  label="삭제"
-                  color={ERROR_RED}
-                  onPress={() => handleDelete(device.deviceId)}
-                />
-              </View>
-            </PixelCard>
-          ))}
-
-          {/* 목록이 없을 때 안내 문구 */}
-          {!loading && devices.length === 0 && (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>등록된 디바이스가 없습니다.</Text>
-            </View>
-          )}
-
-          {/* 2. [+ 디바이스 추가] 버튼 */}
-          <View style={styles.addButtonContainer}>
-            <Pressable onPress={() => navigation.navigate('DeviceAdd')}>
-              <PixelCard centerContent compact>
-                <Text style={styles.addText}>+ 디바이스 추가</Text>
-              </PixelCard>
-            </Pressable>
+      {/* 2. 중앙 콘텐츠 영역 (남은 공간 모두 차지) */}
+      <View style={styles.contentArea}>
+        {loading ? (
+          // 로딩 중일 때 중앙 정렬
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={GREEN} />
           </View>
-        </ScrollView>
-      )}
+        ) : devices.length === 0 ? (
+          // [수정] 등록된 디바이스가 없을 때 (중앙 정렬, 진한 회색)
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyTextDark}>
+              등록된 디바이스가 없습니다.
+            </Text>
+          </View>
+        ) : (
+          // 디바이스가 있을 때 (스크롤 가능 목록)
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {devices.map(device => (
+              <PixelCard key={device.deviceId}>
+                <View style={styles.deviceInfo}>
+                  <Text style={styles.deviceName}>{device.serial}</Text>
+                  <Text
+                    style={[
+                      styles.plantName,
+                      !device.plantConnected && styles.noConnection,
+                    ]}
+                  >
+                    {device.plantConnected
+                      ? device.connectedPlantName || '이름 없는 식물'
+                      : '연결 없음'}
+                  </Text>
+                </View>
+                <View style={styles.actionButtons}>
+                  <PixelMiniButton
+                    label="해제"
+                    color={GREEN}
+                    onPress={() => handleDisconnect(device.deviceId)}
+                    disabled={!device.plantConnected}
+                  />
+                  <View style={{ width: 8 }} />
+                  <PixelMiniButton
+                    label="삭제"
+                    color={ERROR_RED}
+                    onPress={() => handleDelete(device.deviceId)}
+                  />
+                </View>
+              </PixelCard>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
+      {/* 3. 하단 디바이스 추가 버튼 (고정) */}
+      <View style={styles.bottomButtonContainer}>
+        <Pressable onPress={() => navigation.navigate('DeviceAdd')}>
+          <PixelCard centerContent compact>
+            <Text style={styles.addText}>+ 디바이스 추가</Text>
+          </PixelCard>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -210,6 +214,7 @@ function PixelCard({
       >
         {children}
       </View>
+      {/* 테두리 요소들 생략 (기존 코드와 동일하게 유지) */}
       <View style={styles.borderTop} />
       <View style={styles.borderBottom} />
       <View style={styles.borderLeft} />
@@ -240,6 +245,7 @@ function PixelMiniButton({
       disabled={disabled}
       style={styles.miniBtnContainer}
     >
+      {/* 테두리 요소들 생략 (기존 코드와 동일하게 유지) */}
       <View style={[styles.borderTop, { backgroundColor: btnColor }]} />
       <View style={[styles.borderBottom, { backgroundColor: btnColor }]} />
       <View style={[styles.borderLeft, { backgroundColor: btnColor }]} />
@@ -267,12 +273,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#EDEDE9',
     paddingHorizontal: 26,
     paddingTop: 45,
+    paddingBottom: 20, // 하단 버튼과의 간격
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6,
-    marginBottom: 26,
+    marginBottom: 20,
+    flexShrink: 0, // 헤더는 줄어들지 않음
   },
   backBtn: {
     paddingRight: 10,
@@ -289,9 +297,34 @@ const styles = StyleSheet.create({
     fontSize: 34,
     color: 'rgba(36,46,19,0.9)',
   },
-  content: { paddingBottom: 40 },
-  centerLoading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  addButtonContainer: { marginTop: 30 },
+
+  // [신규] 중앙 콘텐츠 영역 (flex: 1로 남은 공간 차지)
+  contentArea: {
+    flex: 1,
+    marginBottom: 20, // 하단 버튼과 간격
+  },
+  // [신규] 로딩 및 빈 상태 중앙 정렬 컨테이너
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // [신규] 스크롤뷰 내부 스타일
+  scrollContent: {
+    paddingBottom: 10,
+  },
+  // [수정] 빈 상태 텍스트 스타일 (진한 회색)
+  emptyTextDark: {
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+    color: '#555555', // 더 진한 회색
+    fontSize: 18,
+  },
+  // [신규] 하단 고정 버튼 컨테이너
+  bottomButtonContainer: {
+    flexShrink: 0, // 버튼 영역은 줄어들지 않음
+  },
+
+  // --- 기존 카드 및 버튼 스타일 유지 ---
   cardContainer: { position: 'relative', marginBottom: 16, padding: 4 },
   cardInner: {
     paddingVertical: 16,
@@ -340,17 +373,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafaf6',
   },
   miniBtnText: { fontSize: 16, fontFamily: 'NeoDunggeunmoPro-Regular' },
-  emptyContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontFamily: 'NeoDunggeunmoPro-Regular',
-    color: '#888',
-    fontSize: 16,
-  },
 
-  // 픽셀 테두리 스타일
+  // 픽셀 테두리 스타일 (기존 유지)
   borderTop: {
     position: 'absolute',
     top: 0,
