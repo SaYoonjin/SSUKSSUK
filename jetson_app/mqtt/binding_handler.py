@@ -5,7 +5,6 @@ import time
 
 from config_loader import load_json, save_json
 from mqtt.ack_builder import build_ack
-from uart.threshold_sync import send_threshold
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SETTING_PATH = BASE_DIR / "setting.json"
@@ -61,11 +60,6 @@ def handle_binding_update(payload: dict, uart):
 
             save_json(SETTING_PATH, setting)
 
-            # =========================
-            # 4) STM threshold 동기화 (단일 책임)
-            # =========================
-
-            send_threshold(uart, setting["binding"]["ideal_ranges"])
             time.sleep(0.05)
 
 

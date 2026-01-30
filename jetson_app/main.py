@@ -12,6 +12,8 @@ from uart.packet import (
     CMD_READY,
     CMD_REQ_SENSOR,
     TYPE_EVENT,
+    TYPE_DATA,
+    DATA_SENSOR,
 
     EVENT_WATER_LOW,
     EVENT_WATER_HIGH,
@@ -282,7 +284,7 @@ def main():
                 
 
                 # ---------------- SENSOR (BOUND일 때만 uplink) ----------------
-                if pkt_type == 0x02 and pkt_sub == 0x01:
+                if pkt_type == TYPE_DATA and pkt_sub == DATA_SENSOR:
                     if binding_state != "BOUND" or claim_state != "CLAIMED":
                         continue
                     
