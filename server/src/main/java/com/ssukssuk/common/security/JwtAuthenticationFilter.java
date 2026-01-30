@@ -46,7 +46,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith("/actuator/")
                 || path.equals("/api/auth/login")
                 || path.equals("/api/auth/signup")
-                || path.equals("/api/auth/refresh");
+                || path.equals("/api/auth/refresh")
+                || path.equals("/api/fcm/token");
 
         log.debug("[JwtFilter] path={}, shouldNotFilter={}", path, skip);
         return skip;
