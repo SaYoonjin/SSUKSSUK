@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,20 +7,29 @@ import {
   Alert,
   SafeAreaView,
   ActivityIndicator,
+  Animated,
+  ScrollView,
 } from 'react-native';
-// 로컬 스토리지 관리 (토큰 삭제용)
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// [변경] Axios 인스턴스 가져오기
 import client from '../api';
 
-// 상수 및 타입 정의
 const GREEN = '#2E5A35';
 const LIGHT_GREEN = '#75A743';
 const BG = '#EDEDE9';
+const CARD_BG = '#FFFFFF';
 const RED = '#D25353';
+const ERROR_RED = '#D97B7B';
 
-// 서버 응답 공통 타입
+type UserInfoResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    userId: number; // [cite: 30, 49]
+    nickname: string; // [cite: 33, 50]
+    isinitialized: boolean; // [cite: 36, 51]
+  } | null;
+};
+
 type CommonResponse = {
   success: boolean;
   data: any | null;
@@ -31,9 +40,56 @@ type CommonResponse = {
 };
 
 export default function ProfileScreen({ navigation }: any) {
+  // Hook들은 반드시 컴포넌트 최상단에서 무조건 실행되는 순서로 선언되어야 합니다.
   const [loading, setLoading] = useState(false);
+  const [nickname, setNickname] = useState('');
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const anim = useRef(new Animated.Value(1)).current;
 
-  // --- 로그아웃 로직 (POST) ---
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      setLoading(true);
+      try {
+        // GET /auth/me 호출 [cite: 3, 5, 7]
+        const res = await client.get<UserInfoResponse>('/auth/me');
+        if (res.data.success && res.data.data) {
+          setNickname(res.data.data.nickname); // [cite: 46, 50]
+        }
+      } catch (err: any) {
+        console.error('내 정보 조회 실패:', err);
+        if (err.response?.status === 401) {
+          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
+
+  const togglePush = () => {
+    const next = !pushEnabled;
+    setPushEnabled(next);
+
+    Animated.spring(anim, {
+      toValue: next ? 1 : 0,
+      useNativeDriver: false,
+      friction: 7,
+      tension: 50,
+    }).start();
+  };
+
+  const toggleBg = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [ERROR_RED, LIGHT_GREEN],
+  });
+
+  const translateX = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [2, 22],
+  });
+
   const onLogout = () => {
     Alert.alert('로그아웃', '로그아웃 하겠습니까?', [
       { text: '아니오', style: 'cancel' },
@@ -43,41 +99,14 @@ export default function ProfileScreen({ navigation }: any) {
         onPress: async () => {
           setLoading(true);
           try {
-            // [변경] Axios 사용: 토큰 헤더 설정 불필요 (자동 처리)
             const res = await client.post<CommonResponse>('/auth/logout');
-            const json = res.data;
-
-            if (json.success) {
-              // [유지] 로그아웃 성공 시 로컬 토큰 삭제
+            if (res.data.success) {
               await AsyncStorage.removeItem('accessToken');
               await AsyncStorage.removeItem('refreshToken');
-
-              Alert.alert('완료', '로그아웃 되었습니다.', [
-                {
-                  text: '확인',
-                  onPress: () => {
-                    navigation.reset({
-                      index: 0,
-                      routes: [{ name: 'Login' }],
-                    });
-                  },
-                },
-              ]);
-            } else {
-              Alert.alert(
-                '실패',
-                json.error?.message || '로그아웃 처리에 실패했습니다.',
-              );
+              navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
             }
-          } catch (err: any) {
-            console.error(err);
-            // [변경] Axios 에러 핸들링
-            if (err.response && err.response.data) {
-              const msg = err.response.data.error?.message;
-              Alert.alert('실패', msg || '로그아웃 처리에 실패했습니다.');
-            } else {
-              Alert.alert('에러', '서버와 통신 중 오류가 발생했습니다.');
-            }
+          } catch (err) {
+            Alert.alert('에러', '로그아웃 중 오류가 발생했습니다.');
           } finally {
             setLoading(false);
           }
@@ -86,186 +115,110 @@ export default function ProfileScreen({ navigation }: any) {
     ]);
   };
 
-  // --- 회원 탈퇴 로직 (DELETE) ---
   const onWithdraw = () => {
-    Alert.alert(
-      '탈퇴하기',
-      '정말로 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
-      [
-        { text: '아니오', style: 'cancel' },
-        {
-          text: '예',
-          style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              // [변경] Axios 사용: DELETE 메서드
-              const res = await client.delete<CommonResponse>('/auth/withdraw');
-              const json = res.data;
-
-              if (json.success) {
-                // [유지] 탈퇴 성공 시 로컬 토큰 삭제
-                await AsyncStorage.removeItem('accessToken');
-                await AsyncStorage.removeItem('refreshToken');
-
-                Alert.alert('탈퇴 처리', '탈퇴가 완료되었습니다.', [
-                  {
-                    text: '확인',
-                    onPress: () => {
-                      navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'Login' }],
-                      });
-                    },
-                  },
-                ]);
-              } else {
-                Alert.alert(
-                  '실패',
-                  json.error?.message || '탈퇴 처리에 실패했습니다.',
-                );
-              }
-            } catch (err: any) {
-              console.error(err);
-              // [변경] Axios 에러 핸들링
-              if (err.response && err.response.data) {
-                const msg = err.response.data.error?.message;
-                Alert.alert('실패', msg || '탈퇴 처리에 실패했습니다.');
-              } else {
-                Alert.alert('에러', '서버와 통신 중 오류가 발생했습니다.');
-              }
-            } finally {
-              setLoading(false);
+    Alert.alert('탈퇴하기', '정말로 탈퇴하시겠습니까?', [
+      { text: '아니오', style: 'cancel' },
+      {
+        text: '예',
+        style: 'destructive',
+        onPress: async () => {
+          setLoading(true);
+          try {
+            const res = await client.delete<CommonResponse>('/auth/withdraw');
+            if (res.data.success) {
+              await AsyncStorage.removeItem('accessToken');
+              await AsyncStorage.removeItem('refreshToken');
+              navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
             }
-          },
+          } catch (err) {
+            Alert.alert('에러', '탈퇴 처리 중 오류가 발생했습니다.');
+          } finally {
+            setLoading(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   return (
-    <SafeAreaView style={styles.root}>
-      {/* 로딩 인디케이터 오버레이 */}
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={GREEN} />
-        </View>
-      )}
+      <SafeAreaView style={styles.root}>
+        {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color={GREEN} />
+            </View>
+        )}
 
-      {/* 메뉴 영역 */}
-      <View style={styles.menu}>
-        <Line />
-        <MenuRow
-          label="닉네임 변경하기"
-          onPress={() => navigation.navigate('NicknameChange')}
-        />
-        <MenuRow
-          label="비밀번호 변경하기"
-          onPress={() => navigation.navigate('PasswordChange')}
-        />
-        <Line />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.profileHeader}>
+            <Text style={styles.headerLine}>
+              <Text style={styles.nickname}>{nickname || '...'}</Text>
+              <Text style={styles.headerSuffix}> 님, 환영합니다!</Text>
+            </Text>
+          </View>
 
-        <MenuRow label="설정" onPress={() => navigation.navigate('Settings')} />
-        <Line />
+          <SectionLabel text="내 정보 변경" />
+          <MenuRow label="닉네임 변경하기" onPress={() => navigation.navigate('NicknameChange')} useCard />
+          <MenuRow label="비밀번호 변경하기" onPress={() => navigation.navigate('PasswordChange')} useCard />
 
-        <MenuRow label="로그아웃" onPress={onLogout} danger />
-        <MenuRow label="탈퇴하기" onPress={onWithdraw} danger />
+          <Line />
+          <SectionLabel text="디바이스 및 알림 설정" />
+          <MenuRow label="디바이스 관리" onPress={() => navigation.navigate('DeviceManagement')} useCard />
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <Text style={styles.rowText}>푸시 알림 설정</Text>
+              <Pressable onPress={togglePush} hitSlop={10}>
+                <Animated.View style={[styles.toggleContainer, { backgroundColor: toggleBg }]}>
+                  <Animated.View style={[styles.sliderThumb, { transform: [{ translateX }] }]} />
+                </Animated.View>
+              </Pressable>
+            </View>
+          </View>
 
-        {/*/!* 👇 [추가] UI 확인용 임시 버튼 *!/*/}
-        {/*<Line />*/}
-        {/*<MenuRow*/}
-        {/*  label="[테스트] 초기 설정 화면"*/}
-        {/*  onPress={() => navigation.navigate('InitialSetup')}*/}
-        {/*/>*/}
-
-      </View>
-    </SafeAreaView>
+          <Line />
+          <MenuRow label="로그아웃" onPress={onLogout} danger />
+          <MenuRow label="탈퇴하기" onPress={onWithdraw} danger />
+        </ScrollView>
+      </SafeAreaView>
   );
 }
 
-// --- 하위 컴포넌트 (기존과 동일) ---
-
-function Line() {
-  return <View style={styles.line} />;
-}
-
-function MenuRow({
-  label,
-  onPress,
-  danger = false,
-}: {
-  label: string;
-  onPress: () => void;
-  danger?: boolean;
-}) {
+function Line() { return <View style={styles.line} />; }
+function SectionLabel({ text }: { text: string }) {
   return (
-    <Pressable onPress={onPress} style={styles.row}>
-      <Text style={[styles.rowText, danger && styles.rowTextDanger]}>
-        {label}
-      </Text>
-      <Text style={[styles.chevron, danger && styles.chevronDanger]}>›</Text>
-    </Pressable>
+      <View style={styles.sectionLabelWrap}>
+        <Text style={styles.sectionLabel}>{text}</Text>
+      </View>
   );
 }
-
-// --- 스타일 정의 (기존과 동일) ---
+function MenuRow({ label, onPress, danger = false, useCard = false }: any) {
+  return (
+      <Pressable onPress={onPress} style={useCard ? styles.card : styles.noCardRow}>
+        <View style={styles.row}>
+          <Text style={[styles.rowText, danger && styles.rowTextDanger]}>{label}</Text>
+          <Text style={[styles.chevron, danger && styles.chevronDanger]}>›</Text>
+        </View>
+      </Pressable>
+  );
+}
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: BG,
-    paddingHorizontal: 26,
-    paddingTop: 40,
-  },
-
-  /* 로딩 오버레이 */
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 999,
-  },
-
-  /* 메뉴 */
-  menu: {
-    backgroundColor: BG,
-    marginTop: 80,
-  },
-
-  line: {
-    height: 2,
-    backgroundColor: GREEN,
-    marginVertical: 10,
-  },
-
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 6,
-  },
-
-  rowText: {
-    flex: 1,
-    fontFamily: 'NeoDunggeunmoPro-Regular',
-    fontSize: 18,
-    color: 'rgba(36,46,19,0.9)',
-  },
-
-  chevron: {
-    fontFamily: 'NeoDunggeunmoPro-Regular',
-    fontSize: 22,
-    color: 'rgba(36,46,19,0.9)',
-    opacity: 0.75,
-    marginLeft: 10,
-  },
-
-  rowTextDanger: {
-    color: RED,
-  },
-  chevronDanger: {
-    color: RED,
-    opacity: 1,
-  },
+  root: { flex: 1, backgroundColor: BG },
+  scrollContent: { paddingHorizontal: 26, paddingTop: 80, paddingBottom: 40 },
+  loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center', zIndex: 999 },
+  profileHeader: { paddingHorizontal: 6, paddingBottom: 30 },
+  headerLine: { fontFamily: 'NeoDunggeunmoPro-Regular', color: 'rgba(36,46,19,0.85)', marginTop: 20},
+  nickname: { fontFamily: 'NeoDunggeunmoPro-Regular', fontSize: 32, color: 'rgba(36,46,19,0.95)' },
+  headerSuffix: { fontFamily: 'NeoDunggeunmoPro-Regular', fontSize: 20, color: 'rgba(36,46,19,0.7)' },
+  line: { height: 2, backgroundColor: GREEN, marginVertical: 10 },
+  sectionLabelWrap: { paddingHorizontal: 6, paddingBottom: 12 },
+  sectionLabel: { fontFamily: 'NeoDunggeunmoPro-Regular', fontSize: 16, color: 'rgba(36,46,19,0.55)' },
+  card: { backgroundColor: CARD_BG, borderRadius: 12, marginBottom: 12, elevation: 2 },
+  noCardRow: { paddingHorizontal: 6 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 18, paddingHorizontal: 16 },
+  rowText: { flex: 1, fontFamily: 'NeoDunggeunmoPro-Regular', fontSize: 18, color: 'rgba(36,46,19,0.9)' },
+  chevron: { fontSize: 22, color: 'rgba(36,46,19,0.3)', marginLeft: 10 },
+  rowTextDanger: { color: RED },
+  chevronDanger: { color: RED, opacity: 0.6 },
+  toggleContainer: { width: 48, height: 24, borderRadius: 12, justifyContent: 'center' },
+  sliderThumb: { width: 20, height: 20, backgroundColor: '#FFFFFF', borderRadius: 10 },
 });
