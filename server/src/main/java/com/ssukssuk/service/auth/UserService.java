@@ -91,6 +91,7 @@ public class UserService {
                 user.getId(),
                 user.getEmail(),
                 user.isAdmin(),
+                user.isInitialized(),
                 accessToken,
                 refreshToken
         );
@@ -164,7 +165,7 @@ public class UserService {
             throw new CustomException(ErrorCode.USER_DELETED);
         }
 
-        return new MeResponse(user.getId(), user.getNickname());
+        return new MeResponse(user.getId(), user.getNickname(),user.isInitialized());
     }
 
     /* =========================
@@ -273,4 +274,22 @@ public class UserService {
 
         return new ModeResponse(user.getMode(), user.getUpdatedAt().toString());
     }
+
+    // 초기 온보딩(스킵/디바이스 등록) 완료 처리: 최초 1회만 isInitialized=true로 변경
+    @Transactional
+    public void completeInitialization(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 탈퇴 유저 방지
+        if (user.getRemovedAt() != null) {
+            throw new CustomException(ErrorCode.USER_DELETED);
+        }
+
+        // 멱등 처리
+        if (!user.isInitialized()) {
+            user.markInitialized();
+        }
+    }
+
 }

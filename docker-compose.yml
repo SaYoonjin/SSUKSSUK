@@ -44,7 +44,10 @@ services:
     restart: unless-stopped
     expose:
       - "8080"
+    volumes:
+      - /home/ubuntu/secrets/firebase-service-account.json:/app/firebase-service-account.json:ro
     environment:
+      - FIREBASE_CREDENTIALS_PATH=/app/firebase-service-account.json
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
       - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
