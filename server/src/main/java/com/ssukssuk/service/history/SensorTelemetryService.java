@@ -4,6 +4,7 @@ import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.domain.history.SensorEvent;
 import com.ssukssuk.domain.notification.Notification;
 import com.ssukssuk.service.notification.NotificationService;
+import com.ssukssuk.service.plant.PlantStatusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ public class SensorTelemetryService {
     private final SensorLogService sensorLogService;
     private final SensorEventService sensorEventService;
     private final NotificationService notificationService;
+    private final PlantStatusService plantStatusService;
 
     @Transactional
     public void handleUplink(SensorUplinkMessage msg, LocalDateTime measuredAt) {
@@ -25,7 +27,10 @@ public class SensorTelemetryService {
         // 1) sensor_log 무조건 INSERT (status 포함)
         Long sensorLogId = sensorLogService.saveFromMqttReturnId(msg, measuredAt);
 
-        // 2) event_kind 분기
+        // 2) PlantStatus 업데이트 (센서값 반영)
+        plantStatusService.updateFromSensor(msg.getPlantId(), msg);
+
+        // 3) event_kind 분기
         if (msg.getEventKind() == null) return;
 
         switch (msg.getEventKind()) {
@@ -49,6 +54,9 @@ public class SensorTelemetryService {
                             createdEvent.getEventId(),
                             title
                     );
+
+                    // 안읽은 알림 표시
+                    plantStatusService.markUnreadNotification(msg.getPlantId());
                 });
             }
 
@@ -72,9 +80,10 @@ public class SensorTelemetryService {
                             resolvedEvent.getEventId(),
                             title
                     );
+
+                    // 안읽은 알림 표시
+                    plantStatusService.markUnreadNotification(msg.getPlantId());
                 });
-
-
             }
         }
     }
