@@ -1,10 +1,7 @@
 package com.ssukssuk.controller.plant;
 
 import com.ssukssuk.common.response.ApiResponse;
-import com.ssukssuk.dto.plant.CreatePlantRequest;
-import com.ssukssuk.dto.plant.CreatePlantResponse;
-import com.ssukssuk.dto.plant.SpeciesResponse;
-import com.ssukssuk.dto.plant.UpdatePlantRequest;
+import com.ssukssuk.dto.plant.*;
 import com.ssukssuk.service.plant.SpeciesService;
 import com.ssukssuk.service.plant.UserPlantService;
 import jakarta.validation.Valid;
@@ -51,4 +48,14 @@ public class PlantController {
         userPlantService.updatePlant(userId, plantId, request);
         return ApiResponse.ok();
     }
+
+    @GetMapping
+    public ApiResponse<List<MyPlantResponse>> getMyPlants(
+            @AuthenticationPrincipal Long userId
+    ) {
+        return ApiResponse.ok(
+                userPlantService.getMyPlants(userId)
+        );
+    }
+
 }
