@@ -23,11 +23,12 @@ static SensorAbnormalState ec_state    = SENSOR_NORMAL;
 Threshold_t g_threshold = {
     .water_min = 10.0f,
     .water_max = 60.0f,
-    .ec_min    = 0.0f,
+    .ec_min    = 700.0f,
     .ec_max    = 2000.0f
 };
 
 static bool sensor_check_suspended = false;
+static bool first_threshold_check  = true;
 
 SensorData_t g_sensor = {0};
 
@@ -102,6 +103,34 @@ void sensor_check_threshold(void)
     uint16_t ec       = (uint16_t)(g_sensor.ec);
     uint16_t water    = (uint16_t)(g_sensor.water_level);
 
+    // ==========================
+    // 부팅 직후 1회 초기 판단
+    // ==========================
+    if (first_threshold_check) {
+        if (g_sensor.water_level < g_threshold.water_min) {
+            water_state = SENSOR_LOW;
+            proto_send_event_sensor(EVENT_WATER_LOW, temp_x10, humi_x10, ec, water);
+        } else if (g_sensor.water_level > g_threshold.water_max) {
+            water_state = SENSOR_HIGH;
+            proto_send_event_sensor(EVENT_WATER_HIGH, temp_x10, humi_x10, ec, water);
+        }
+
+        if (g_sensor.ec < g_threshold.ec_min) {
+            ec_state = SENSOR_LOW;
+            proto_send_event_sensor(EVENT_EC_LOW, temp_x10, humi_x10, ec, water);
+        } else if (g_sensor.ec > g_threshold.ec_max) {
+            ec_state = SENSOR_HIGH;
+            proto_send_event_sensor(EVENT_EC_HIGH, temp_x10, humi_x10, ec, water);
+        }
+
+        first_threshold_check = false;
+        return;  // ❗ 여기서 종료
+    }
+
+    // ==========================
+    // 기존 상태 머신 로직
+    // ==========================
+
     // ---- WATER ----
     if (water_state == SENSOR_NORMAL) {
         if (g_sensor.water_level < g_threshold.water_min) {
@@ -136,3 +165,4 @@ void sensor_check_threshold(void)
         }
     }
 }
+

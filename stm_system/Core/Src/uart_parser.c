@@ -116,6 +116,7 @@ void handle_packet(uint8_t type, uint8_t subtype,
         uint16_t water     = (uint16_t)(g_sensor.water_level);
 
         proto_send_sensor_data(temp_x10, humi_x10, ec, water);
+
     }
 
     else if (type == TYPE_CMD && subtype == CMD_LED_ON) {
