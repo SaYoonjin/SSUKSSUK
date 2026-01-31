@@ -10,6 +10,7 @@ import com.ssukssuk.dto.device.DeviceResponse;
 import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.device.DeviceRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
+import com.ssukssuk.service.plant.PlantBindingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,8 @@ public class DeviceService {
     private final UserRepository userRepository;
     private final UserPlantRepository userPlantRepository;
     private final DeviceControlService deviceControlService;
+    private final DeviceClaimService deviceClaimService;
+    private final PlantBindingService plantBindingService;
 
     public DeviceClaimResponse claim(Long userId, String serial) {
 
@@ -44,16 +47,8 @@ public class DeviceService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
-        deviceControlService.sendClaimUpdate(
-                serial,
-                userId,
-                "CLAIMED",
-                user.getMode().name()
-        );
-
-        // 2. ACK 성공 시 DB 저장
-        device.claim(user);
+        // 별도 트랜잭션으로 MQTT + DB 처리
+        deviceClaimService.claim(device.getDeviceId(), user);
 
         return DeviceClaimResponse.from(device);
     }
@@ -73,25 +68,13 @@ public class DeviceService {
             throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
         }
 
-        String serial = device.getSerial();
-
-        // 연결된 식물이 있으면 먼저 바인딩 해제
+        // 별도 트랜잭션으로 각각 처리 (MQTT 성공 시 즉시 DB 커밋)
+        // 1. 연결된 식물이 있으면 먼저 바인딩 해제
         userPlantRepository.findConnectedPlantByDeviceId(deviceId)
-                .ifPresent(plant -> {
-                    deviceControlService.sendBindingUnbound(serial);
-                    plant.unbindDevice();
-                });
+                .ifPresent(plant -> plantBindingService.unbind(plant.getPlantId()));
 
-        // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
-        deviceControlService.sendClaimUpdate(
-                serial,
-                userId,
-                "UNCLAIMED",
-                null
-        );
-
-        // 2. ACK 성공 시 DB 업데이트
-        device.unclaim();
+        // 2. 디바이스 unclaim
+        deviceClaimService.unclaim(deviceId, userId);
     }
 
     @Transactional(readOnly = true)

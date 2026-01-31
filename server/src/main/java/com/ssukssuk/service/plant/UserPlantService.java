@@ -30,6 +30,7 @@ public class UserPlantService {
     private final UserPlantRepository userPlantRepository;
     private final PlantStatusRepository plantStatusRepository;
     private final DeviceControlService deviceControlService;
+    private final PlantBindingService plantBindingService;
 
     public CreatePlantResponse createPlant(
             Long userId,
@@ -113,10 +114,8 @@ public class UserPlantService {
         // 2-1. 디바이스 연결 해제 요청
         if (Boolean.TRUE.equals(request.getUnbindDevice())) {
             if (currentlyConnected) {
-                // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
-                deviceControlService.sendBindingUnbound(currentDevice.getSerial());
-                // 2. ACK 성공 시 DB 업데이트
-                plant.unbindDevice();
+                // 별도 트랜잭션으로 MQTT + DB 처리
+                plantBindingService.unbind(plantId);
             }
             return;
         }
@@ -145,21 +144,14 @@ public class UserPlantService {
                 throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
             }
 
-            // 1. MQTT 발송 + ACK 대기 (모든 MQTT가 성공해야 DB 업데이트)
-            // 기존 디바이스가 있으면 먼저 UNBOUND 전송
-            if (currentlyConnected && currentDevice != null) {
-                deviceControlService.sendBindingUnbound(currentDevice.getSerial());
+            // 별도 트랜잭션으로 각각 처리 (MQTT 성공 시 즉시 DB 커밋)
+            // 1. 기존 디바이스 연결 해제
+            if (currentlyConnected) {
+                plantBindingService.unbind(plantId);
             }
 
-            // 새 디바이스에 BOUND 전송
-            deviceControlService.sendBindingBound(
-                    newDevice.getSerial(),
-                    plant.getPlantId(),
-                    plant.getSpecies().getSpeciesId()
-            );
-
-            // 2. 모든 ACK 성공 시 DB 업데이트
-            plant.bindDevice(newDevice);
+            // 2. 새 디바이스 연결
+            plantBindingService.bind(plantId, newDeviceId);
         }
     }
 }

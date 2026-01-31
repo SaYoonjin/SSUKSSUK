@@ -1,0 +1,57 @@
+package com.ssukssuk.service.device;
+
+import com.ssukssuk.common.exception.CustomException;
+import com.ssukssuk.common.exception.ErrorCode;
+import com.ssukssuk.domain.auth.User;
+import com.ssukssuk.domain.device.Device;
+import com.ssukssuk.repository.device.DeviceRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class DeviceClaimService {
+
+    private final DeviceRepository deviceRepository;
+    private final DeviceControlService deviceControlService;
+
+    /**
+     * 디바이스 claim (별도 트랜잭션)
+     * MQTT 성공 시 DB 즉시 커밋
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void claim(Long deviceId, User user) {
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
+
+        deviceControlService.sendClaimUpdate(
+                device.getSerial(),
+                user.getId(),
+                "CLAIMED",
+                user.getMode().name()
+        );
+
+        device.claim(user);
+    }
+
+    /**
+     * 디바이스 unclaim (별도 트랜잭션)
+     * MQTT 성공 시 DB 즉시 커밋
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void unclaim(Long deviceId, Long userId) {
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
+
+        deviceControlService.sendClaimUpdate(
+                device.getSerial(),
+                userId,
+                "UNCLAIMED",
+                null
+        );
+
+        device.unclaim();
+    }
+}
