@@ -46,6 +46,7 @@ public class UserPlantService {
                 .orElseThrow(() -> new CustomException(ErrorCode.SPECIES_NOT_FOUND));
 
         Device device = null;
+        boolean shouldBeMain = false;
 
         // 디바이스가 있는 경우에만 연결 처리
         if (deviceId != null) {
@@ -71,6 +72,12 @@ public class UserPlantService {
 
             // 디바이스에 식물 연결 상태 설정
             device.bindPlant();
+
+            // 기존 main 식물이 있으면 해제
+            userPlantRepository.findMainPlantByUserId(userId)
+                    .ifPresent(UserPlant::changeMainFalse);
+
+            shouldBeMain = true;
         }
 
         // DB 저장
@@ -79,7 +86,7 @@ public class UserPlantService {
                 .species(species)
                 .device(device)
                 .plantName(plantName)
-                .isMain(Boolean.TRUE)
+                .isMain(shouldBeMain)
                 .build();
 
         userPlantRepository.save(userPlant);

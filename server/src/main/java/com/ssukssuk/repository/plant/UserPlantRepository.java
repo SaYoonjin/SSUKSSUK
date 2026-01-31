@@ -89,4 +89,13 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
             @Param("userId") Long userId
     );
 
+    // 사용자의 현재 main 식물 조회
+    @Query("""
+        select up from UserPlant up
+        where up.user.id = :userId
+          and up.removedAt is null
+          and up.isMain = true
+    """)
+    Optional<UserPlant> findMainPlantByUserId(@Param("userId") Long userId);
+
 }

@@ -22,15 +22,8 @@ public class SensorTelemetryService {
     @Transactional
     public void handleUplink(SensorUplinkMessage msg, LocalDateTime measuredAt) {
 
-        // 1) sensor_log 무조건 INSERT
-        Long sensorLogId = sensorLogService.saveFromMqttReturnId(
-                msg.getPlantId(),
-                measuredAt,
-                msg.getTemperature(),
-                msg.getHumidity(),
-                msg.getWaterLevel(),
-                msg.getNutrientConc()
-        );
+        // 1) sensor_log 무조건 INSERT (status 포함)
+        Long sensorLogId = sensorLogService.saveFromMqttReturnId(msg, measuredAt);
 
         // 2) event_kind 분기
         if (msg.getEventKind() == null) return;
