@@ -8,9 +8,12 @@ import com.ssukssuk.repository.history.SensorEventRepository;
 import com.ssukssuk.service.device.DeviceBindingValidator;
 import com.ssukssuk.service.history.ActionLogService;
 import com.ssukssuk.service.notification.NotificationService;
+import com.ssukssuk.service.push.PushService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -31,6 +34,7 @@ public class ActionResultHandler implements MqttMessageHandler {
     private final SensorEventRepository sensorEventRepository;
     private final ActionLogService actionLogService;
     private final NotificationService notificationService;
+    private final PushService pushService;
 
     @Override
     public void handle(MqttEnvelope envelope) {
@@ -89,11 +93,26 @@ public class ActionResultHandler implements MqttMessageHandler {
             // action_log INSERT (SUCCESS/FAIL 모두)
             actionLogService.record(msg, sensorEvent, occurredAt);
 
+            Long notificationId;
+
             if ("SUCCESS".equalsIgnoreCase(msg.getResultStatus())) {
-                notificationService.notifyActionDone(msg.getPlantId(), sensorEvent.getEventId());
+                notificationId =
+                    notificationService.notifyActionDoneAndReturnId(
+                            msg.getPlantId(), sensorEvent.getEventId());
             } else {
-                notificationService.notifyActionFail(msg.getPlantId(), sensorEvent.getEventId());
+                notificationId =
+                    notificationService.notifyActionFailAndReturnId(
+                            msg.getPlantId(), sensorEvent.getEventId());
             }
+
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            pushService.sendNotification(notificationId);
+                        }
+                    }
+            );
 
             log.info("[MQTT][ACTION_RESULT] action_log saved. eventId={},  actionType={}, result={}",
                     sensorEvent.getEventId(), msg.getActionType(), msg.getResultStatus());

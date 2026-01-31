@@ -10,9 +10,12 @@ import com.ssukssuk.repository.history.PlantImageRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import com.ssukssuk.service.notification.NotificationService;
 import com.ssukssuk.service.plant.PlantStatusService;
+import com.ssukssuk.service.push.PushService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 
@@ -26,6 +29,7 @@ public class ImageInferenceService {
     private final IdempotencyService idempotencyService;
     private final NotificationService notificationService;
     private final PlantStatusService plantStatusService;
+    private final PushService pushService;
 
     @Transactional
     public void handle(DeviceImageInferenceRequest request) {
@@ -122,7 +126,17 @@ public class ImageInferenceService {
         if (request.getConfidence() >= 70
                 && request.getAnomaly() != null
                 && request.getAnomaly() >= 3) {
-            notificationService.notifyImageDiscoloration(plant, inference);
+            Long notificationId =
+                notificationService.notifyImageDiscolorationAndReturnId(plant, inference);
+
+            TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            pushService.sendNotification(notificationId);
+                        }
+                    }
+            );
 
             // 안읽은 알림 표시
             plantStatusService.markUnreadNotification(request.getPlantId());

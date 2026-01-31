@@ -25,7 +25,7 @@ public class NotificationService {
     private final SensorEventRepository sensorEventRepository;
 
     @Transactional
-    public void notifySensorAnomaly(
+    public Long notifySensorAnomalyAndReturnId(
             Long plantId,
             Long eventId,
             Notification.NotiTitle sensorTitle
@@ -47,10 +47,11 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     @Transactional
-    public void notifyImageDiscoloration(UserPlant plant, ImageInference inference) {
+    public Long notifyImageDiscolorationAndReturnId(UserPlant plant, ImageInference inference) {
         User user = findActiveUserByPlantId(plant.getPlantId());
 
         Notification n = Notification.of(
@@ -64,6 +65,7 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     /**
@@ -72,7 +74,7 @@ public class NotificationService {
      *       (SensorTelemetryService의 ANOMALY_DETECTED, RECOVERY_DONE 처리 패턴 참고)
      */
     @Transactional
-    public void notifyActionDone(
+    public Long notifyActionDoneAndReturnId(
             Long plantId,
             Long eventId
     ) {
@@ -91,6 +93,7 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     /**
@@ -99,7 +102,7 @@ public class NotificationService {
      *       (SensorTelemetryService의 ANOMALY_DETECTED, RECOVERY_DONE 처리 패턴 참고)
      */
     @Transactional
-    public void notifyActionFail(
+    public Long notifyActionFailAndReturnId(
             Long plantId,
             Long eventId
     ) {
@@ -118,10 +121,11 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     @Transactional
-    public void notifySensorRecovery(
+    public Long notifySensorRecoveryAndReturnId(
             Long plantId,
             Long eventId,
             Notification.NotiTitle sensorTitle
@@ -144,6 +148,7 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     @Transactional
