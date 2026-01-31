@@ -62,7 +62,7 @@ public class UserPlant {
         this.device = device;
         this.plantName = plantName;
         this.isMain = (isMain != null) ? isMain : false;
-        this.isConnected = true;
+        this.isConnected = (device != null);  // 디바이스가 있을 때만 연결 상태
         this.createdAt = LocalDateTime.now();
     }
 

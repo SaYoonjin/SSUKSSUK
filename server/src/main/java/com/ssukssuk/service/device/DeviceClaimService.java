@@ -4,6 +4,7 @@ import com.ssukssuk.common.exception.CustomException;
 import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.auth.User;
 import com.ssukssuk.domain.device.Device;
+import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.repository.device.DeviceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,13 +39,15 @@ public class DeviceClaimService {
 
     /**
      * 디바이스 unclaim (별도 트랜잭션)
-     * MQTT 성공 시 DB 즉시 커밋
+     * MQTT는 unclaim 하나만 보내면 디바이스에서 식물 해제까지 자동 처리
+     * DB는 식물 unbind + 디바이스 unclaim 둘 다 반영
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void unclaim(Long deviceId, Long userId) {
+    public void unclaim(Long deviceId, Long userId, UserPlant connectedPlant) {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
 
+        // MQTT는 unclaim 하나만 전송
         deviceControlService.sendClaimUpdate(
                 device.getSerial(),
                 userId,
@@ -52,6 +55,13 @@ public class DeviceClaimService {
                 null
         );
 
+        // DB: 연결된 식물이 있으면 unbind 처리
+        if (connectedPlant != null) {
+            connectedPlant.unbindDevice();
+            device.unbindPlant();
+        }
+
+        // DB: 디바이스 unclaim
         device.unclaim();
     }
 }

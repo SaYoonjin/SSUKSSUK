@@ -23,6 +23,8 @@ public class PlantBindingService {
     /**
      * 식물-디바이스 연결 해제 (별도 트랜잭션)
      * MQTT 성공 시 DB 즉시 커밋
+     * - plant.isConnected = false
+     * - device.pairing = false
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void unbind(Long plantId) {
@@ -36,11 +38,14 @@ public class PlantBindingService {
 
         deviceControlService.sendBindingUnbound(device.getSerial());
         plant.unbindDevice();
+        device.unbindPlant();
     }
 
     /**
      * 식물-디바이스 연결 (별도 트랜잭션)
      * MQTT 성공 시 DB 즉시 커밋
+     * - plant.isConnected = true, plant.device = newDevice
+     * - device.pairing = true
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void bind(Long plantId, Long deviceId) {
@@ -56,5 +61,6 @@ public class PlantBindingService {
                 plant.getSpecies().getSpeciesId()
         );
         plant.bindDevice(newDevice);
+        newDevice.bindPlant();
     }
 }

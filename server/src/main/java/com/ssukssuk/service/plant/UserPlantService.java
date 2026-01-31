@@ -68,6 +68,9 @@ public class UserPlantService {
                     null,  // plantId는 아직 생성 전이므로 null
                     species.getSpeciesId()
             );
+
+            // 디바이스에 식물 연결 상태 설정
+            device.bindPlant();
         }
 
         // DB 저장

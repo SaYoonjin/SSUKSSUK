@@ -28,15 +28,36 @@ public class Device {
     @Column(name = "claimed_at")
     private LocalDateTime claimedAt;
 
+    /**
+     * 디바이스를 사용자에게 등록 (claim)
+     * pairing은 식물 연결 시 별도로 설정
+     */
     public void claim(User user) {
         this.user = user;
-        this.pairing = true;
         this.claimedAt = LocalDateTime.now();
     }
 
+    /**
+     * 디바이스 등록 해제 (unclaim)
+     * user_id와 pairing 모두 제거
+     */
     public void unclaim() {
         this.user = null;
         this.pairing = false;
         this.claimedAt = null;
+    }
+
+    /**
+     * 식물과 연결 (bind)
+     */
+    public void bindPlant() {
+        this.pairing = true;
+    }
+
+    /**
+     * 식물 연결 해제 (unbind)
+     */
+    public void unbindPlant() {
+        this.pairing = false;
     }
 }
