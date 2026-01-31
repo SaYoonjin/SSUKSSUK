@@ -16,4 +16,7 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     Optional<Device> findBySerial(String serial);
 
     List<Device> findAllByUser_IdAndPairingTrue(Long userId);
+
+    // 사용자의 모든 등록된 디바이스 조회 (pairing 여부 관계없이)
+    List<Device> findAllByUser_Id(Long userId);
 }

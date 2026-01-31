@@ -5,6 +5,7 @@ import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.history.SensorLog;
 import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.history.SensorLogResponse;
+import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.repository.history.SensorLogRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,54 +22,35 @@ public class SensorLogService {
     private final SensorLogRepository sensorLogRepository;
     private final UserPlantRepository userPlantRepository;
 
-    // MQTT 수신용 (SensorTelemetryHandler에서 호출)
-    public void saveFromMqtt(
-            Long plantId,
-            LocalDateTime measuredAt,
-            Float temperature,
-            Float humidity,
-            Float waterLevel,
-            Float nutrientConc
-    ) {
-        UserPlant plant = userPlantRepository.findById(plantId)
+    // MQTT 수신용 - status 포함 버전
+    public Long saveFromMqttReturnId(SensorUplinkMessage msg, LocalDateTime measuredAt) {
+        UserPlant plant = userPlantRepository.findById(msg.getPlantId())
                 .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
 
         SensorLog log = SensorLog.builder()
                 .plant(plant)
                 .measuredAt(measuredAt != null ? measuredAt : LocalDateTime.now())
-                .temperature(temperature)
-                .humidity(humidity)
-                .waterLevel(waterLevel)
-                .nutrientConc(nutrientConc)
-                .receivedAt(LocalDateTime.now())
-                .build();
-
-        sensorLogRepository.save(log);
-    }
-
-    // MQTT 수신용 - sensor_event 연동을 위해 PK 반환 버전 추가
-    public Long saveFromMqttReturnId(
-            Long plantId,
-            LocalDateTime measuredAt,
-            Float temperature,
-            Float humidity,
-            Float waterLevel,
-            Float nutrientConc
-    ) {
-        UserPlant plant = userPlantRepository.findById(plantId)
-                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
-
-        SensorLog log = SensorLog.builder()
-                .plant(plant)
-                .measuredAt(measuredAt != null ? measuredAt : LocalDateTime.now())
-                .temperature(temperature)
-                .humidity(humidity)
-                .waterLevel(waterLevel)
-                .nutrientConc(nutrientConc)
+                .temperature(msg.getTemperature())
+                .humidity(msg.getHumidity())
+                .waterLevel(msg.getWaterLevel())
+                .nutrientConc(msg.getNutrientConc())
+                .temperatureStatus(convertStatus(msg.getTemperatureStatus()))
+                .humidityStatus(convertStatus(msg.getHumidityStatus()))
+                .waterLevelStatus(convertStatus(msg.getWaterLevelStatus()))
+                .nutrientConcStatus(convertStatus(msg.getNutrientConcStatus()))
                 .receivedAt(LocalDateTime.now())
                 .build();
 
         return sensorLogRepository.save(log).getSensorLogId();
+    }
+
+    private SensorLog.SensorStatus convertStatus(SensorUplinkMessage.SensorStatus status) {
+        if (status == null) return null;
+        return switch (status) {
+            case OK -> SensorLog.SensorStatus.OK;
+            case UP -> SensorLog.SensorStatus.UP;
+            case DOWN -> SensorLog.SensorStatus.DOWN;
+        };
     }
 
     // 최신 센서값 조회

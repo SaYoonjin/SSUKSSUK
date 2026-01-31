@@ -10,6 +10,7 @@ import com.ssukssuk.dto.device.DeviceResponse;
 import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.device.DeviceRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
+import com.ssukssuk.service.plant.PlantBindingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,8 @@ public class DeviceService {
     private final UserRepository userRepository;
     private final UserPlantRepository userPlantRepository;
     private final DeviceControlService deviceControlService;
+    private final DeviceClaimService deviceClaimService;
+    private final PlantBindingService plantBindingService;
 
     public DeviceClaimResponse claim(Long userId, String serial) {
 
@@ -36,24 +39,16 @@ public class DeviceService {
             return DeviceClaimResponse.from(device);
         }
 
-        // 이미 다른 유저에게 클레임된 경우
-        if (Boolean.TRUE.equals(device.getPairing())) {
+        // 이미 다른 유저에게 클레임된 경우 (user_id가 있으면 이미 등록됨)
+        if (device.getUser() != null) {
             throw new CustomException(ErrorCode.DEVICE_ALREADY_CLAIMED);
         }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
-        deviceControlService.sendClaimUpdate(
-                serial,
-                userId,
-                "CLAIMED",
-                user.getMode().name()
-        );
-
-        // 2. ACK 성공 시 DB 저장
-        device.claim(user);
+        // 별도 트랜잭션으로 MQTT + DB 처리
+        deviceClaimService.claim(device.getDeviceId(), user);
 
         return DeviceClaimResponse.from(device);
     }
@@ -63,8 +58,8 @@ public class DeviceService {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
 
-        // 클레임되지 않은 디바이스
-        if (device.getUser() == null || !Boolean.TRUE.equals(device.getPairing())) {
+        // 클레임되지 않은 디바이스 (user가 없으면 등록되지 않은 것)
+        if (device.getUser() == null) {
             throw new CustomException(ErrorCode.DEVICE_NOT_CLAIMED);
         }
 
@@ -73,30 +68,18 @@ public class DeviceService {
             throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
         }
 
-        String serial = device.getSerial();
+        // MQTT는 unclaim 하나만 보내면 디바이스에서 식물 해제까지 자동 처리
+        // DB는 unbind + unclaim 둘 다 반영 필요
+        var connectedPlant = userPlantRepository.findConnectedPlantByDeviceId(deviceId);
 
-        // 연결된 식물이 있으면 먼저 바인딩 해제
-        userPlantRepository.findConnectedPlantByDeviceId(deviceId)
-                .ifPresent(plant -> {
-                    deviceControlService.sendBindingUnbound(serial);
-                    plant.unbindDevice();
-                });
-
-        // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
-        deviceControlService.sendClaimUpdate(
-                serial,
-                userId,
-                "UNCLAIMED",
-                null
-        );
-
-        // 2. ACK 성공 시 DB 업데이트
-        device.unclaim();
+        // 별도 트랜잭션으로 MQTT + DB 처리
+        deviceClaimService.unclaim(deviceId, userId, connectedPlant.orElse(null));
     }
 
     @Transactional(readOnly = true)
     public List<DeviceResponse> getMyDevices(Long userId) {
-        List<Device> devices = deviceRepository.findAllByUser_IdAndPairingTrue(userId);
+        // 사용자의 모든 등록된 디바이스 조회 (pairing 여부 관계없이)
+        List<Device> devices = deviceRepository.findAllByUser_Id(userId);
 
         return devices.stream()
                 .map(device -> {
@@ -107,7 +90,7 @@ public class DeviceService {
                     return DeviceResponse.builder()
                             .deviceId(device.getDeviceId())
                             .serial(device.getSerial())
-                            .paired(true)
+                            .paired(Boolean.TRUE.equals(device.getPairing()))
                             .plantConnected(connectedPlant.isPresent())
                             .connectedPlantId(connectedPlant.map(UserPlant::getPlantId).orElse(null))
                             .connectedPlantName(connectedPlant.map(UserPlant::getPlantName).orElse(null))
