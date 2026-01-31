@@ -44,28 +44,32 @@ public class UserPlantService {
         Species species = speciesRepository.findById(speciesId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SPECIES_NOT_FOUND));
 
-        Device device = deviceRepository.findById(deviceId)
-                .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
+        Device device = null;
 
-        // 디바이스 소유자 검증
-        if (device.getUser() == null || !device.getUser().getId().equals(userId)) {
-            throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
+        // 디바이스가 있는 경우에만 연결 처리
+        if (deviceId != null) {
+            device = deviceRepository.findById(deviceId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
+
+            // 디바이스 소유자 검증
+            if (device.getUser() == null || !device.getUser().getId().equals(userId)) {
+                throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
+            }
+
+            // 이미 다른 식물에 연결된 디바이스인지 확인
+            if (userPlantRepository.findConnectedPlantByDeviceId(deviceId).isPresent()) {
+                throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
+            }
+
+            // MQTT 발송 + ACK 대기 (실패 시 예외 발생, DB 저장 안함)
+            deviceControlService.sendBindingBound(
+                    device.getSerial(),
+                    null,  // plantId는 아직 생성 전이므로 null
+                    species.getSpeciesId()
+            );
         }
 
-        // 이미 다른 식물에 연결된 디바이스인지 확인
-        if (userPlantRepository.findConnectedPlantByDeviceId(deviceId).isPresent()) {
-            throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
-        }
-
-        // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생, DB 저장 안함)
-        deviceControlService.sendBindingBound(
-                device.getSerial(),
-                null,  // plantId는 아직 생성 전이므로 null
-                species.getSpeciesId()
-        );
-
-        // 2. ACK 성공 시 DB 저장
-        // 유저가 가지고 있는 식물들 중에서 main이 있었다면 해지하는 로직 추가
+        // DB 저장
         UserPlant userPlant = UserPlant.builder()
                 .user(user)
                 .species(species)
@@ -87,7 +91,7 @@ public class UserPlantService {
                 .plantId(userPlant.getPlantId())
                 .name(userPlant.getPlantName())
                 .species(species.getSpeciesId())
-                .deviceId(device.getDeviceId())
+                .deviceId(device != null ? device.getDeviceId() : null)
                 .characterCode(0)
                 .build();
     }
@@ -108,7 +112,7 @@ public class UserPlantService {
 
         // 2-1. 디바이스 연결 해제 요청
         if (Boolean.TRUE.equals(request.getUnbindDevice())) {
-            if (currentlyConnected && currentDevice != null) {
+            if (currentlyConnected) {
                 // 1. MQTT 발송 + ACK 대기 (실패 시 예외 발생)
                 deviceControlService.sendBindingUnbound(currentDevice.getSerial());
                 // 2. ACK 성공 시 DB 업데이트

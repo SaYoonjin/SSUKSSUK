@@ -13,6 +13,5 @@ public class CreatePlantRequest {
     @NotNull
     private Long species;
 
-    @NotNull
-    private Long deviceId;
+    private Long deviceId;  // nullable - 기기 연결 없이 식물 등록 가능
 }
