@@ -66,6 +66,11 @@ public class NotificationService {
         notificationRepository.save(n);
     }
 
+    /**
+     * 디바이스 자동 조치 완료 알림 생성
+     * TODO: 이 메서드를 호출하는 곳에서 plantStatusService.markUnreadNotification(plantId)도 함께 호출해야 함
+     *       (SensorTelemetryService의 ANOMALY_DETECTED, RECOVERY_DONE 처리 패턴 참고)
+     */
     @Transactional
     public void notifyActionDone(
             Long plantId,
@@ -88,6 +93,11 @@ public class NotificationService {
         notificationRepository.save(n);
     }
 
+    /**
+     * 디바이스 자동 조치 실패 알림 생성
+     * TODO: 이 메서드를 호출하는 곳에서 plantStatusService.markUnreadNotification(plantId)도 함께 호출해야 함
+     *       (SensorTelemetryService의 ANOMALY_DETECTED, RECOVERY_DONE 처리 패턴 참고)
+     */
     @Transactional
     public void notifyActionFail(
             Long plantId,

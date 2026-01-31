@@ -9,6 +9,7 @@ import com.ssukssuk.repository.history.ImageInferenceRepository;
 import com.ssukssuk.repository.history.PlantImageRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import com.ssukssuk.service.notification.NotificationService;
+import com.ssukssuk.service.plant.PlantStatusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class ImageInferenceService {
     private final UserPlantRepository userPlantRepository;
     private final IdempotencyService idempotencyService;
     private final NotificationService notificationService;
+    private final PlantStatusService plantStatusService;
 
     @Transactional
     public void handle(DeviceImageInferenceRequest request) {
@@ -107,11 +109,23 @@ public class ImageInferenceService {
 
         imageInferenceRepository.save(inference);
 
-        // 9. 이상 감지 시 알람: confidence >= 70 && anomaly >= 3
+        // 9. PlantStatus 업데이트 (이미지 데이터 반영)
+        Integer anomalyValue = request.getAnomaly() != null ? request.getAnomaly().intValue() : null;
+        plantStatusService.updateFromImage(
+                request.getPlantId(),
+                request.getHeight(),
+                request.getWidth(),
+                anomalyValue
+        );
+
+        // 10. 이상 감지 시 알람: confidence >= 70 && anomaly >= 3
         if (request.getConfidence() >= 70
                 && request.getAnomaly() != null
                 && request.getAnomaly() >= 3) {
             notificationService.notifyImageDiscoloration(plant, inference);
+
+            // 안읽은 알림 표시
+            plantStatusService.markUnreadNotification(request.getPlantId());
         }
     }
 
