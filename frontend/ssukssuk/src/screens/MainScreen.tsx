@@ -43,92 +43,92 @@ const MOVE_RANGE_Y = 30;
 // 픽셀 박스 컴포넌트 (복구)
 // --------------------
 function PixelBox({
-  children,
-  style,
-  bgColor = '#FFFFFF',
-  cardThin = false,
-}: any) {
+                    children,
+                    style,
+                    bgColor = '#FFFFFF',
+                    cardThin = false,
+                  }: any) {
   const t = cardThin ? 2 : 4;
   const s = cardThin ? 4 : 8;
   const step = t;
 
   return (
-    <View style={[styles.pixelBoxContainer, style]}>
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: bgColor, margin: t },
-        ]}
-      />
-      <View style={[styles.pLine, { top: 0, left: s, right: s, height: t }]} />
-      <View
-        style={[styles.pLine, { bottom: 0, left: s, right: s, height: t }]}
-      />
-      <View style={[styles.pLine, { left: 0, top: s, bottom: s, width: t }]} />
-      <View style={[styles.pLine, { right: 0, top: s, bottom: s, width: t }]} />
-      <View
-        style={[styles.pLine, { top: t, left: t, width: step, height: step }]}
-      />
-      <View
-        style={[styles.pLine, { top: 0, left: t, width: step, height: step }]}
-      />
-      <View
-        style={[styles.pLine, { top: t, left: 0, width: step, height: step }]}
-      />
-      <View
-        style={[styles.pLine, { top: t, right: t, width: step, height: step }]}
-      />
-      <View
-        style={[styles.pLine, { top: 0, right: t, width: step, height: step }]}
-      />
-      <View
-        style={[styles.pLine, { top: t, right: 0, width: step, height: step }]}
-      />
-      <View
-        style={[
-          styles.pLine,
-          { bottom: t, left: t, width: step, height: step },
-        ]}
-      />
-      <View
-        style={[
-          styles.pLine,
-          { bottom: 0, left: t, width: step, height: step },
-        ]}
-      />
-      <View
-        style={[
-          styles.pLine,
-          { bottom: t, left: 0, width: step, height: step },
-        ]}
-      />
-      <View
-        style={[
-          styles.pLine,
-          { bottom: t, right: t, width: step, height: step },
-        ]}
-      />
-      <View
-        style={[
-          styles.pLine,
-          { bottom: 0, right: t, width: step, height: step },
-        ]}
-      />
-      <View
-        style={[
-          styles.pLine,
-          { bottom: t, right: 0, width: step, height: step },
-        ]}
-      />
-      <View
-        style={[
-          styles.pixelBoxInner,
-          cardThin && { padding: 10, paddingTop: 12 },
-        ]}
-      >
-        {children}
+      <View style={[styles.pixelBoxContainer, style]}>
+        <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: bgColor, margin: t },
+            ]}
+        />
+        <View style={[styles.pLine, { top: 0, left: s, right: s, height: t }]} />
+        <View
+            style={[styles.pLine, { bottom: 0, left: s, right: s, height: t }]}
+        />
+        <View style={[styles.pLine, { left: 0, top: s, bottom: s, width: t }]} />
+        <View style={[styles.pLine, { right: 0, top: s, bottom: s, width: t }]} />
+        <View
+            style={[styles.pLine, { top: t, left: t, width: step, height: step }]}
+        />
+        <View
+            style={[styles.pLine, { top: 0, left: t, width: step, height: step }]}
+        />
+        <View
+            style={[styles.pLine, { top: t, left: 0, width: step, height: step }]}
+        />
+        <View
+            style={[styles.pLine, { top: t, right: t, width: step, height: step }]}
+        />
+        <View
+            style={[styles.pLine, { top: 0, right: t, width: step, height: step }]}
+        />
+        <View
+            style={[styles.pLine, { top: t, right: 0, width: step, height: step }]}
+        />
+        <View
+            style={[
+              styles.pLine,
+              { bottom: t, left: t, width: step, height: step },
+            ]}
+        />
+        <View
+            style={[
+              styles.pLine,
+              { bottom: 0, left: t, width: step, height: step },
+            ]}
+        />
+        <View
+            style={[
+              styles.pLine,
+              { bottom: t, left: 0, width: step, height: step },
+            ]}
+        />
+        <View
+            style={[
+              styles.pLine,
+              { bottom: t, right: t, width: step, height: step },
+            ]}
+        />
+        <View
+            style={[
+              styles.pLine,
+              { bottom: 0, right: t, width: step, height: step },
+            ]}
+        />
+        <View
+            style={[
+              styles.pLine,
+              { bottom: t, right: 0, width: step, height: step },
+            ]}
+        />
+        <View
+            style={[
+              styles.pixelBoxInner,
+              cardThin && { padding: 10, paddingTop: 12 },
+            ]}
+        >
+          {children}
+        </View>
       </View>
-    </View>
   );
 }
 
@@ -137,13 +137,13 @@ function PixelBox({
 // --------------------
 function PixelSheetBackground({ style }: BottomSheetBackgroundProps) {
   return (
-    <View style={[style, { backgroundColor: 'transparent', top: -1 }]}>
-      <View style={styles.pixelSheetFrame}>
-        <View style={styles.pixelSheetInner} />
-        <View style={styles.pixelSheetCornerTL} />
-        <View style={styles.pixelSheetCornerTR} />
+      <View style={[style, { backgroundColor: 'transparent', top: -1 }]}>
+        <View style={styles.pixelSheetFrame}>
+          <View style={styles.pixelSheetInner} />
+          <View style={styles.pixelSheetCornerTL} />
+          <View style={styles.pixelSheetCornerTR} />
+        </View>
       </View>
-    </View>
   );
 }
 
@@ -185,8 +185,8 @@ export default function MainScreen() {
   const snapPoints = useMemo(() => ['8%', '43%'], []);
 
   const backgroundSource = useMemo(
-    () => (useDayBg ? BG_DAY : BG_NIGHT),
-    [useDayBg],
+      () => (useDayBg ? BG_DAY : BG_NIGHT),
+      [useDayBg],
   );
 
   const scheduleBackgroundSwitch = useCallback(() => {
@@ -208,9 +208,9 @@ export default function MainScreen() {
   // [수정] useCallback 적용 및 의존성 추가 (ESLint 경고 해결)
   const moveRandomly = useCallback(() => {
     const toX =
-      Math.floor(Math.random() * (MOVE_RANGE_X * 2 + 1)) - MOVE_RANGE_X;
+        Math.floor(Math.random() * (MOVE_RANGE_X * 2 + 1)) - MOVE_RANGE_X;
     const toY =
-      Math.floor(Math.random() * (MOVE_RANGE_Y * 2 + 1)) - MOVE_RANGE_Y;
+        Math.floor(Math.random() * (MOVE_RANGE_Y * 2 + 1)) - MOVE_RANGE_Y;
     const duration = 3000 + Math.random() * 3000;
 
     Animated.parallel([
@@ -260,91 +260,91 @@ export default function MainScreen() {
   }, [moveRandomly]);
 
   return (
-    <View style={styles.root}>
-      <ImageBackground
-        source={backgroundSource}
-        style={styles.bg}
-        resizeMode="cover"
-      >
-        {/* 알림 버튼 */}
-        <Pressable style={styles.alarmWrap} onPress={() => {}}>
-          <View style={styles.alarmBox}>
-            <Image source={ALARM_ICON} style={styles.alarmIcon} />
-            {hasAlarm && <View style={styles.badgeDot} />}
-          </View>
-        </Pressable>
-
-        {/* 🍅 캐릭터 (Animated View) */}
-        <Animated.View
-          style={[
-            styles.characterWrapper,
-            {
-              transform: [
-                { translateX: translateX },
-                { translateY: combinedTranslateY },
-              ],
-            },
-          ]}
+      <View style={styles.root}>
+        <ImageBackground
+            source={backgroundSource}
+            style={styles.bg}
+            resizeMode="cover"
         >
-          <Pressable onPress={handleCharacterPress}>
-            <Image source={TOMATO_NORMAL} style={styles.tomatoImage} />
-          </Pressable>
-        </Animated.View>
-      </ImageBackground>
+          {/* 🍅 캐릭터 (Animated View) */}
+          <Animated.View
+              style={[
+                styles.characterWrapper,
+                {
+                  transform: [
+                    { translateX: translateX },
+                    { translateY: combinedTranslateY },
+                  ],
+                },
+              ]}
+          >
+            {/* 알림 버튼 - 캐릭터 박스 내부로 이동 */}
+            <Pressable style={styles.alarmWrap} onPress={() => {}}>
+              <View style={styles.alarmBox}>
+                <Image source={ALARM_ICON} style={styles.alarmIcon} />
+                {hasAlarm && <View style={styles.badgeDot} />}
+              </View>
+            </Pressable>
 
-      {/* [복구] 바텀 시트 및 내부 UI */}
-      {/*<BottomSheet*/}
-      {/*  ref={sheetRef}*/}
-      {/*  index={0}*/}
-      {/*  snapPoints={snapPoints}*/}
-      {/*  enablePanDownToClose={false}*/}
-      {/*  backgroundComponent={PixelSheetBackground}*/}
-      {/*  handleStyle={styles.handleArea}*/}
-      {/*  handleIndicatorStyle={styles.handleIndicator}*/}
-      {/*>*/}
-      {/*  <BottomSheetView style={styles.sheetContent}>*/}
-      {/*    <View style={styles.sheetHeader}>*/}
-      {/*      <View style={styles.headerLeft}>*/}
-      {/*        <Text style={styles.plantName}>토토</Text>*/}
-      {/*        <Text style={styles.plantType}>(방울토마토)</Text>*/}
-      {/*      </View>*/}
-      {/*      <View style={styles.dDayPill}>*/}
-      {/*        <Text style={styles.dDayText}>D+45</Text>*/}
-      {/*      </View>*/}
-      {/*    </View>*/}
+            <Pressable onPress={handleCharacterPress}>
+              <Image source={TOMATO_NORMAL} style={styles.tomatoImage} />
+            </Pressable>
+          </Animated.View>
+        </ImageBackground>
 
-      {/*    <PixelBox style={styles.statusPanel} bgColor="#F2F7ED" cardThin>*/}
-      {/*      <Text style={styles.panelTitle}>현재 상태</Text>*/}
-      {/*      <View style={styles.barTrack}>*/}
-      {/*        <View style={[styles.barFill, { width: '80%' }]} />*/}
-      {/*      </View>*/}
-      {/*      <Text style={[styles.panelTitle, { marginTop: 12 }]}>*/}
-      {/*        성장 상태*/}
-      {/*      </Text>*/}
-      {/*      <View style={styles.barTrack}>*/}
-      {/*        <View style={[styles.barFillDark, { width: '65%' }]} />*/}
-      {/*      </View>*/}
-      {/*    </PixelBox>*/}
+        {/* [복구] 바텀 시트 및 내부 UI */}
+        {/*<BottomSheet*/}
+        {/* ref={sheetRef}*/}
+        {/* index={0}*/}
+        {/* snapPoints={snapPoints}*/}
+        {/* enablePanDownToClose={false}*/}
+        {/* backgroundComponent={PixelSheetBackground}*/}
+        {/* handleStyle={styles.handleArea}*/}
+        {/* handleIndicatorStyle={styles.handleIndicator}*/}
+        {/*>*/}
+        {/* <BottomSheetView style={styles.sheetContent}>*/}
+        {/* <View style={styles.sheetHeader}>*/}
+        {/* <View style={styles.headerLeft}>*/}
+        {/* <Text style={styles.plantName}>토토</Text>*/}
+        {/* <Text style={styles.plantType}>(방울토마토)</Text>*/}
+        {/* </View>*/}
+        {/* <View style={styles.dDayPill}>*/}
+        {/* <Text style={styles.dDayText}>D+45</Text>*/}
+        {/* </View>*/}
+        {/* </View>*/}
 
-      {/*    <Text style={styles.sectionTitle}>현재 기기 상태</Text>*/}
+        {/* <PixelBox style={styles.statusPanel} bgColor="#F2F7ED" cardThin>*/}
+        {/* <Text style={styles.panelTitle}>현재 상태</Text>*/}
+        {/* <View style={styles.barTrack}>*/}
+        {/* <View style={[styles.barFill, { width: '80%' }]} />*/}
+        {/* </View>*/}
+        {/* <Text style={[styles.panelTitle, { marginTop: 12 }]}>*/}
+        {/* 성장 상태*/}
+        {/* </Text>*/}
+        {/* <View style={styles.barTrack}>*/}
+        {/* <View style={[styles.barFillDark, { width: '65%' }]} />*/}
+        {/* </View>*/}
+        {/* </PixelBox>*/}
 
-      {/*    <View style={styles.cardRow}>*/}
-      {/*      <PixelBox style={styles.card} bgColor="#BFD1F1" cardThin>*/}
-      {/*        <Text style={styles.cardTitle}>수위</Text>*/}
-      {/*        <Text style={styles.cardDesc}>충분함</Text>*/}
-      {/*      </PixelBox>*/}
-      {/*      <PixelBox style={styles.card} bgColor="#E7CF90" cardThin>*/}
-      {/*        <Text style={styles.cardTitle}>농도</Text>*/}
-      {/*        <Text style={styles.cardDesc}>적당함</Text>*/}
-      {/*      </PixelBox>*/}
-      {/*      <PixelBox style={styles.card} bgColor="#DDE8C8" cardThin>*/}
-      {/*        <Text style={styles.cardTitle}>기온/습도</Text>*/}
-      {/*        <Text style={styles.cardDesc}>25도 / 58%</Text>*/}
-      {/*      </PixelBox>*/}
-      {/*    </View>*/}
-      {/*  </BottomSheetView>*/}
-      {/*</BottomSheet>*/}
-    </View>
+        {/* <Text style={styles.sectionTitle}>현재 기기 상태</Text>*/}
+
+        {/* <View style={styles.cardRow}>*/}
+        {/* <PixelBox style={styles.card} bgColor="#BFD1F1" cardThin>*/}
+        {/* <Text style={styles.cardTitle}>수위</Text>*/}
+        {/* <Text style={styles.cardDesc}>충분함</Text>*/}
+        {/* </PixelBox>*/}
+        {/* <PixelBox style={styles.card} bgColor="#E7CF90" cardThin>*/}
+        {/* <Text style={styles.cardTitle}>농도</Text>*/}
+        {/* <Text style={styles.cardDesc}>적당함</Text>*/}
+        {/* </PixelBox>*/}
+        {/* <PixelBox style={styles.card} bgColor="#DDE8C8" cardThin>*/}
+        {/* <Text style={styles.cardTitle}>기온/습도</Text>*/}
+        {/* <Text style={styles.cardDesc}>25도 / 58%</Text>*/}
+        {/* </PixelBox>*/}
+        {/* </View>*/}
+        {/* </BottomSheetView>*/}
+        {/*</BottomSheet>*/}
+      </View>
   );
 }
 
@@ -395,6 +395,7 @@ const styles = StyleSheet.create({
     bottom: 150, // 위치 조정됨 (지면 위)
     alignSelf: 'center',
     zIndex: 10,
+    alignItems: 'center',
   },
   tomatoImage: {
     width: 320,
@@ -403,7 +404,12 @@ const styles = StyleSheet.create({
   },
 
   // --- 레이아웃 ---
-  alarmWrap: { position: 'absolute', top: 80, right: 1, zIndex: 20 },
+  alarmWrap: {
+    position: 'absolute',
+    top: 20,
+    right: 30,
+    zIndex: 20,
+  },
   alarmBox: {
     width: 78,
     height: 78,
