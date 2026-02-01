@@ -42,11 +42,11 @@ MQTT 기반 디바이스 통신과 FCM 푸시 알림을 통해
 
 ## 화면설계서
 
-![image.png](attachment:491b3c49-6141-4c26-922c-bb1b1535ef47:image.png)
+<img width="1385" height="595" alt="image" src="https://github.com/user-attachments/assets/1df89dfe-608d-4b12-ba62-63a105d3ee7a" />
 
 ## DB설계
 
-![ERD (1).png](attachment:348302ee-1c0a-411b-b1aa-c3460ce6f1ff:ERD_(1).png)
+<img width="1244" height="940" alt="image" src="https://github.com/user-attachments/assets/fb64dbaa-25d9-4432-9a34-e7ecceea2013" />
 
 ## API 설계
 
@@ -65,4 +65,5 @@ MQTT 기반 디바이스 통신과 FCM 푸시 알림을 통해
 - **Messaging**: MQTT
 - **Infra**: AWS EC2, RDS
 - **Notification**: Firebase Cloud Messaging (FCM)
+
 
