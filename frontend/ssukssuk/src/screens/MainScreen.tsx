@@ -47,6 +47,9 @@ const CARD_BG = '#EDEDE9';
 const MODE_STORAGE_KEY = 'plantMode';
 const NOTIF_SEEN_STATE_KEY = 'notifSeenState';
 
+// ✅ 식물 이름 캐시 키
+const PLANT_NAME_STORAGE_KEY = 'plantName';
+
 type TodayNotificationsResponse = {
     success: boolean;
     message: string;
@@ -100,7 +103,8 @@ type ModalItem = {
     sensor?: SensorBarData;
 };
 
-function PixelBox({ children, style }: any) {
+// ✅ 모달 짤림 방지: PixelBox innerStyle 받아서 모달에서만 stretch 처리 가능
+function PixelBox({ children, style, innerStyle }: any) {
     return (
         <View style={[styles.pixelBoxContainer, style]}>
             <View style={styles.pixelBgUnderlay} />
@@ -122,7 +126,7 @@ function PixelBox({ children, style }: any) {
             <View style={styles.pixelCornerBR1} />
             <View style={styles.pixelCornerBR2} />
             <View style={styles.pixelCornerBR3} />
-            <View style={styles.cardInner}>{children}</View>
+            <View style={[styles.cardInner, innerStyle]}>{children}</View>
         </View>
     );
 }
@@ -274,6 +278,9 @@ export default function MainScreen() {
     const [todayCount, setTodayCount] = useState(0);
     const [latestNotification, setLatestNotification] = useState<any>(null);
 
+    // ✅ 닉네임(식물 이름)
+    const [plantName, setPlantName] = useState<string>('');
+
     const translateX = useRef(new Animated.Value(0)).current;
     const translateY_walk = useRef(new Animated.Value(0)).current;
     const translateY_jump = useRef(new Animated.Value(0)).current;
@@ -333,7 +340,7 @@ export default function MainScreen() {
         schedule();
     }, []);
 
-    // ✅ 앱 시작 시 저장된 모드 복구 (리로딩하면 AUTO로 보이던 버그 해결)
+    // ✅ 앱 시작 시 저장된 모드 복구
     useEffect(() => {
         const initMode = async () => {
             try {
@@ -349,6 +356,17 @@ export default function MainScreen() {
         };
         initMode();
     }, [toggleAnim]);
+
+    // ✅ 앱 시작 시 저장된 plantName 먼저 복구 (깜빡임 방지)
+    useEffect(() => {
+        const initPlantName = async () => {
+            try {
+                const cachedName = await AsyncStorage.getItem(PLANT_NAME_STORAGE_KEY);
+                if (cachedName) setPlantName(cachedName);
+            } catch {}
+        };
+        initPlantName();
+    }, []);
 
     const moveRandomly = useCallback(() => {
         const toX = Math.floor(Math.random() * (MOVE_RANGE_X * 2 + 1)) - MOVE_RANGE_X;
@@ -426,9 +444,19 @@ export default function MainScreen() {
         }
     };
 
+    // ✅ plantId 캐시가 있어도 plantName이 없으면 /plants로 name 채우게 수정 (닉네임 안 뜨는 문제 해결)
     const getPlantId = useCallback(async () => {
         const cached = await AsyncStorage.getItem('plantId');
-        if (cached && !Number.isNaN(Number(cached))) return Number(cached);
+        const cachedName = await AsyncStorage.getItem(PLANT_NAME_STORAGE_KEY);
+
+        const cachedPid = cached && !Number.isNaN(Number(cached)) ? Number(cached) : null;
+
+        if (cachedName) setPlantName(cachedName);
+
+        // pid도 있고 name도 있으면 그대로 사용
+        if (cachedPid && cachedName) {
+            return cachedPid;
+        }
 
         try {
             const token = await AsyncStorage.getItem('accessToken');
@@ -439,7 +467,14 @@ export default function MainScreen() {
 
             const list = res?.data?.data || [];
             const main = list.find((p: any) => p?.is_main === true) || list[0];
-            const pid = main?.plant_id;
+
+            const pid = main?.plant_id ?? cachedPid;
+            const pname = main?.name;
+
+            if (pname) {
+                setPlantName(String(pname));
+                try { await AsyncStorage.setItem(PLANT_NAME_STORAGE_KEY, String(pname)); } catch {}
+            }
 
             if (pid && !Number.isNaN(Number(pid))) {
                 await AsyncStorage.setItem('plantId', String(pid));
@@ -447,8 +482,13 @@ export default function MainScreen() {
             }
         } catch {}
 
-        return null;
+        return cachedPid;
     }, []);
+
+    // ✅ 앱 시작 시 한 번 확보
+    useEffect(() => {
+        getPlantId();
+    }, [getPlantId]);
 
     const buildWaterGuide = (current: number, min: number, max: number) => {
         if (current > max) return '물 수위가 높아요. \n수위가 높으면 뿌리 손상이 생길 수 있으니 급수 중지가 필요해요!';
@@ -568,6 +608,11 @@ export default function MainScreen() {
                     <Pressable onPress={() => handleToggle(false)} style={styles.togglePiece}><Text style={[styles.togglePieceText, !isAutoMode && styles.textActive]}>MANU</Text></Pressable>
                 </View>
 
+                {/* ✅ 표지판 영역에 식물 이름 표시 */}
+                <View style={styles.plantNameWrap} pointerEvents="none">
+                    <Text style={styles.plantNameText}>{plantName ? plantName : ''}</Text>
+                </View>
+
                 <Pressable style={[styles.signTouchArea, { left: '3%', top: '24%' }]} onPress={onPressWaterSign}>
                     <Text style={styles.signTitleText}>수위</Text>
                 </Pressable>
@@ -592,13 +637,18 @@ export default function MainScreen() {
                 <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
                     <Animated.View onStartShouldSetResponder={() => true} style={{ transform: [{ scale: modalScale }] }}>
-                        <PixelBox style={styles.modalContent}>
+                        {/* ✅ 모달 짤림 방지: innerStyle로 stretch + maxHeight 화면비 */}
+                        <PixelBox style={styles.modalContent} innerStyle={styles.modalInner}>
                             <View style={styles.modalHeaderCustom}>
                                 <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
                                 <Pressable style={styles.closeBtn} onPress={closeModal}><Text style={styles.closeBtnText}>X</Text></Pressable>
                             </View>
 
-                            <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
+                            <ScrollView
+                                style={styles.modalScroll}
+                                contentContainerStyle={styles.modalScrollContent}
+                                showsVerticalScrollIndicator={false}
+                            >
                                 {modalBodyItems.length > 0 ? (
                                     modalBodyItems.map((item, idx) => (
                                         <View key={idx} style={styles.notifCard}>
@@ -656,6 +706,24 @@ const styles = StyleSheet.create({
     togglePieceText: { fontFamily: FONT, fontSize: 14, color: BORDER_COLOR, opacity: 0.4, zIndex: 10 },
     textActive: { color: '#FFF', opacity: 1 },
 
+    // ✅ 표지판(나무판) 쪽에 자연스럽게
+    plantNameWrap: {
+        position: 'absolute',
+        top: 34,
+        left: -33,
+        width: 240,
+        height: 54,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 90,
+    },
+    plantNameText: {
+        fontFamily: FONT,
+        fontSize: 20,
+        color: SIGN_TEXT_COLOR,
+        textAlign: 'center',
+    },
+
     signTouchArea: { position: 'absolute', width: '28%', height: '11%', alignItems: 'center' },
     signTitleText: { fontFamily: FONT, fontSize: 16, color: SIGN_TEXT_COLOR, textAlign: 'center', marginTop: 40 },
 
@@ -666,8 +734,17 @@ const styles = StyleSheet.create({
     alarmBox: { width: 78, height: 78, justifyContent: 'center', alignItems: 'center' },
     alarmIcon: { width: 70, height: 70, resizeMode: 'contain' },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
-    modalContent: { width: 300, maxHeight: 520 },
+    // 모달 짤림 방지: padding 주고, maxHeight 화면비로
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 24,
+        paddingHorizontal: 16,
+    },
+    modalContent: { width: 300, maxHeight: SCREEN_HEIGHT * 0.78 },
+    modalInner: { alignItems: 'stretch' },
 
     modalHeaderCustom: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 2, borderBottomColor: '#eee', paddingBottom: 10, marginBottom: 10 },
     modalHeaderTextCustom: { fontFamily: FONT, fontSize: 20, color: BORDER_COLOR },
