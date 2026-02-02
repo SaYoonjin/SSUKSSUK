@@ -54,6 +54,9 @@ public class PushToken {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "noti_setting")
+    private Boolean notiSetting;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -67,5 +70,9 @@ public class PushToken {
 
     public void updateToken(String token) {
         this.token = token;
+    }
+
+    public void updateNotiSetting(boolean notiSetting) {
+        this.notiSetting = notiSetting;
     }
 }

@@ -24,4 +24,6 @@ public class NotificationController {
         NotificationResponse data = notificationService.openTodayNotifications(userId);
         return ApiResponse.ok(data);
     }
+
+
 }
