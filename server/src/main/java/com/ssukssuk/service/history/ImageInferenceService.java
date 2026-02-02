@@ -4,7 +4,9 @@ import com.ssukssuk.domain.history.ImageInference;
 import com.ssukssuk.domain.history.PlantImage;
 import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.history.DeviceImageInferenceRequest;
+import com.ssukssuk.dto.history.PlantHistoryResponse;
 import com.ssukssuk.infra.idempotency.IdempotencyService;
+import com.ssukssuk.repository.history.DailyHeightRow;
 import com.ssukssuk.repository.history.ImageInferenceRepository;
 import com.ssukssuk.repository.history.PlantImageRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
@@ -17,7 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +38,9 @@ public class ImageInferenceService {
     private final NotificationService notificationService;
     private final PlantStatusService plantStatusService;
     private final PushService pushService;
+
+    private static final int FIXED_PERIOD_DAYS = 14;
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     @Transactional
     public void handle(DeviceImageInferenceRequest request) {
@@ -141,6 +152,43 @@ public class ImageInferenceService {
             // 안읽은 알림 표시
             plantStatusService.markUnreadNotification(request.getPlantId());
         }
+    }
+
+    @Transactional(readOnly = true)
+    public PlantHistoryResponse.GrowthGraph getGrowthGraph14Days(Long plantId) {
+
+        LocalDate end = LocalDate.now(KST);
+        LocalDate start = end.minusDays(FIXED_PERIOD_DAYS - 1);
+
+        LocalDateTime startDt = start.atStartOfDay();
+        LocalDateTime endExclusive = end.plusDays(1).atStartOfDay();
+
+        List<DailyHeightRow> rows =
+                imageInferenceRepository.findDailyLastHeight(plantId, startDt, endExclusive);
+
+        Map<LocalDate, Double> map = rows.stream()
+                .collect(Collectors.toMap(
+                        DailyHeightRow::getD,
+                        DailyHeightRow::getHeight
+                ));
+
+        List<PlantHistoryResponse.GrowthPoint> data = new ArrayList<>(FIXED_PERIOD_DAYS);
+        for (int i = 0; i < FIXED_PERIOD_DAYS; i++) {
+            LocalDate d = start.plusDays(i);
+            data.add(PlantHistoryResponse.GrowthPoint.builder()
+                    .date(d.toString())
+                    .height(map.get(d)) // 없으면 null
+                    .build());
+        }
+
+        return PlantHistoryResponse.GrowthGraph.builder()
+                .unit("cm")
+                .period(PlantHistoryResponse.Period.builder()
+                        .start(start.toString())
+                        .end(end.toString())
+                        .build())
+                .data(data)
+                .build();
     }
 
     private boolean hasImage(String kind, String url) {
