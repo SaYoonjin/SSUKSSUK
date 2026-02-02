@@ -83,7 +83,4 @@ public class PlantController {
                 nutrientSensorService.getNutrientCard(plantId)
         );
     }
-
-
-
 }
