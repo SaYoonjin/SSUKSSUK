@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import client from '../api';
+import { useFocusEffect } from '@react-navigation/native';
 
 const GREEN = '#2E5A35';
 const LIGHT_GREEN = '#75A743';
@@ -46,27 +47,29 @@ export default function ProfileScreen({ navigation }: any) {
   const [pushEnabled, setPushEnabled] = useState(true);
   const anim = useRef(new Animated.Value(1)).current;
 
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      setLoading(true);
-      try {
-        // GET /auth/me 호출 [cite: 3, 5, 7]
-        const res = await client.get<UserInfoResponse>('/auth/me');
-        if (res.data.success && res.data.data) {
-          setNickname(res.data.data.nickname); // [cite: 46, 50]
-        }
-      } catch (err: any) {
-        console.error('내 정보 조회 실패:', err);
-        if (err.response?.status === 401) {
-          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-        }
-      } finally {
-        setLoading(false);
+  const fetchUserInfo = useCallback(async () => {
+    setLoading(true);
+    try {
+      // GET /auth/me 호출 [cite: 3, 5, 7]
+      const res = await client.get<UserInfoResponse>('/auth/me');
+      if (res.data.success && res.data.data) {
+        setNickname(res.data.data.nickname); // [cite: 46, 50]
       }
-    };
+    } catch (err: any) {
+      console.error('내 정보 조회 실패:', err);
+      if (err.response?.status === 401) {
+        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [navigation]);
 
-    fetchUserInfo();
-  }, []);
+  useFocusEffect(
+      useCallback(() => {
+        fetchUserInfo();
+      }, [fetchUserInfo])
+  );
 
   const togglePush = () => {
     const next = !pushEnabled;
@@ -206,7 +209,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 26, paddingTop: 80, paddingBottom: 40 },
   loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center', zIndex: 999 },
   profileHeader: { paddingHorizontal: 6, paddingBottom: 30 },
-  headerLine: { fontFamily: 'NeoDunggeunmoPro-Regular', color: 'rgba(36,46,19,0.85)', marginTop: 20},
+  headerLine: { fontFamily: 'NeoDunggeunmoPro-Regular', color: 'rgba(36,46,19,0.85)', marginTop: 20 },
   nickname: { fontFamily: 'NeoDunggeunmoPro-Regular', fontSize: 32, color: 'rgba(36,46,19,0.95)' },
   headerSuffix: { fontFamily: 'NeoDunggeunmoPro-Regular', fontSize: 20, color: 'rgba(36,46,19,0.7)' },
   line: { height: 2, backgroundColor: GREEN, marginVertical: 10 },
