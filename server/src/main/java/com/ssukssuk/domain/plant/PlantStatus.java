@@ -150,12 +150,11 @@ public class PlantStatus {
         }
         double area = plantHeight * plantWidth;
 
-        // 크기 기준 (height * width 기준)
-        // 0: < 100, 1: 100~300, 2: 300~600, 3: >= 600
-        if (area < 100) return 0;
-        if (area < 300) return 1;
-        if (area < 600) return 2;
-        return 3;
+        // 크기 기준 (height * width 기준) - 3단계
+        // 0: < 150, 1: 150~450, 2: >= 450
+        if (area < 150) return 0;
+        if (area < 450) return 1;
+        return 2;
     }
 
     private int determineCharacterCode(int sizeGrade) {
@@ -168,21 +167,21 @@ public class PlantStatus {
                 (nutrientConcStatus == SensorStatusType.UP);
 
         if (waterOrNutrientDown) {
-            return 4 + sizeGrade;  // 4~7: 수위/양분 부족
+            return 3 + sizeGrade;  // 3~5: 수위/양분 부족
         }
         if (waterOrNutrientUp) {
-            return 8 + sizeGrade;  // 8~11: 수위/양분 과다
+            return 6 + sizeGrade;  // 6~8: 수위/양분 과다
         }
 
         // 우선순위 2: 온도 이상
         if (temperatureStatus == SensorStatusType.UP) {
-            return 12 + sizeGrade;  // 12~15: 더운 상태
+            return 9 + sizeGrade;  // 9~11: 더운 상태
         }
         if (temperatureStatus == SensorStatusType.DOWN) {
-            return 16 + sizeGrade;  // 16~19: 추운 상태
+            return 12 + sizeGrade;  // 12~14: 추운 상태
         }
 
         // 정상
-        return sizeGrade;  // 0~3: 정상
+        return sizeGrade;  // 0~2: 정상
     }
 }
