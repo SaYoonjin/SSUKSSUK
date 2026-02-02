@@ -62,9 +62,8 @@ public class PlantHistoryResponse {
     @AllArgsConstructor
     public static class SensorAlertPoint {
         private String date;
+        private int total;
         private int water;
-        private int temperature;
-        private int humidity;
         private int nutrient;
     }
 

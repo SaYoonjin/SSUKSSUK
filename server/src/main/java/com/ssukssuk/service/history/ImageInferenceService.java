@@ -177,7 +177,7 @@ public class ImageInferenceService {
             LocalDate d = start.plusDays(i);
             data.add(PlantHistoryResponse.GrowthPoint.builder()
                     .date(d.toString())
-                    .height(map.get(d)) // 없으면 null
+                    .height(map.get(d))
                     .build());
         }
 

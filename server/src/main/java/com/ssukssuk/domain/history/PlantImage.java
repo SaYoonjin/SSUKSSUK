@@ -31,9 +31,9 @@ public class PlantImage {
     @Column(name = "captured_at", nullable = false)
     private LocalDateTime capturedAt;
 
-    @Column(name = "image_url_top", nullable = false, length = 1024)
+    @Column(name = "image_url_top", length = 1024)
     private String imageUrlTop;
 
-    @Column(name = "image_url_side", nullable = false, length = 1024)
+    @Column(name = "image_url_side", length = 1024)
     private String imageUrlSide;
 }

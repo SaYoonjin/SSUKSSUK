@@ -20,26 +20,23 @@ public class PlantHistoryQueryService {
     private final ImageInferenceService imageInferenceService;
     private final SensorEventService sensorEventService;
 
-    public PlantHistoryResponse getPlantHistory(Long userId, Long plantId, Integer period) {
+    public PlantHistoryResponse getPlantHistory(Long userId, Long plantId) {
 
-        // period는 스펙상 14 고정이면 강제
-        int p = 14;
-
-        // 1) 소유 검증 + plantName 확보 (한 번에 처리)
+        // 1) 소유 검증 + plantName 확보
         UserPlant up = userPlantRepository.findByPlantIdAndUserId(plantId, userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.FORBIDDEN));
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_ACCESS_DENIED));
 
-        String plantName = up.getPlantName(); // UserPlant에 plantName 필드가 있다고 가정
+        String plantName = up.getPlantName();
 
-        // 2) 각 파트 조립 (각 서비스는 단일 책임)
+        // 2) 각 파트 조립
         PlantHistoryResponse.CurrentImage currentImage =
-                plantImageQueryService.getLatestTopSideImage(plantId);
+                plantImageQueryService.getLatestTopSideImage(userId, plantId);
 
         PlantHistoryResponse.GrowthGraph growthGraph =
-                imageInferenceService.getGrowthGraph(plantId, p);
+                imageInferenceService.getGrowthGraph14Days(plantId);
 
         PlantHistoryResponse.SensorAlertGraph sensorAlertGraph =
-                sensorEventService.getSensorAlertGraph(plantId, p);
+                sensorEventService.getSensorAlertGraph14Days(plantId);
 
         // 3) 최종 응답
         return PlantHistoryResponse.builder()

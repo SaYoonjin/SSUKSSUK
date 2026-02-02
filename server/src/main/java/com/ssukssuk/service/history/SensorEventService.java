@@ -2,6 +2,7 @@ package com.ssukssuk.service.history;
 
 import com.ssukssuk.common.exception.CustomException;
 import com.ssukssuk.common.exception.ErrorCode;
+import com.ssukssuk.dto.history.PlantHistoryResponse;
 import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.domain.history.SensorEvent;
 import com.ssukssuk.domain.history.SensorLog;
@@ -13,12 +14,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.time.ZoneId;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class SensorEventService {
+    private static final int FIXED_PERIOD_DAYS = 14;
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
+    private static final int WATER_CODE = 1;
+    private static final int NUTRIENT_CODE = 2;
 
     private final SensorEventRepository sensorEventRepository;
     private final SensorLogRepository sensorLogRepository;
@@ -81,5 +89,64 @@ public class SensorEventService {
         event.resolve(sensorLog, measuredAt);
 
         return Optional.of(event);
+    }
+
+    @Transactional(readOnly = true)
+    public PlantHistoryResponse.SensorAlertGraph getSensorAlertGraph14Days(Long plantId) {
+
+        LocalDate end = LocalDate.now(KST);
+        LocalDate start = end.minusDays(FIXED_PERIOD_DAYS - 1);
+
+        LocalDateTime startDt = start.atStartOfDay();
+        LocalDateTime endExclusive = end.plusDays(1).atStartOfDay();
+
+        // 이상치 오픈된 시간 기준 집계
+        List<SensorEvent> events =
+                sensorEventRepository.findByPlantIdAndStartedAtBetween(
+                        plantId, startDt, endExclusive
+                );
+
+        // date, [water, nutrient]
+        Map<LocalDate, int[]> map = new HashMap<>();
+
+        for (SensorEvent e : events) {
+            LocalDate d = e.getStartedAt().toLocalDate();
+            map.putIfAbsent(d, new int[2]);
+
+            int[] c = map.get(d);
+            int code = e.getSensorCode();
+
+            if (code == WATER_CODE) {
+                c[0]++;
+            } else if (code == NUTRIENT_CODE) {
+                c[1]++;
+            }
+        }
+
+        List<PlantHistoryResponse.SensorAlertPoint> data =
+                new ArrayList<>(FIXED_PERIOD_DAYS);
+
+        for (int i = 0; i < FIXED_PERIOD_DAYS; i++) {
+            LocalDate d = start.plusDays(i);
+            int[] c = map.getOrDefault(d, new int[2]);
+
+            int water = c[0];
+            int nutrient = c[1];
+
+            data.add(PlantHistoryResponse.SensorAlertPoint.builder()
+                    .date(d.toString())
+                    .water(water)
+                    .nutrient(nutrient)
+                    .total(water + nutrient)
+                    .build());
+        }
+
+        return PlantHistoryResponse.SensorAlertGraph.builder()
+                .period(PlantHistoryResponse.Period.builder()
+                        .start(start.toString())
+                        .end(end.toString())
+                        .build())
+                .data(data)
+                .build();
     }
 }
