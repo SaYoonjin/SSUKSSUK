@@ -64,6 +64,8 @@ public class PushService {
         for (PushToken token : tokens) {
             try {
                 sendFcm(notification, token.getToken());
+                log.warn("FCM success. notiId={}, token={}",
+                        notificationId, token.getToken());
 
             } catch (FirebaseMessagingException e) {
 
