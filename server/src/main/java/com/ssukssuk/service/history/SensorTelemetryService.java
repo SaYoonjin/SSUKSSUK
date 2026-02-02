@@ -133,6 +133,5 @@ public class SensorTelemetryService {
             case WATER_LEVEL -> Notification.NotiTitle.WATER_LEVEL;
             case NUTRIENT_CONC -> Notification.NotiTitle.NUTRIENT_CONC;
         };
-
     }
 }
