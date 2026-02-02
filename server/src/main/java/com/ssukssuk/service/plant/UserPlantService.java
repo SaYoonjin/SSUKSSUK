@@ -2,18 +2,12 @@ package com.ssukssuk.service.plant;
 
 import com.ssukssuk.common.exception.CustomException;
 import com.ssukssuk.common.exception.ErrorCode;
-import com.ssukssuk.domain.auth.User;
 import com.ssukssuk.domain.device.Device;
-import com.ssukssuk.domain.plant.PlantStatus;
-import com.ssukssuk.domain.plant.Species;
 import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.plant.CreatePlantResponse;
 import com.ssukssuk.dto.plant.MyPlantResponse;
 import com.ssukssuk.dto.plant.UpdatePlantRequest;
-import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.device.DeviceRepository;
-import com.ssukssuk.repository.plant.PlantStatusRepository;
-import com.ssukssuk.repository.plant.SpeciesRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,13 +20,16 @@ import java.util.List;
 @Transactional
 public class UserPlantService {
 
-    private final UserRepository userRepository;
-    private final SpeciesRepository speciesRepository;
     private final DeviceRepository deviceRepository;
     private final UserPlantRepository userPlantRepository;
-    private final PlantStatusRepository plantStatusRepository;
     private final PlantBindingService plantBindingService;
+    private final PlantCreationService plantCreationService;
 
+    /**
+     * 식물 생성 + 디바이스 바인딩
+     * - 식물 생성은 별도 트랜잭션으로 먼저 커밋 (plantId 확보)
+     * - 바인딩은 그 후 별도 트랜잭션으로 시도
+     */
     public CreatePlantResponse createPlant(
             Long userId,
             Long speciesId,
@@ -40,29 +37,8 @@ public class UserPlantService {
             String plantName
     ) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        Species species = speciesRepository.findById(speciesId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SPECIES_NOT_FOUND));
-
-        // 1. 식물 생성 (디바이스 없이)
-        UserPlant userPlant = UserPlant.builder()
-                .user(user)
-                .species(species)
-                .device(null)
-                .plantName(plantName)
-                .isMain(false)
-                .build();
-
-        userPlantRepository.save(userPlant);
-
-        PlantStatus plantStatus = PlantStatus.builder()
-                .userPlant(userPlant)
-                .characterCode(0)
-                .build();
-
-        plantStatusRepository.save(plantStatus);
+        // 1. 식물 생성 (별도 트랜잭션으로 즉시 커밋 → plantId 확보)
+        UserPlant userPlant = plantCreationService.createPlantOnly(userId, speciesId, plantName);
 
         // 2. 디바이스가 있으면 바인딩 시도
         String bindingError = null;
@@ -82,7 +58,7 @@ public class UserPlantService {
         return CreatePlantResponse.builder()
                 .plantId(userPlant.getPlantId())
                 .name(userPlant.getPlantName())
-                .species(species.getSpeciesId())
+                .species(userPlant.getSpecies().getSpeciesId())
                 .deviceId(boundDeviceId)
                 .characterCode(0)
                 .bindingError(bindingError)

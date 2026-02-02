@@ -38,7 +38,7 @@ public class UserPlant {
     @Column(name = "plant_name", nullable = false, length = 50)
     private String plantName;
 
-    @Column(name = "is_connected", nullable = false)
+    @Column(name = "is_connected")
     private Boolean isConnected;
 
     @Column(name = "is_main")
