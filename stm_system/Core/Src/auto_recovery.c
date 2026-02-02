@@ -18,48 +18,99 @@ typedef enum {
     AR_EC_CHECK,
 } AutoRecoveryState;
 
+static uint8_t pending_recovery_mask = 0;
 static AutoRecoveryState ar_state = AR_IDLE;
 static uint32_t ar_tick = 0;
 static uint8_t ar_ec_retry = 0;
 static bool ar_active = false;
+
+static void auto_recovery_start_if_needed(void);
+
+// auto_recovery.c 상단 (include 아래)
+static inline void pump_water_on(void)
+{
+    HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_RESET);
+}
+
+static inline void pump_water_off(void)
+{
+    HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_SET);
+}
+
+static inline void pump_nutri_on(void)
+{
+    HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_RESET);
+}
+
+static inline void pump_nutri_off(void)
+{
+    HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_SET);
+}
 
 bool auto_recovery_is_active(void)
 {
     return ar_active;
 }
 
-static void auto_recovery_finish(void)
+void auto_recovery_request(uint8_t sensor_mask)
 {
-    HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_SET);
+    // 이미 pending이면 무시 (중복 enqueue 방지)
+    if (pending_recovery_mask & sensor_mask) {
+        return;
+    }
 
-    ar_state = AR_IDLE;
-    ar_active = false;
-    sensor_suspend_check(false);
+    pending_recovery_mask |= sensor_mask;
+
+    if (!ar_active && ar_state == AR_IDLE) {
+        auto_recovery_start_if_needed();
+    }
 }
+
 
 void auto_recovery_start_if_needed(void)
 {
     if (ar_state != AR_IDLE) return;
 
-    if (g_sensor.water_level < g_threshold.water_min) {
+    if ((pending_recovery_mask & RECOV_WATER) &&
+        g_sensor.water_level < g_threshold.water_min) {
+
+        pending_recovery_mask &= ~RECOV_WATER;
         ar_active = true;
         sensor_suspend_check(true);
 
-        HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_RESET);
+        pump_water_on();
         ar_state = AR_WATER_PUMP_ON;
         ar_tick = HAL_GetTick();
         return;
     }
 
-    if (g_sensor.ec < g_threshold.ec_min) {
+    if ((pending_recovery_mask & RECOV_EC) &&
+        g_sensor.ec < g_threshold.ec_min) {
+
+        pending_recovery_mask &= ~RECOV_EC;
         ar_active = true;
         sensor_suspend_check(true);
 
         ar_ec_retry = 0;
-        HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_RESET);
+        pump_nutri_on();
         ar_state = AR_EC_PUMP_ON;
         ar_tick = HAL_GetTick();
+        return;
+    }
+}
+
+static void auto_recovery_finish(void)
+{
+    pump_water_off();
+    pump_nutri_off();
+
+    ar_state = AR_IDLE;
+    ar_active = false;
+    sensor_suspend_check(false);
+
+    // ⭐ pending_mask가 남아있으면 다음 작업 시작
+    if (pending_recovery_mask != 0) {
+        auto_recovery_start_if_needed();
     }
 }
 
@@ -121,7 +172,7 @@ void auto_recovery_fsm(void)
         // =======================
         case AR_EC_PUMP_ON:
             // 1초 ON
-            if (now - ar_tick >= 1000) {
+            if (now - ar_tick >= 700) {
                 HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_SET); // OFF
                 ar_state = AR_EC_WAIT_AFTER_ON;
                 ar_tick = now;
@@ -148,7 +199,7 @@ void auto_recovery_fsm(void)
                 auto_recovery_finish();
             } else {
                 ar_ec_retry++;
-                if (ar_ec_retry >= 5) {
+                if (ar_ec_retry >= 1) {
                     proto_send_event_sensor(EVENT_NUTRI_PUMP_FAIL,
                         (uint16_t)(g_sensor.temperature * 10),
                         (uint16_t)(g_sensor.humidity * 10),

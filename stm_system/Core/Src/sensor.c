@@ -20,6 +20,7 @@ typedef enum {
 static SensorAbnormalState water_state = SENSOR_NORMAL;
 static SensorAbnormalState ec_state    = SENSOR_NORMAL;
 
+// threshold
 Threshold_t g_threshold = {
     .water_min = 10.0f,
     .water_max = 60.0f,
@@ -27,8 +28,10 @@ Threshold_t g_threshold = {
     .ec_max    = 2000.0f
 };
 
+// ⭐ 현재 "열려 있는 anomaly" 마스크 (AUTO_RECOVERY 기준)
+uint8_t g_active_anomaly_mask = 0;
+
 static bool sensor_check_suspended = false;
-static bool first_threshold_check  = true;
 
 SensorData_t g_sensor = {0};
 
@@ -72,10 +75,9 @@ void sensor_read_all(void)
         last_ec_raw    = ec_raw;
         i2c_fail_cnt   = 0;
     } else {
-        // ❗ 실패 시 값 갱신 안 함
+        // 실패 시 이전 값 유지
         i2c_fail_cnt++;
         if (i2c_fail_cnt >= 3) {
-            // I2C 재초기화 (최후 방어)
             HAL_I2C_DeInit(&hi2c1);
             HAL_Delay(2);
             MX_I2C1_Init();
@@ -91,8 +93,50 @@ void sensor_read_all(void)
 }
 
 // =======================
-// 임계치 체크
+// INIT 전용: 상태 선언 1회
+//  - CMD_REQ_SENSOR 첫 응답 직후 1번만 호출
 // =======================
+
+void sensor_check_threshold_force_once(void)
+{
+    if (sensor_check_suspended) return;
+
+    uint16_t temp_x10 = (uint16_t)(g_sensor.temperature * 10.0f);
+    uint16_t humi_x10 = (uint16_t)(g_sensor.humidity * 10.0f);
+    uint16_t ec       = (uint16_t)(g_sensor.ec);
+    uint16_t water    = (uint16_t)(g_sensor.water_level);
+
+    // ---- WATER ----
+    if (g_sensor.water_level < g_threshold.water_min) {
+        water_state = SENSOR_LOW;
+        g_active_anomaly_mask |= RECOV_WATER;
+        proto_send_event_sensor(EVENT_WATER_LOW, temp_x10, humi_x10, ec, water);
+    } else if (g_sensor.water_level > g_threshold.water_max) {
+        water_state = SENSOR_HIGH;
+        g_active_anomaly_mask |= RECOV_WATER;
+        proto_send_event_sensor(EVENT_WATER_HIGH, temp_x10, humi_x10, ec, water);
+    } else {
+        water_state = SENSOR_NORMAL;
+    }
+
+    // ---- EC ----
+    if (g_sensor.ec < g_threshold.ec_min) {
+        ec_state = SENSOR_LOW;
+        g_active_anomaly_mask |= RECOV_EC;
+        proto_send_event_sensor(EVENT_EC_LOW, temp_x10, humi_x10, ec, water);
+    } else if (g_sensor.ec > g_threshold.ec_max) {
+        ec_state = SENSOR_HIGH;
+        g_active_anomaly_mask |= RECOV_EC;
+        proto_send_event_sensor(EVENT_EC_HIGH, temp_x10, humi_x10, ec, water);
+    } else {
+        ec_state = SENSOR_NORMAL;
+    }
+}
+
+// =======================
+// 일반 임계치 체크 (상태 머신)
+// =======================
+
 void sensor_check_threshold(void)
 {
     if (sensor_check_suspended) return;
@@ -103,47 +147,23 @@ void sensor_check_threshold(void)
     uint16_t ec       = (uint16_t)(g_sensor.ec);
     uint16_t water    = (uint16_t)(g_sensor.water_level);
 
-    // ==========================
-    // 부팅 직후 1회 초기 판단
-    // ==========================
-    if (first_threshold_check) {
-        if (g_sensor.water_level < g_threshold.water_min) {
-            water_state = SENSOR_LOW;
-            proto_send_event_sensor(EVENT_WATER_LOW, temp_x10, humi_x10, ec, water);
-        } else if (g_sensor.water_level > g_threshold.water_max) {
-            water_state = SENSOR_HIGH;
-            proto_send_event_sensor(EVENT_WATER_HIGH, temp_x10, humi_x10, ec, water);
-        }
-
-        if (g_sensor.ec < g_threshold.ec_min) {
-            ec_state = SENSOR_LOW;
-            proto_send_event_sensor(EVENT_EC_LOW, temp_x10, humi_x10, ec, water);
-        } else if (g_sensor.ec > g_threshold.ec_max) {
-            ec_state = SENSOR_HIGH;
-            proto_send_event_sensor(EVENT_EC_HIGH, temp_x10, humi_x10, ec, water);
-        }
-
-        first_threshold_check = false;
-        return;  // ❗ 여기서 종료
-    }
-
-    // ==========================
-    // 기존 상태 머신 로직
-    // ==========================
-
     // ---- WATER ----
     if (water_state == SENSOR_NORMAL) {
         if (g_sensor.water_level < g_threshold.water_min) {
             water_state = SENSOR_LOW;
+            g_active_anomaly_mask |= RECOV_WATER;
             proto_send_event_sensor(EVENT_WATER_LOW, temp_x10, humi_x10, ec, water);
         } else if (g_sensor.water_level > g_threshold.water_max) {
             water_state = SENSOR_HIGH;
+            g_active_anomaly_mask |= RECOV_WATER;
             proto_send_event_sensor(EVENT_WATER_HIGH, temp_x10, humi_x10, ec, water);
         }
     } else {
         if (g_sensor.water_level >= g_threshold.water_min &&
             g_sensor.water_level <= g_threshold.water_max) {
+
             water_state = SENSOR_NORMAL;
+            g_active_anomaly_mask &= ~RECOV_WATER;
             proto_send_event_sensor(EVENT_WATER_RECOVERY_DONE, temp_x10, humi_x10, ec, water);
         }
     }
@@ -152,17 +172,20 @@ void sensor_check_threshold(void)
     if (ec_state == SENSOR_NORMAL) {
         if (g_sensor.ec < g_threshold.ec_min) {
             ec_state = SENSOR_LOW;
+            g_active_anomaly_mask |= RECOV_EC;
             proto_send_event_sensor(EVENT_EC_LOW, temp_x10, humi_x10, ec, water);
         } else if (g_sensor.ec > g_threshold.ec_max) {
             ec_state = SENSOR_HIGH;
+            g_active_anomaly_mask |= RECOV_EC;
             proto_send_event_sensor(EVENT_EC_HIGH, temp_x10, humi_x10, ec, water);
         }
     } else {
         if (g_sensor.ec >= g_threshold.ec_min &&
             g_sensor.ec <= g_threshold.ec_max) {
+
             ec_state = SENSOR_NORMAL;
+            g_active_anomaly_mask &= ~RECOV_EC;
             proto_send_event_sensor(EVENT_NUTRI_RECOVERY_DONE, temp_x10, humi_x10, ec, water);
         }
     }
 }
-

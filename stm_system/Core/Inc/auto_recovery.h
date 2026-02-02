@@ -1,15 +1,15 @@
 // auto_recovery.h
-#pragma once
-#include <stdbool.h>
+#ifndef AUTO_RECOVERY_H
+#define AUTO_RECOVERY_H
+
 #include <stdint.h>
+#include <stdbool.h>
 
-void auto_recovery_init(void);
+#define RECOV_WATER  (1 << 0)
+#define RECOV_EC     (1 << 1)
 
-/* CMD_AUTO_RECOVERY 수신 시 호출 */
-void auto_recovery_start_if_needed(void);
-
-/* main loop에서 주기적으로 호출 */
+void auto_recovery_request(uint8_t sensor_mask);
 void auto_recovery_fsm(void);
-
-/* 자동조치 진행 여부 확인 */
 bool auto_recovery_is_active(void);
+
+#endif
