@@ -6,6 +6,7 @@ import com.ssukssuk.domain.auth.User;
 import com.ssukssuk.domain.device.Device;
 import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.repository.device.DeviceRepository;
+import com.ssukssuk.repository.plant.UserPlantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DeviceClaimService {
 
     private final DeviceRepository deviceRepository;
+    private final UserPlantRepository userPlantRepository;
     private final DeviceControlService deviceControlService;
 
     /**
@@ -43,7 +45,7 @@ public class DeviceClaimService {
      * DB는 식물 unbind + 디바이스 unclaim 둘 다 반영
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void unclaim(Long deviceId, Long userId, UserPlant connectedPlant) {
+    public void unclaim(Long deviceId, Long userId, Long connectedPlantId) {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
 
@@ -55,9 +57,10 @@ public class DeviceClaimService {
                 null
         );
 
-        // DB: 연결된 식물이 있으면 unbind 처리
-        if (connectedPlant != null) {
-            connectedPlant.unbindDevice();
+        // DB: 연결된 식물이 있으면 unbind 처리 (새 트랜잭션에서 다시 조회)
+        if (connectedPlantId != null) {
+            userPlantRepository.findById(connectedPlantId)
+                    .ifPresent(UserPlant::unbindDevice);
             device.unbindPlant();
         }
 

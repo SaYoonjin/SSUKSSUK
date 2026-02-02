@@ -70,10 +70,12 @@ public class DeviceService {
 
         // MQTT는 unclaim 하나만 보내면 디바이스에서 식물 해제까지 자동 처리
         // DB는 unbind + unclaim 둘 다 반영 필요
-        var connectedPlant = userPlantRepository.findConnectedPlantByDeviceId(deviceId);
+        Long connectedPlantId = userPlantRepository.findConnectedPlantByDeviceId(deviceId)
+                .map(UserPlant::getPlantId)
+                .orElse(null);
 
         // 별도 트랜잭션으로 MQTT + DB 처리
-        deviceClaimService.unclaim(deviceId, userId, connectedPlant.orElse(null));
+        deviceClaimService.unclaim(deviceId, userId, connectedPlantId);
     }
 
     @Transactional(readOnly = true)

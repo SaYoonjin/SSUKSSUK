@@ -40,7 +40,7 @@ public class ImageInference {
     private String symptomEnum;
 
     @Column(nullable = false)
-    private Double confidence;
+    private Integer confidence;
 
     @Column(name = "inference_at", nullable = false)
     private LocalDateTime inferenceAt;

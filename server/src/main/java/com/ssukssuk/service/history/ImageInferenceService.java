@@ -116,7 +116,7 @@ public class ImageInferenceService {
                 .image(image)
                 .height(request.getHeight())
                 .width(request.getWidth())
-                .anomaly(request.getAnomaly() != null ? request.getAnomaly().intValue() : null)
+                .anomaly(request.getAnomaly())
                 .confidence(request.getConfidence())
                 .symptomEnum(request.getSymptomEnum())
                 .inferenceAt(now)
@@ -125,7 +125,7 @@ public class ImageInferenceService {
         imageInferenceRepository.save(inference);
 
         // 9. PlantStatus 업데이트 (이미지 데이터 반영)
-        Integer anomalyValue = request.getAnomaly() != null ? request.getAnomaly().intValue() : null;
+        Integer anomalyValue = request.getAnomaly();
         plantStatusService.updateFromImage(
                 request.getPlantId(),
                 request.getHeight(),
@@ -136,7 +136,7 @@ public class ImageInferenceService {
         // 10. 이상 감지 시 알람: confidence >= 70 && anomaly >= 3
         if (request.getConfidence() >= 70
                 && request.getAnomaly() != null
-                && request.getAnomaly() >= 3) {
+                && request.getAnomaly() >= 5) {
             Long notificationId =
                 notificationService.notifyImageDiscolorationAndReturnId(plant, inference);
 

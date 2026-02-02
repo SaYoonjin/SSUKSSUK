@@ -27,8 +27,11 @@ public class DeviceImageInferenceRequest {
     // inference 결과
     private Double height;
     private Double width;
-    private Double anomaly;
-    private Double confidence;
+    private Integer anomaly;
+    private Integer confidence;
+
+    @JsonProperty("diagnosis_message")
+    private String diagnosisMessage;
 
     // TOP 이미지
     @JsonProperty("image_kind1")

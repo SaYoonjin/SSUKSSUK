@@ -98,7 +98,7 @@ public class ActionResultService {
 
         return switch (actionType.toUpperCase()) {
             case "WATER_ADD" -> SENSOR_CODE_WATER_LEVEL;
-            case "NUTRIENT_ADD" -> SENSOR_CODE_NUTRIENT_CONC;
+            case "NUTRI_ADD" -> SENSOR_CODE_NUTRIENT_CONC;
             default -> throw new IllegalArgumentException("Unknown action_type: " + actionType);
         };
     }
