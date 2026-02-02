@@ -28,5 +28,13 @@ public record ApiResponse<T>(
                 .build();
     }
 
+    public static <T> ApiResponse<T> okWithError(T data, String code, String message) {
+        return ApiResponse.<T>builder()
+                .success(true)
+                .data(data)
+                .error(new ApiError(code, message))
+                .build();
+    }
+
     public record ApiError(String code, String message) {}
 }

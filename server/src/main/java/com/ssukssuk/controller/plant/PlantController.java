@@ -35,14 +35,22 @@ public class PlantController {
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody CreatePlantRequest request
     ) {
-        return ApiResponse.ok(
-                userPlantService.createPlant(
-                        userId,
-                        request.getSpecies(),
-                        request.getDeviceId(),
-                        request.getName()
-                )
+        CreatePlantResponse response = userPlantService.createPlant(
+                userId,
+                request.getSpecies(),
+                request.getDeviceId(),
+                request.getName()
         );
+
+        if (response.hasBindingError()) {
+            return ApiResponse.okWithError(
+                    response,
+                    "DEVICE_BINDING_FAILED",
+                    response.getBindingError()
+            );
+        }
+
+        return ApiResponse.ok(response);
     }
 
     @PatchMapping("/{plantId}")
