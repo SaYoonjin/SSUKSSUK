@@ -83,4 +83,14 @@ public class PlantController {
                 nutrientSensorService.getNutrientCard(plantId)
         );
     }
+
+    @DeleteMapping("/{plantId}")
+    public ApiResponse<Void> deletePlant(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long plantId
+    ) {
+        userPlantService.deletePlant(userId, plantId);
+        return ApiResponse.ok();
+    }
+
 }

@@ -179,4 +179,24 @@ public class UserPlantService {
                 .toList();
     }
 
+    @Transactional
+    public void deletePlant(Long userId, Long plantId) {
+
+        UserPlant plant = userPlantRepository.findByPlantIdAndUserId(plantId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+
+        boolean connected = Boolean.TRUE.equals(plant.getIsConnected());
+
+        // 디바이스가 연결돼 있으면 먼저 언바인드
+        if (connected) {
+            plantBindingService.unbind(plantId);
+        }
+
+        // - removedAt 설정
+        // - isMain = false
+        // - isConnected = false
+        // - device = null
+        plant.remove();
+    }
+
 }

@@ -2,7 +2,6 @@ package com.ssukssuk.repository.plant;
 
 import com.ssukssuk.domain.plant.UserPlant;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -25,15 +24,15 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
     );
 
     @Query("""
-    select new com.ssukssuk.repository.plant.BindingProjection(
-        d.serial,
-        up.plantId
-    )
-    from UserPlant up
-    join up.device d
-    where up.removedAt is null
-      and up.isConnected = true
-""")
+        select new com.ssukssuk.repository.plant.BindingProjection(
+            d.serial,
+            up.plantId
+        )
+        from UserPlant up
+        join up.device d
+        where up.removedAt is null
+          and up.isConnected = true
+    """)
     List<BindingProjection> findAllActiveBindings();
 
     // plantId로 "현재 연결된(활성)" userId 찾기
@@ -78,12 +77,12 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
     List<UserPlant> findActiveConnectionsByUserId(@Param("userId") Long userId);
 
     @Query("""
-    select (count(up) > 0)
-    from UserPlant up
-    where up.plantId = :plantId
-      and up.user.id = :userId
-      and up.removedAt is null
-""")
+        select (count(up) > 0)
+        from UserPlant up
+        where up.plantId = :plantId
+          and up.user.id = :userId
+          and up.removedAt is null
+    """)
     boolean existsByPlantIdAndUserId(
             @Param("plantId") Long plantId,
             @Param("userId") Long userId
@@ -98,47 +97,53 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
     """)
     Optional<UserPlant> findMainPlantByUserId(@Param("userId") Long userId);
 
-    // 사용자의 모든 식물 조회
+    // 사용자의 모든 활성 식물 조회 (species/device fetch join으로 N+1 방지)
     @Query("""
         select up
         from UserPlant up
+        join fetch up.species s
+        left join fetch up.device d
         where up.user.id = :userId
           and up.removedAt is null
     """)
-    List<UserPlant> findAllByUserIdWithJoin(Long userId);
+    List<UserPlant> findAllByUserIdWithJoin(@Param("userId") Long userId);
 
-    // 종 수위 적정치 조회
+    // 종 수위 적정치 조회 (삭제된 식물 제외)
     @Query("""
-    select s.waterMin
-    from UserPlant up
-    join up.species s
-    where up.plantId = :plantId
-""")
-    Optional<Float> findWaterMinByPlantId(Long plantId);
-
-    @Query("""
-    select s.waterMax
-    from UserPlant up
-    join up.species s
-    where up.plantId = :plantId
-""")
-    Optional<Float> findWaterMaxByPlantId(Long plantId);
-
-    // 종 농도 적정치 조회
-    @Query("""
-    select s.ecMin
-    from UserPlant up
-    join up.species s
-    where up.plantId = :plantId
-""")
-    Optional<Float> findNutrientMinByPlantId(Long plantId);
+        select s.waterMin
+        from UserPlant up
+        join up.species s
+        where up.plantId = :plantId
+          and up.removedAt is null
+    """)
+    Optional<Float> findWaterMinByPlantId(@Param("plantId") Long plantId);
 
     @Query("""
-    select s.ecMax
-    from UserPlant up
-    join up.species s
-    where up.plantId = :plantId
-""")
-    Optional<Float> findNutrientMaxByPlantId(Long plantId);
+        select s.waterMax
+        from UserPlant up
+        join up.species s
+        where up.plantId = :plantId
+          and up.removedAt is null
+    """)
+    Optional<Float> findWaterMaxByPlantId(@Param("plantId") Long plantId);
+
+    // 종 농도 적정치 조회 (삭제된 식물 제외)
+    @Query("""
+        select s.ecMin
+        from UserPlant up
+        join up.species s
+        where up.plantId = :plantId
+          and up.removedAt is null
+    """)
+    Optional<Float> findNutrientMinByPlantId(@Param("plantId") Long plantId);
+
+    @Query("""
+        select s.ecMax
+        from UserPlant up
+        join up.species s
+        where up.plantId = :plantId
+          and up.removedAt is null
+    """)
+    Optional<Float> findNutrientMaxByPlantId(@Param("plantId") Long plantId);
 
 }
