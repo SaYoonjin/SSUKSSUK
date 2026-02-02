@@ -68,7 +68,8 @@ public class UserPlant {
 
     public void remove() {
         this.removedAt = LocalDateTime.now();
-        this.isConnected = false;
+        this.isMain = false;
+        unbindDevice();
     }
 
     public void changeMainFalse() {
