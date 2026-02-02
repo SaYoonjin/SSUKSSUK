@@ -34,10 +34,10 @@ const BOTTOM_BG = require('../assets/bottom.png');
 
 // ✅ [신규] 애니메이션을 담당할 개별 탭 컴포넌트
 function TabItem({
-  name,
-  isFocused,
-  onPress,
-}: {
+                   name,
+                   isFocused,
+                   onPress,
+                 }: {
   name: RouteName;
   isFocused: boolean;
   onPress: () => void;
@@ -62,62 +62,62 @@ function TabItem({
   }, [isFocused, scaleAnim]);
 
   return (
-    <Pressable onPress={onPress} style={styles.item}>
-      <Animated.Image
-        source={isFocused ? ASSETS[name].on : ASSETS[name].off}
-        style={[
-          styles.icon,
-          {
-            transform: [{ scale: scaleAnim }], // 애니메이션 적용
-          },
-        ]}
-        resizeMode="contain"
-      />
-    </Pressable>
+      <Pressable onPress={onPress} style={styles.item}>
+        <Animated.Image
+            source={isFocused ? ASSETS[name].on : ASSETS[name].off}
+            style={[
+              styles.icon,
+              {
+                transform: [{ scale: scaleAnim }], // 애니메이션 적용
+              },
+            ]}
+            resizeMode="contain"
+        />
+      </Pressable>
   );
 }
 
 export default function BottomBar({ state, navigation }: BottomTabBarProps) {
   return (
-    <View style={styles.container}>
-      <ImageBackground
-        source={BOTTOM_BG}
-        resizeMode="stretch"
-        style={StyleSheet.absoluteFill}
-      />
+      <View style={styles.container}>
+        <ImageBackground
+            source={BOTTOM_BG}
+            resizeMode="stretch"
+            style={StyleSheet.absoluteFill}
+        />
 
-      <View style={styles.row}>
-        {state.routes.map((route, index) => {
-          const name = route.name as RouteName;
-          const isFocused = state.index === index;
+        <View style={styles.row}>
+          {state.routes.map((route, index) => {
+            const name = route.name as RouteName;
+            const isFocused = state.index === index;
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
 
-            if (isFocused) {
-              if (name === 'History') {
-                navigation.navigate('History', { screen: 'HistoryHome' });
+              if (isFocused) {
+                if (name === 'History') {
+                  navigation.navigate('History', { screen: 'HistoryHome' });
+                }
+              } else if (!event.defaultPrevented) {
+                navigation.navigate(route.name);
               }
-            } else if (!event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
+            };
 
-          return (
-            <TabItem
-              key={route.key}
-              name={name}
-              isFocused={isFocused}
-              onPress={onPress}
-            />
-          );
-        })}
+            return (
+                <TabItem
+                    key={route.key}
+                    name={name}
+                    isFocused={isFocused}
+                    onPress={onPress}
+                />
+            );
+          })}
+        </View>
       </View>
-    </View>
   );
 }
 
@@ -125,12 +125,12 @@ const styles = StyleSheet.create({
   container: {
     height: 90,
     borderTopWidth: 0,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'transparent',
-    elevation: 0,
+    // position: 'absolute',
+    // bottom: 0,
+    // left: 0,
+    // right: 0,
+    // backgroundColor: 'transparent',
+    // elevation: 0,
   },
   row: {
     flex: 1,
