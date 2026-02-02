@@ -75,52 +75,52 @@ public class UserPlantService {
             plant.changeName(request.getName());
         }
 
-        // 2. 디바이스 처리
-        Device currentDevice = plant.getDevice();
-        boolean currentlyConnected = Boolean.TRUE.equals(plant.getIsConnected());
+        // 2. 디바이스 처리 (JSON에 deviceId 키가 있을 때만)
+        if (!request.isDeviceIdProvided()) {
+            return; // deviceId 키가 없으면 디바이스 변경 안 함
+        }
 
-        // 2-1. 디바이스 연결 해제 요청
-        if (Boolean.TRUE.equals(request.getUnbindDevice())) {
-            if (currentlyConnected) {
-                // 별도 트랜잭션으로 MQTT + DB 처리
+        Device currentDevice = plant.getDevice();
+        Long newDeviceId = request.getDeviceId();
+
+        // 2-1. deviceId: null → 연결 해제
+        if (newDeviceId == null) {
+            if (currentDevice != null) {
                 plantBindingService.unbind(plantId);
+                plant.unbindDevice(); // 현재 트랜잭션 엔티티도 동기화
             }
             return;
         }
 
-        // 2-2. 새 디바이스로 변경 요청
-        if (request.getDeviceId() != null) {
-            Long newDeviceId = request.getDeviceId();
-
-            // 같은 디바이스면 무시
-            if (currentDevice != null && currentDevice.getDeviceId().equals(newDeviceId) && currentlyConnected) {
-                return;
-            }
-
-            Device newDevice = deviceRepository.findById(newDeviceId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
-
-            // 새 디바이스 소유자 검증
-            if (newDevice.getUser() == null || !newDevice.getUser().getId().equals(userId)) {
-                throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
-            }
-
-            // 새 디바이스가 이미 다른 식물에 연결되어 있는지 확인
-            var existingPlant = userPlantRepository
-                    .findConnectedPlantByDeviceId(newDeviceId);
-            if (existingPlant.isPresent() && !existingPlant.get().getPlantId().equals(plantId)) {
-                throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
-            }
-
-            // 별도 트랜잭션으로 각각 처리 (MQTT 성공 시 즉시 DB 커밋)
-            // 1. 기존 디바이스 연결 해제
-            if (currentlyConnected) {
-                plantBindingService.unbind(plantId);
-            }
-
-            // 2. 새 디바이스 연결
-            plantBindingService.bind(plantId, newDeviceId);
+        // 2-2. 같은 디바이스면 무시
+        if (currentDevice != null && currentDevice.getDeviceId().equals(newDeviceId)) {
+            return;
         }
+
+        // 2-3. 새 디바이스로 변경
+        Device newDevice = deviceRepository.findById(newDeviceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
+
+        // 새 디바이스 소유자 검증
+        if (newDevice.getUser() == null || !newDevice.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
+        }
+
+        // 새 디바이스가 이미 다른 식물에 연결되어 있는지 확인
+        var existingPlant = userPlantRepository.findConnectedPlantByDeviceId(newDeviceId);
+        if (existingPlant.isPresent() && !existingPlant.get().getPlantId().equals(plantId)) {
+            throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
+        }
+
+        // 기존 디바이스 연결 해제
+        if (currentDevice != null) {
+            plantBindingService.unbind(plantId);
+            plant.unbindDevice();
+        }
+
+        // 새 디바이스 연결
+        plantBindingService.bind(plantId, newDeviceId);
+        plant.bindDevice(newDevice); // 현재 트랜잭션 엔티티도 동기화
     }
 
     public List<MyPlantResponse> getMyPlants(Long userId) {
@@ -152,6 +152,23 @@ public class UserPlantService {
         // - isConnected = false
         // - device = null
         plant.remove();
+    }
+
+    @Transactional
+    public void unbindPlantDevice(Long userId, Long plantId) {
+
+        UserPlant plant = userPlantRepository.findByPlantIdAndUserId(plantId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+
+        Device device = plant.getDevice();
+        if (device == null) {
+            return; // 이미 연결된 디바이스가 없으면 무시
+        }
+
+        // MQTT 전송 후 DB 반영 (별도 트랜잭션)
+        plantBindingService.unbind(plantId);
+        // 현재 트랜잭션 엔티티도 동기화
+        plant.unbindDevice();
     }
 
     @Transactional

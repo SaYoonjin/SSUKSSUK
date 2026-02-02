@@ -110,4 +110,13 @@ public class PlantController {
         return ApiResponse.ok();
     }
 
+    @PostMapping("/{plantId}/unbind")
+    public ApiResponse<Void> unbindPlantDevice(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long plantId
+    ) {
+        userPlantService.unbindPlantDevice(userId, plantId);
+        return ApiResponse.ok();
+    }
+
 }
