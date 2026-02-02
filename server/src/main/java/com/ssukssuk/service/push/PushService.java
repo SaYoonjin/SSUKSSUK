@@ -4,6 +4,8 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.MessagingErrorCode;
+import com.ssukssuk.common.exception.CustomException;
+import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.notification.Notification;
 import com.ssukssuk.domain.push.PushToken;
 import com.ssukssuk.dto.push.PushTokenRequest;
@@ -41,6 +43,7 @@ public class PushService {
                                 .deviceId(request.getMobileDeviceId())
                                 .platform(request.getPlatform())
                                 .token(request.getToken())
+                                .notiSetting(true)
                                 .build()
                 );
 
@@ -105,5 +108,17 @@ public class PushService {
     private boolean isInvalidToken(FirebaseMessagingException e) {
         return e.getMessagingErrorCode()
                 == MessagingErrorCode.UNREGISTERED;
+    }
+
+    @Transactional
+    public void updateNotiSetting(
+            Long userId,
+            String deviceId,
+            boolean notiSetting) {
+
+        pushTokenRepository.updateNotiSettingByDeviceId(
+                deviceId,
+                notiSetting
+        );
     }
 }

@@ -68,15 +68,20 @@ public class UserPlant {
 
     public void remove() {
         this.removedAt = LocalDateTime.now();
-        this.isConnected = false;
+        this.isMain = false;
+        unbindDevice();
     }
 
     public void changeMainFalse() {
         this.isMain = false;
     }
 
-    public void changeMain(boolean isMain) {
-        this.isMain = isMain;
+    public boolean isMain() {
+        return Boolean.TRUE.equals(this.isMain);
+    }
+
+    public void changeMain(boolean main) {
+        this.isMain = main;
     }
 
     public void changeName(String name) {
