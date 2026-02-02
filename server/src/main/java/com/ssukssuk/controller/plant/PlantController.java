@@ -2,8 +2,10 @@ package com.ssukssuk.controller.plant;
 
 import com.ssukssuk.common.response.ApiResponse;
 import com.ssukssuk.dto.plant.*;
+import com.ssukssuk.service.plant.NutrientSensorService;
 import com.ssukssuk.service.plant.SpeciesService;
 import com.ssukssuk.service.plant.UserPlantService;
+import com.ssukssuk.service.plant.WaterSensorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,9 +20,13 @@ public class PlantController {
 
     private final UserPlantService userPlantService;
     private final SpeciesService speciesService;
+    private final WaterSensorService waterSensorService;
+    private final NutrientSensorService nutrientSensorService;
 
     @GetMapping("/species")
-    public ApiResponse<List<SpeciesResponse>> getAllSpecies() {
+    public ApiResponse<List<SpeciesResponse>> getAllSpecies(
+
+    ) {
         return ApiResponse.ok(speciesService.getAllSpecies());
     }
 
@@ -58,4 +64,23 @@ public class PlantController {
         );
     }
 
+    @GetMapping("/{plantId}/sensors/water")
+    public ApiResponse<WaterCardResponse> getWaterCard(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long plantId
+    ) {
+        return ApiResponse.ok(
+                waterSensorService.getWaterCard(plantId)
+        );
+    }
+
+    @GetMapping("/{plantId}/sensors/nutrient")
+    public ApiResponse<NutrientCardResponse> getNutrientCard(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long plantId
+    ) {
+        return ApiResponse.ok(
+                nutrientSensorService.getNutrientCard(plantId)
+        );
+    }
 }

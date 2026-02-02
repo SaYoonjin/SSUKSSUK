@@ -102,9 +102,43 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
     @Query("""
         select up
         from UserPlant up
-        join fetch up.species s
-        left join fetch up.device d
         where up.user.id = :userId
+          and up.removedAt is null
     """)
     List<UserPlant> findAllByUserIdWithJoin(Long userId);
+
+    // 종 수위 적정치 조회
+    @Query("""
+    select s.waterMin
+    from UserPlant up
+    join up.species s
+    where up.plantId = :plantId
+""")
+    Optional<Float> findWaterMinByPlantId(Long plantId);
+
+    @Query("""
+    select s.waterMax
+    from UserPlant up
+    join up.species s
+    where up.plantId = :plantId
+""")
+    Optional<Float> findWaterMaxByPlantId(Long plantId);
+
+    // 종 농도 적정치 조회
+    @Query("""
+    select s.ecMin
+    from UserPlant up
+    join up.species s
+    where up.plantId = :plantId
+""")
+    Optional<Float> findNutrientMinByPlantId(Long plantId);
+
+    @Query("""
+    select s.ecMax
+    from UserPlant up
+    join up.species s
+    where up.plantId = :plantId
+""")
+    Optional<Float> findNutrientMaxByPlantId(Long plantId);
+
 }

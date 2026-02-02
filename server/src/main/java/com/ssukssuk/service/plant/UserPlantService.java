@@ -175,11 +175,7 @@ public class UserPlantService {
                 userPlantRepository.findAllByUserIdWithJoin(userId);
 
         return userPlants.stream()
-                .map(up -> MyPlantResponse.from(
-                        up,
-                        up.getSpecies(),
-                        up.getDevice()
-                ))
+                .map(MyPlantResponse::from)
                 .toList();
     }
 
