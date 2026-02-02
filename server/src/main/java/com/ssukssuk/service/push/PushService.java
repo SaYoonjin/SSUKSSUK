@@ -116,12 +116,9 @@ public class PushService {
             String deviceId,
             boolean notiSetting) {
 
-        PushToken token = pushTokenRepository
-                .findByDeviceId(deviceId)
-                .orElse(null);
-
-        if (token == null) return;
-
-        token.updateNotiSetting(notiSetting);
+        pushTokenRepository.updateNotiSettingByDeviceId(
+                deviceId,
+                notiSetting
+        );
     }
 }
