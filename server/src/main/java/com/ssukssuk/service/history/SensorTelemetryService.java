@@ -5,9 +5,12 @@ import com.ssukssuk.domain.history.SensorEvent;
 import com.ssukssuk.domain.notification.Notification;
 import com.ssukssuk.service.notification.NotificationService;
 import com.ssukssuk.service.plant.PlantStatusService;
+import com.ssukssuk.service.push.PushService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -20,6 +23,7 @@ public class SensorTelemetryService {
     private final SensorEventService sensorEventService;
     private final NotificationService notificationService;
     private final PlantStatusService plantStatusService;
+    private final PushService pushService;
 
     @Transactional
     public void handleUplink(SensorUplinkMessage msg, LocalDateTime measuredAt) {
@@ -46,13 +50,28 @@ public class SensorTelemetryService {
 
                 // 처음 이상치(OPEN 생성)일 때만 알림 테이블 insert
                 createdOpt.ifPresent(createdEvent -> {
+
                     Notification.NotiTitle title =
                             mapTriggerToNotiTitle(msg.getTriggerSensorType());
 
-                    notificationService.notifySensorAnomaly(
-                            msg.getPlantId(),
-                            createdEvent.getEventId(),
-                            title
+                    // notification 테이블에 알림 저장
+                    // DB만 저장되고 푸시 안 감
+                    Long notificationId =
+                        notificationService.notifySensorAnomalyAndReturnId(
+                                msg.getPlantId(),
+                                createdEvent.getEventId(),
+                                title
+                        );
+
+                    // AFTER COMMIT 푸시 등록
+                    // 트랜잭션 정상 커밋된 경우에만 실행됨
+                    TransactionSynchronizationManager.registerSynchronization(
+                            new TransactionSynchronization() {
+                                @Override
+                                public void afterCommit() {
+                                    pushService.sendNotification(notificationId);
+                                }
+                            }
                     );
 
                     // 안읽은 알림 표시
@@ -75,12 +94,21 @@ public class SensorTelemetryService {
                     Notification.NotiTitle title =
                             mapTriggerToRecoveryTitle(msg.getTriggerSensorType());
 
-                    notificationService.notifySensorRecovery(
-                            msg.getPlantId(),
-                            resolvedEvent.getEventId(),
-                            title
-                    );
+                    Long notificationId =
+                        notificationService.notifySensorRecoveryAndReturnId(
+                                msg.getPlantId(),
+                                resolvedEvent.getEventId(),
+                                title
+                        );
 
+                    TransactionSynchronizationManager.registerSynchronization(
+                            new TransactionSynchronization() {
+                                @Override
+                                public void afterCommit() {
+                                    pushService.sendNotification(notificationId);
+                                }
+                            }
+                    );
                     // 안읽은 알림 표시
                     plantStatusService.markUnreadNotification(msg.getPlantId());
                 });
@@ -105,6 +133,5 @@ public class SensorTelemetryService {
             case WATER_LEVEL -> Notification.NotiTitle.WATER_LEVEL;
             case NUTRIENT_CONC -> Notification.NotiTitle.NUTRIENT_CONC;
         };
-
     }
 }

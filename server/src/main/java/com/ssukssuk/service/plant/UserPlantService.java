@@ -8,6 +8,7 @@ import com.ssukssuk.domain.plant.PlantStatus;
 import com.ssukssuk.domain.plant.Species;
 import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.plant.CreatePlantResponse;
+import com.ssukssuk.dto.plant.MyPlantResponse;
 import com.ssukssuk.dto.plant.UpdatePlantRequest;
 import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.device.DeviceRepository;
@@ -18,6 +19,8 @@ import com.ssukssuk.service.device.DeviceControlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -164,4 +167,20 @@ public class UserPlantService {
             plantBindingService.bind(plantId, newDeviceId);
         }
     }
+
+    public List<MyPlantResponse> getMyPlants(Long userId) {
+
+        // 해당 유저가 키우는 모든 식물 조회
+        List<UserPlant> userPlants =
+                userPlantRepository.findAllByUserIdWithJoin(userId);
+
+        return userPlants.stream()
+                .map(up -> MyPlantResponse.from(
+                        up,
+                        up.getSpecies(),
+                        up.getDevice()
+                ))
+                .toList();
+    }
+
 }

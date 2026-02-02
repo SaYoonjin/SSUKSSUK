@@ -98,4 +98,13 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
     """)
     Optional<UserPlant> findMainPlantByUserId(@Param("userId") Long userId);
 
+    // 사용자의 모든 식물 조회
+    @Query("""
+        select up
+        from UserPlant up
+        join fetch up.species s
+        left join fetch up.device d
+        where up.user.id = :userId
+    """)
+    List<UserPlant> findAllByUserIdWithJoin(Long userId);
 }

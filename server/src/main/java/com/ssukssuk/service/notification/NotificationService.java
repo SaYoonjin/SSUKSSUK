@@ -5,14 +5,18 @@ import com.ssukssuk.domain.history.ImageInference;
 import com.ssukssuk.domain.history.SensorEvent;
 import com.ssukssuk.domain.notification.Notification;
 import com.ssukssuk.domain.plant.UserPlant;
+import com.ssukssuk.dto.notification.NotificationResponse;
 import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.history.SensorEventRepository;
 import com.ssukssuk.repository.notification.NotificationRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
+import java.time.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -25,7 +29,7 @@ public class NotificationService {
     private final SensorEventRepository sensorEventRepository;
 
     @Transactional
-    public void notifySensorAnomaly(
+    public Long notifySensorAnomalyAndReturnId(
             Long plantId,
             Long eventId,
             Notification.NotiTitle sensorTitle
@@ -47,10 +51,11 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     @Transactional
-    public void notifyImageDiscoloration(UserPlant plant, ImageInference inference) {
+    public Long notifyImageDiscolorationAndReturnId(UserPlant plant, ImageInference inference) {
         User user = findActiveUserByPlantId(plant.getPlantId());
 
         Notification n = Notification.of(
@@ -64,6 +69,7 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     /**
@@ -72,7 +78,7 @@ public class NotificationService {
      *       (SensorTelemetryService의 ANOMALY_DETECTED, RECOVERY_DONE 처리 패턴 참고)
      */
     @Transactional
-    public void notifyActionDone(
+    public Long notifyActionDoneAndReturnId(
             Long plantId,
             Long eventId
     ) {
@@ -91,6 +97,7 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     /**
@@ -99,7 +106,7 @@ public class NotificationService {
      *       (SensorTelemetryService의 ANOMALY_DETECTED, RECOVERY_DONE 처리 패턴 참고)
      */
     @Transactional
-    public void notifyActionFail(
+    public Long notifyActionFailAndReturnId(
             Long plantId,
             Long eventId
     ) {
@@ -118,10 +125,11 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     @Transactional
-    public void notifySensorRecovery(
+    public Long notifySensorRecoveryAndReturnId(
             Long plantId,
             Long eventId,
             Notification.NotiTitle sensorTitle
@@ -144,6 +152,7 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+        return n.getNotificationId();
     }
 
     @Transactional
@@ -165,6 +174,34 @@ public class NotificationService {
         );
 
         notificationRepository.save(n);
+    }
+
+    @Transactional
+    public NotificationResponse openTodayNotifications(Long userId) {
+
+        ZoneId zoneId = ZoneId.of("Asia/Seoul");
+        LocalDate today = LocalDate.now(zoneId);
+
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+
+        // 1) 벨 아이콘 클릭 시 전체 읽음 처리
+        LocalDateTime now = LocalDateTime.now(zoneId);
+        int updatedCount = notificationRepository.markAllReadByUserId(userId, now);
+
+        // 2) 오늘 알림 리스트 조회
+        List<Notification> list = notificationRepository.findTodayByUserId(userId, start, end);
+
+        List<NotificationResponse.NotificationItem> items = list.stream()
+                .map(n -> NotificationResponse.NotificationItem.builder()
+                        .notificationId(n.getNotificationId())
+                        .message(n.getMessage())
+                        .createdAt(n.getCreatedAt())
+                        .build()
+                )
+                .toList();
+
+        return NotificationResponse.of(today, updatedCount, items);
     }
 
     private UserPlant findPlantById(Long plantId) {
