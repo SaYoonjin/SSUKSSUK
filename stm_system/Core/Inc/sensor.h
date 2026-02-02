@@ -21,9 +21,11 @@ typedef struct {
 
 extern Threshold_t g_threshold;
 extern SensorData_t g_sensor;
+extern uint8_t g_active_anomaly_mask;
 
 void sensor_read_all(void);
 void sensor_check_threshold(void);
 void sensor_suspend_check(bool suspend);
+void sensor_check_threshold_force_once(void);
 
 #endif

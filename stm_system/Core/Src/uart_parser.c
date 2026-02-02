@@ -117,6 +117,12 @@ void handle_packet(uint8_t type, uint8_t subtype,
 
         proto_send_sensor_data(temp_x10, humi_x10, ec, water);
 
+        // INIT 1회 anomaly 판단만 별도 수행
+		static bool init_checked = false;
+		if (!init_checked) {
+			sensor_check_threshold_force_once();
+			init_checked = true;
+		}
     }
 
     else if (type == TYPE_CMD && subtype == CMD_LED_ON) {
@@ -131,10 +137,11 @@ void handle_packet(uint8_t type, uint8_t subtype,
     }
 
     else if (type == TYPE_CMD && subtype == CMD_AUTO_RECOVERY) {
-		if (!auto_recovery_is_active()) {
-			auto_recovery_start_if_needed();
-		}
-	}
+
+        // 이미 anomaly로 선언된 것만 recovery 대상
+        auto_recovery_request(g_active_anomaly_mask);
+    }
+
 
     // [테스트용] 펌프 두개 작동&중지 테스트용임 이거 실제 사용하지 않음
     else if(type==TYPE_CMD && subtype == CMD_PUMP_WATER) {
