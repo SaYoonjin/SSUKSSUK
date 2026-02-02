@@ -45,10 +45,19 @@ const BORDER_COLOR = '#300e08';
 const CARD_BG = '#EDEDE9';
 
 const MODE_STORAGE_KEY = 'plantMode';
+
+// ✅ base key
 const NOTIF_SEEN_STATE_KEY = 'notifSeenState';
 
-// ✅ 식물 이름 캐시 키
 const PLANT_NAME_STORAGE_KEY = 'plantName';
+
+const NOTIF_CARD_MIN_H = 62;
+const NOTIF_CARD_GAP = 8;
+const MAX_VISIBLE_NOTIF_CARDS = 4;
+const LIST_MODAL_MAX_HEIGHT =
+    NOTIF_CARD_MIN_H * MAX_VISIBLE_NOTIF_CARDS +
+    NOTIF_CARD_GAP * (MAX_VISIBLE_NOTIF_CARDS - 1) +
+    4;
 
 type TodayNotificationsResponse = {
     success: boolean;
@@ -101,9 +110,14 @@ type ModalItem = {
     message: string;
     createdAt?: string;
     sensor?: SensorBarData;
+    notificationId?: number;
 };
 
-// ✅ 모달 짤림 방지: PixelBox innerStyle 받아서 모달에서만 stretch 처리 가능
+type SeenState = {
+    date: string;
+    lastSeenAt: string;
+};
+
 function PixelBox({ children, style, innerStyle }: any) {
     return (
         <View style={[styles.pixelBoxContainer, style]}>
@@ -278,7 +292,6 @@ export default function MainScreen() {
     const [todayCount, setTodayCount] = useState(0);
     const [latestNotification, setLatestNotification] = useState<any>(null);
 
-    // ✅ 닉네임(식물 이름)
     const [plantName, setPlantName] = useState<string>('');
 
     const translateX = useRef(new Animated.Value(0)).current;
@@ -289,6 +302,10 @@ export default function MainScreen() {
     const backgroundSource = useMemo(() => (useDayBg ? BG_DAY : BG_NIGHT), [useDayBg]);
     const toggleTranslateX = toggleAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 50] });
     const toggleBgColor = toggleAnim.interpolate({ inputRange: [0, 1], outputRange: ['#75A743', '#a1a1a1'] });
+
+    // ✅ plantId별 key 분리 (list/baloon도 분리)
+    const getNotifListSeenKey = (plantId: number) => `${NOTIF_SEEN_STATE_KEY}:list:${plantId}`;
+    const getNotifBalloonSeenKey = (plantId: number) => `${NOTIF_SEEN_STATE_KEY}:balloon:${plantId}`;
 
     const formatTimeHHmm = (iso: string) => {
         if (!iso) return '';
@@ -340,11 +357,10 @@ export default function MainScreen() {
         schedule();
     }, []);
 
-    // ✅ 앱 시작 시 저장된 모드 복구
     useEffect(() => {
         const initMode = async () => {
             try {
-                const stored = await AsyncStorage.getItem(MODE_STORAGE_KEY); // 'AUTO' | 'MANUAL' | null
+                const stored = await AsyncStorage.getItem(MODE_STORAGE_KEY);
                 const auto = stored ? stored === 'AUTO' : true;
 
                 setIsAutoMode(auto);
@@ -357,7 +373,6 @@ export default function MainScreen() {
         initMode();
     }, [toggleAnim]);
 
-    // ✅ 앱 시작 시 저장된 plantName 먼저 복구 (깜빡임 방지)
     useEffect(() => {
         const initPlantName = async () => {
             try {
@@ -407,44 +422,7 @@ export default function MainScreen() {
         }
     };
 
-    const fetchTodayNotifications = useCallback(async () => {
-        try {
-            const res = await client.post<TodayNotificationsResponse>('/notifications/list', {});
-            const data = res.data.data;
-            if (!data) return;
-
-            const rawState = await AsyncStorage.getItem(NOTIF_SEEN_STATE_KEY);
-            const parsed = rawState ? JSON.parse(rawState) : {};
-            const lastSeen = parsed.date === data.date ? parsed.lastSeenAt : null;
-
-            const list = data.notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            const unread = lastSeen ? list.filter(n => new Date(n.createdAt).getTime() > new Date(lastSeen).getTime()) : list;
-
-            setTodayNotifications(data);
-            setTodayCount(unread.length);
-            setLatestNotification(unread[0] || null);
-        } catch {}
-    }, []);
-
-    useEffect(() => {
-        fetchTodayNotifications();
-        const id = setInterval(fetchTodayNotifications, 30000);
-        return () => clearInterval(id);
-    }, [fetchTodayNotifications]);
-
-    const onPressBell = async () => {
-        if (todayNotifications?.notifications) {
-            const list = [...todayNotifications.notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            openModal('오늘의 알림', list, 'list');
-            if (list.length > 0) {
-                await AsyncStorage.setItem(NOTIF_SEEN_STATE_KEY, JSON.stringify({ date: todayNotifications.date, lastSeenAt: list[0].createdAt }));
-                setTodayCount(0);
-                setLatestNotification(null);
-            }
-        }
-    };
-
-    // ✅ plantId 캐시가 있어도 plantName이 없으면 /plants로 name 채우게 수정 (닉네임 안 뜨는 문제 해결)
+    // ✅ (원래대로) is_main=true plant_id 확보 로직 유지
     const getPlantId = useCallback(async () => {
         const cached = await AsyncStorage.getItem('plantId');
         const cachedName = await AsyncStorage.getItem(PLANT_NAME_STORAGE_KEY);
@@ -453,7 +431,6 @@ export default function MainScreen() {
 
         if (cachedName) setPlantName(cachedName);
 
-        // pid도 있고 name도 있으면 그대로 사용
         if (cachedPid && cachedName) {
             return cachedPid;
         }
@@ -485,10 +462,114 @@ export default function MainScreen() {
         return cachedPid;
     }, []);
 
-    // ✅ 앱 시작 시 한 번 확보
     useEffect(() => {
         getPlantId();
     }, [getPlantId]);
+
+    const readSeenAt = async (key: string, serverDate: string) => {
+        try {
+            const raw = await AsyncStorage.getItem(key);
+            if (!raw) return null;
+            const parsed: SeenState = JSON.parse(raw);
+            if (!parsed?.date || !parsed?.lastSeenAt) return null;
+            if (parsed.date !== serverDate) return null;
+            return parsed.lastSeenAt;
+        } catch {
+            return null;
+        }
+    };
+
+    const writeSeenAt = async (key: string, serverDate: string, lastSeenAt: string) => {
+        try {
+            await AsyncStorage.setItem(key, JSON.stringify({ date: serverDate, lastSeenAt }));
+        } catch {}
+    };
+
+    const fetchTodayNotifications = useCallback(async () => {
+        try {
+            const plantId = await getPlantId();
+            if (!plantId) return;
+
+            const res = await client.post<TodayNotificationsResponse>('/notifications/list', {});
+            const data = res.data.data;
+            if (!data) return;
+
+            const list = data.notifications
+                .slice()
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+            const listSeenKey = getNotifListSeenKey(plantId);
+            const balloonSeenKey = getNotifBalloonSeenKey(plantId);
+
+            const listSeenAt = await readSeenAt(listSeenKey, data.date);
+            const balloonSeenAt = await readSeenAt(balloonSeenKey, data.date);
+
+            // ✅ 종 뱃지: "오늘의 알림 모달(목록)"을 확인한 이후부터는 0
+            const unreadForBadge = listSeenAt
+                ? list.filter(n => new Date(n.createdAt).getTime() > new Date(listSeenAt).getTime())
+                : list;
+
+            // ✅ 풍선: "최신 알림 1개" 읽었으면 사라짐 (balloonSeenAt 이후로 새로 온 것 중 최신 1개)
+            const balloonCandidate = balloonSeenAt
+                ? (list.find(n => new Date(n.createdAt).getTime() > new Date(balloonSeenAt).getTime()) || null)
+                : (list[0] || null);
+
+            setTodayNotifications({ ...data, notifications: list });
+            setTodayCount(unreadForBadge.length);
+            setLatestNotification(balloonCandidate);
+        } catch {}
+    }, [getPlantId]);
+
+    useEffect(() => {
+        fetchTodayNotifications();
+        const id = setInterval(fetchTodayNotifications, 30000);
+        return () => clearInterval(id);
+    }, [fetchTodayNotifications]);
+
+    const onPressBell = async () => {
+        try {
+            const plantId = await getPlantId();
+            if (!plantId) return;
+
+            if (todayNotifications?.notifications) {
+                const list = [...todayNotifications.notifications].sort(
+                    (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+
+                openModal('오늘의 알림', list, 'list');
+
+                // ✅ "오늘의 알림"을 한 번 다 확인하면: 종 뱃지 0
+                // ✅ 동시에 최신도 확인한거니까 풍선도 같이 없애는게 자연스러움
+                if (todayNotifications?.date && list.length > 0) {
+                    const latestAt = list[0].createdAt;
+                    await writeSeenAt(getNotifListSeenKey(plantId), todayNotifications.date, latestAt);
+                    await writeSeenAt(getNotifBalloonSeenKey(plantId), todayNotifications.date, latestAt);
+
+                    setTodayCount(0);
+                    setLatestNotification(null);
+                }
+            }
+        } catch {}
+    };
+
+    const onPressBalloon = async () => {
+        try {
+            const plantId = await getPlantId();
+            if (!plantId) return;
+
+            if (!latestNotification) return;
+
+            openModal('최신 알림', [latestNotification], 'list');
+
+            // ✅ 풍선은 "최신 1개"만 읽음 처리 (종 뱃지는 그대로 남아있을 수 있음)
+            if (todayNotifications?.date && latestNotification?.createdAt) {
+                await writeSeenAt(getNotifBalloonSeenKey(plantId), todayNotifications.date, latestNotification.createdAt);
+            }
+
+            setLatestNotification(null);
+            await fetchTodayNotifications();
+        } catch {}
+    };
 
     const buildWaterGuide = (current: number, min: number, max: number) => {
         if (current > max) return '물 수위가 높아요. \n수위가 높으면 뿌리 손상이 생길 수 있으니 급수 중지가 필요해요!';
@@ -502,6 +583,7 @@ export default function MainScreen() {
         return '영양분 농도가 정상이에요. \n따로 조치할 필요 없어요.';
     };
 
+    // ✅✅✅ 여기 중요: 수위/농도는 원래대로 getPlantId()만 사용 (내가 건드린거 원복)
     const onPressWaterSign = useCallback(async () => {
         openModal('수위 정보', '불러오는 중...', 'sign');
         try {
@@ -608,7 +690,6 @@ export default function MainScreen() {
                     <Pressable onPress={() => handleToggle(false)} style={styles.togglePiece}><Text style={[styles.togglePieceText, !isAutoMode && styles.textActive]}>MANU</Text></Pressable>
                 </View>
 
-                {/* ✅ 표지판 영역에 식물 이름 표시 */}
                 <View style={styles.plantNameWrap} pointerEvents="none">
                     <Text style={styles.plantNameText}>{plantName ? plantName : ''}</Text>
                 </View>
@@ -625,7 +706,7 @@ export default function MainScreen() {
 
                 <Animated.View style={[styles.characterWrapper, { transform: [{ translateX }, { translateY: combinedTranslateY }] }]}>
                     {latestNotification && (
-                        <Pressable style={styles.alarmWrap} onPress={() => openModal('최신 알림', [latestNotification], 'list')}>
+                        <Pressable style={styles.alarmWrap} onPress={onPressBalloon}>
                             <View style={styles.alarmBox}><Image source={ALARM_ICON} style={styles.alarmIcon} /></View>
                         </Pressable>
                     )}
@@ -637,7 +718,6 @@ export default function MainScreen() {
                 <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
                     <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
                     <Animated.View onStartShouldSetResponder={() => true} style={{ transform: [{ scale: modalScale }] }}>
-                        {/* ✅ 모달 짤림 방지: innerStyle로 stretch + maxHeight 화면비 */}
                         <PixelBox style={styles.modalContent} innerStyle={styles.modalInner}>
                             <View style={styles.modalHeaderCustom}>
                                 <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
@@ -645,7 +725,10 @@ export default function MainScreen() {
                             </View>
 
                             <ScrollView
-                                style={styles.modalScroll}
+                                style={[
+                                    styles.modalScroll,
+                                    modalTitle === '오늘의 알림' && styles.modalScrollLimit4,
+                                ]}
                                 contentContainerStyle={styles.modalScrollContent}
                                 showsVerticalScrollIndicator={false}
                             >
@@ -706,7 +789,6 @@ const styles = StyleSheet.create({
     togglePieceText: { fontFamily: FONT, fontSize: 14, color: BORDER_COLOR, opacity: 0.4, zIndex: 10 },
     textActive: { color: '#FFF', opacity: 1 },
 
-    // ✅ 표지판(나무판) 쪽에 자연스럽게
     plantNameWrap: {
         position: 'absolute',
         top: 34,
@@ -734,7 +816,6 @@ const styles = StyleSheet.create({
     alarmBox: { width: 78, height: 78, justifyContent: 'center', alignItems: 'center' },
     alarmIcon: { width: 70, height: 70, resizeMode: 'contain' },
 
-    // 모달 짤림 방지: padding 주고, maxHeight 화면비로
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.7)',
@@ -752,14 +833,16 @@ const styles = StyleSheet.create({
     closeBtnText: { fontFamily: FONT, fontSize: 18, color: '#999' },
 
     modalScroll: { width: '100%' },
+    modalScrollLimit4: { maxHeight: LIST_MODAL_MAX_HEIGHT },
     modalScrollContent: { paddingBottom: 10 },
 
     notifCard: {
         width: '100%',
+        minHeight: NOTIF_CARD_MIN_H,
         backgroundColor: '#fafaf6',
         borderRadius: 6,
         padding: 12,
-        marginBottom: 8,
+        marginBottom: NOTIF_CARD_GAP,
         borderWidth: 1,
         borderColor: '#e6e6e0',
     },
