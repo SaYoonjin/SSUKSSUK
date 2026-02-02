@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -13,6 +13,7 @@ import {
     PanResponder,
     ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Svg, {
     Line,
     Polyline,
@@ -50,6 +51,19 @@ type PlantImage = {
 
 export default function HistoryScreen({ navigation }: any) {
     const periodLabel = '2026.01.17 - 2026.01.23';
+
+    // ✅ 탭 전환(포커스) 시 페이드 인
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    useFocusEffect(
+        useCallback(() => {
+            fadeAnim.setValue(0);
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 180,
+                useNativeDriver: true,
+            }).start();
+        }, [fadeAnim]),
+    );
 
     // 사진 관련 상태
     const [photoIndex, setPhotoIndex] = useState(0);
@@ -137,209 +151,211 @@ export default function HistoryScreen({ navigation }: any) {
     const anomalyNutrient = dummyAnomaly.map(d => d.nutrient);
 
     return (
-        <SafeAreaView style={styles.screen}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>식물 히스토리</Text>
-            </View>
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+            <SafeAreaView style={styles.screen}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>식물 히스토리</Text>
+                </View>
 
-            <ScrollView
-                contentContainerStyle={styles.content}
-                showsVerticalScrollIndicator={false}
-            >
-                <SectionHeader title="현재 모습" />
-                <PixelBox hasShadow style={{ padding: 0 }}>
-                    <View style={styles.photoWrap}>
-                        {loadingPhotos ? (
-                            <View
-                                style={[
-                                    styles.photoContainer,
-                                    { justifyContent: 'center', alignItems: 'center' },
-                                ]}
-                            >
-                                <ActivityIndicator size="large" color={ACCENT} />
-                            </View>
-                        ) : recentPhotos.length > 0 ? (
-                            <>
-                                <Animated.View
+                <ScrollView
+                    contentContainerStyle={styles.content}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <SectionHeader title="현재 모습" />
+                    <PixelBox hasShadow style={{ padding: 0 }}>
+                        <View style={styles.photoWrap}>
+                            {loadingPhotos ? (
+                                <View
                                     style={[
-                                        styles.slideContainer,
-                                        {
-                                            width: PHOTO_WIDTH * recentPhotos.length,
-                                            transform: [{ translateX: scrollX }],
-                                        },
+                                        styles.photoContainer,
+                                        { justifyContent: 'center', alignItems: 'center' },
                                     ]}
                                 >
-                                    {recentPhotos.map((url, i) => (
-                                        <View key={i} style={styles.photoContainer}>
-                                            <Image
-                                                source={{ uri: url }}
-                                                style={styles.photo}
-                                                resizeMode="cover"
+                                    <ActivityIndicator size="large" color={ACCENT} />
+                                </View>
+                            ) : recentPhotos.length > 0 ? (
+                                <>
+                                    <Animated.View
+                                        style={[
+                                            styles.slideContainer,
+                                            {
+                                                width: PHOTO_WIDTH * recentPhotos.length,
+                                                transform: [{ translateX: scrollX }],
+                                            },
+                                        ]}
+                                    >
+                                        {recentPhotos.map((url, i) => (
+                                            <View key={i} style={styles.photoContainer}>
+                                                <Image
+                                                    source={{ uri: url }}
+                                                    style={styles.photo}
+                                                    resizeMode="cover"
+                                                />
+                                            </View>
+                                        ))}
+                                    </Animated.View>
+
+                                    <View style={styles.statusBadge}>
+                                        <View style={styles.statusDot} />
+                                        <Text style={styles.statusText}>RECENT FEED</Text>
+                                    </View>
+
+                                    {photoIndex > 0 && (
+                                        <Pressable
+                                            onPress={goPrev}
+                                            style={[styles.photoNavBtn, { left: 10 }]}
+                                            hitSlop={10}
+                                        >
+                                            <Text style={styles.photoNavText}>◀</Text>
+                                        </Pressable>
+                                    )}
+                                    {photoIndex < recentPhotos.length - 1 && (
+                                        <Pressable
+                                            onPress={goNext}
+                                            style={[styles.photoNavBtn, { right: 10 }]}
+                                            hitSlop={10}
+                                        >
+                                            <Text style={styles.photoNavText}>▶</Text>
+                                        </Pressable>
+                                    )}
+                                    <View style={styles.photoIndicatorRow}>
+                                        {recentPhotos.map((_, i) => (
+                                            <View
+                                                key={i}
+                                                style={[
+                                                    styles.photoDot,
+                                                    i === photoIndex
+                                                        ? { backgroundColor: '#FFD700' }
+                                                        : { backgroundColor: '#FFF' },
+                                                ]}
                                             />
-                                        </View>
-                                    ))}
-                                </Animated.View>
-
-                                <View style={styles.statusBadge}>
-                                    <View style={styles.statusDot} />
-                                    <Text style={styles.statusText}>RECENT FEED</Text>
-                                </View>
-
-                                {photoIndex > 0 && (
-                                    <Pressable
-                                        onPress={goPrev}
-                                        style={[styles.photoNavBtn, { left: 10 }]}
-                                        hitSlop={10}
-                                    >
-                                        <Text style={styles.photoNavText}>◀</Text>
-                                    </Pressable>
-                                )}
-                                {photoIndex < recentPhotos.length - 1 && (
-                                    <Pressable
-                                        onPress={goNext}
-                                        style={[styles.photoNavBtn, { right: 10 }]}
-                                        hitSlop={10}
-                                    >
-                                        <Text style={styles.photoNavText}>▶</Text>
-                                    </Pressable>
-                                )}
-                                <View style={styles.photoIndicatorRow}>
-                                    {recentPhotos.map((_, i) => (
-                                        <View
-                                            key={i}
-                                            style={[
-                                                styles.photoDot,
-                                                i === photoIndex
-                                                    ? { backgroundColor: '#FFD700' }
-                                                    : { backgroundColor: '#FFF' },
-                                            ]}
-                                        />
-                                    ))}
-                                </View>
-                            </>
-                        ) : (
-                            <View
-                                style={[
-                                    styles.photoContainer,
-                                    { justifyContent: 'center', alignItems: 'center' },
-                                ]}
-                            >
-                                <Text
-                                    style={{
-                                        fontFamily: 'NeoDunggeunmoPro-Regular',
-                                        color: '#666',
-                                    }}
+                                        ))}
+                                    </View>
+                                </>
+                            ) : (
+                                <View
+                                    style={[
+                                        styles.photoContainer,
+                                        { justifyContent: 'center', alignItems: 'center' },
+                                    ]}
                                 >
-                                    등록된 사진이 없습니다.
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-                </PixelBox>
-
-                <SectionHeader title="기록 보관소" />
-                <Pressable
-                    onPress={() => navigation.navigate('HistoryAlbum', { plantId: 1 })}
-                >
-                    <PixelBox hasShadow style={styles.archiveBar}>
-                        <View style={styles.folderIcon}>
-                            <View style={styles.folderTab} />
-                            <View style={styles.folderBody} />
+                                    <Text
+                                        style={{
+                                            fontFamily: 'NeoDunggeunmoPro-Regular',
+                                            color: '#666',
+                                        }}
+                                    >
+                                        등록된 사진이 없습니다.
+                                    </Text>
+                                </View>
+                            )}
                         </View>
-                        <View style={styles.archiveTextWrap}>
-                            <Text style={styles.archiveTitle}>생장 앨범 열기</Text>
-                        </View>
-                        <Text style={styles.arrow}>≫</Text>
                     </PixelBox>
-                </Pressable>
 
-                <SectionHeader title="생장 그래프" />
-                <PixelBox hasShadow style={styles.chartBox}>
-                    <ChartPager
-                        width={SCREEN_WIDTH - 80}
-                        height={160}
-                        pages={[
-                            {
-                                key: 'height',
-                                titleRight: (
-                                    <LegendItem label="Height(cm)" color={HEIGHT_COLOR} />
-                                ),
-                                headerLeft: (
-                                    <Text style={styles.periodText}>{periodLabel}</Text>
-                                ),
-                                render: ({ onTouchingChange, chartWidth }) => (
-                                    <GrowthLineChartInteractive
-                                        days={dummyDays}
-                                        values={dummyGrowth}
-                                        width={chartWidth}
-                                        height={160}
-                                        onTouchingChange={onTouchingChange}
-                                        color={HEIGHT_COLOR}
-                                        fillOpacity={0.12}
-                                    />
-                                ),
-                            },
-                            {
-                                key: 'width',
-                                titleRight: (
-                                    <LegendItem label="Width(cm)" color={WIDTH_COLOR} />
-                                ),
-                                headerLeft: (
-                                    <Text style={styles.periodText}>{periodLabel}</Text>
-                                ),
-                                render: ({ onTouchingChange, chartWidth }) => (
-                                    <GrowthLineChartInteractive
-                                        days={dummyDays}
-                                        values={dummyWidth}
-                                        width={chartWidth}
-                                        height={160}
-                                        onTouchingChange={onTouchingChange}
-                                        color={WIDTH_COLOR}
-                                        fillOpacity={0.1}
-                                    />
-                                ),
-                            },
-                        ]}
-                    />
-                </PixelBox>
+                    <SectionHeader title="기록 보관소" />
+                    <Pressable
+                        onPress={() => navigation.navigate('HistoryAlbum', { plantId: 1 })}
+                    >
+                        <PixelBox hasShadow style={styles.archiveBar}>
+                            <View style={styles.folderIcon}>
+                                <View style={styles.folderTab} />
+                                <View style={styles.folderBody} />
+                            </View>
+                            <View style={styles.archiveTextWrap}>
+                                <Text style={styles.archiveTitle}>생장 앨범 열기</Text>
+                            </View>
+                            <Text style={styles.arrow}>≫</Text>
+                        </PixelBox>
+                    </Pressable>
 
-                <SectionHeader title="이상치 알람 그래프" />
-                <PixelBox hasShadow style={styles.chartBox}>
-                    <View style={styles.monitorHeader}>
-                        <View style={[styles.monitorLed, { backgroundColor: ACCENT }]} />
-                        <Text style={styles.monitorTitle}>ANOMALY MONITOR</Text>
-                    </View>
+                    <SectionHeader title="생장 그래프" />
+                    <PixelBox hasShadow style={styles.chartBox}>
+                        <ChartPager
+                            width={SCREEN_WIDTH - 80}
+                            height={160}
+                            pages={[
+                                {
+                                    key: 'height',
+                                    titleRight: (
+                                        <LegendItem label="Height(cm)" color={HEIGHT_COLOR} />
+                                    ),
+                                    headerLeft: (
+                                        <Text style={styles.periodText}>{periodLabel}</Text>
+                                    ),
+                                    render: ({ onTouchingChange, chartWidth }) => (
+                                        <GrowthLineChartInteractive
+                                            days={dummyDays}
+                                            values={dummyGrowth}
+                                            width={chartWidth}
+                                            height={160}
+                                            onTouchingChange={onTouchingChange}
+                                            color={HEIGHT_COLOR}
+                                            fillOpacity={0.12}
+                                        />
+                                    ),
+                                },
+                                {
+                                    key: 'width',
+                                    titleRight: (
+                                        <LegendItem label="Width(cm)" color={WIDTH_COLOR} />
+                                    ),
+                                    headerLeft: (
+                                        <Text style={styles.periodText}>{periodLabel}</Text>
+                                    ),
+                                    render: ({ onTouchingChange, chartWidth }) => (
+                                        <GrowthLineChartInteractive
+                                            days={dummyDays}
+                                            values={dummyWidth}
+                                            width={chartWidth}
+                                            height={160}
+                                            onTouchingChange={onTouchingChange}
+                                            color={WIDTH_COLOR}
+                                            fillOpacity={0.1}
+                                        />
+                                    ),
+                                },
+                            ]}
+                        />
+                    </PixelBox>
 
-                    <AnomalyButtonPager
-                        width={SCREEN_WIDTH - 80}
-                        height={180}
-                        days={dummyDays}
-                        series={[
-                            {
-                                key: 'total',
-                                label: '전체',
-                                color: '#FF3131',
-                                values: anomalyTotal,
-                            },
-                            {
-                                key: 'water',
-                                label: '수위',
-                                color: '#6495ED',
-                                values: anomalyWater,
-                            },
-                            {
-                                key: 'nutrient',
-                                label: '농도',
-                                color: '#9ACD32',
-                                values: anomalyNutrient,
-                            },
-                        ]}
-                    />
-                </PixelBox>
+                    <SectionHeader title="이상치 알람 그래프" />
+                    <PixelBox hasShadow style={styles.chartBox}>
+                        <View style={styles.monitorHeader}>
+                            <View style={[styles.monitorLed, { backgroundColor: ACCENT }]} />
+                            <Text style={styles.monitorTitle}>ANOMALY MONITOR</Text>
+                        </View>
 
-                <View style={{ height: 40 }} />
-            </ScrollView>
-        </SafeAreaView>
+                        <AnomalyButtonPager
+                            width={SCREEN_WIDTH - 80}
+                            height={180}
+                            days={dummyDays}
+                            series={[
+                                {
+                                    key: 'total',
+                                    label: '전체',
+                                    color: '#FF3131',
+                                    values: anomalyTotal,
+                                },
+                                {
+                                    key: 'water',
+                                    label: '수위',
+                                    color: '#6495ED',
+                                    values: anomalyWater,
+                                },
+                                {
+                                    key: 'nutrient',
+                                    label: '농도',
+                                    color: '#9ACD32',
+                                    values: anomalyNutrient,
+                                },
+                            ]}
+                        />
+                    </PixelBox>
+
+                    <View style={{ height: 40 }} />
+                </ScrollView>
+            </SafeAreaView>
+        </Animated.View>
     );
 }
 

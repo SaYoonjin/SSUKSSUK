@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -47,6 +47,9 @@ export default function ProfileScreen({ navigation }: any) {
   const [pushEnabled, setPushEnabled] = useState(true);
   const anim = useRef(new Animated.Value(1)).current;
 
+  // ✅ 탭 전환 페이드: "화면 자체 opacity" 말고 "오버레이"만 페이드 아웃
+  const overlayOpacity = useRef(new Animated.Value(1)).current;
+
   const fetchUserInfo = useCallback(async () => {
     setLoading(true);
     try {
@@ -67,8 +70,16 @@ export default function ProfileScreen({ navigation }: any) {
 
   useFocusEffect(
       useCallback(() => {
+        // 오버레이를 다시 덮고 → 빠르게 걷어내기
+        overlayOpacity.setValue(1);
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }).start();
+
         fetchUserInfo();
-      }, [fetchUserInfo])
+      }, [fetchUserInfo, overlayOpacity])
   );
 
   const togglePush = () => {
@@ -90,7 +101,7 @@ export default function ProfileScreen({ navigation }: any) {
 
   const translateX = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [2, 22],
+    outputRange: [2, 26],
   });
 
   const onLogout = () => {
@@ -181,6 +192,19 @@ export default function ProfileScreen({ navigation }: any) {
           <MenuRow label="로그아웃" onPress={onLogout} danger />
           <MenuRow label="탈퇴하기" onPress={onWithdraw} danger />
         </ScrollView>
+
+        {/* ✅ 화면 자체는 그대로(100%), "덮개"만 사라지게 */}
+        <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor: BG, // 검정 싫으면 BG로
+                opacity: overlayOpacity,
+                zIndex: 50,
+              },
+            ]}
+        />
       </SafeAreaView>
   );
 }

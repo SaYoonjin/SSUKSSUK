@@ -37,6 +37,9 @@ export default function PlantScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
+  // ✅ 탭 전환(포커스) 시 페이드 인
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
   // ✅ 식물 목록 가져오기
   const fetchPlants = async () => {
     try {
@@ -53,10 +56,18 @@ export default function PlantScreen({ navigation }: any) {
   };
 
   useFocusEffect(
-    useCallback(() => {
-      fetchPlants();
-      return () => setActiveMenuId(null);
-    }, [])
+      useCallback(() => {
+        // 페이드 인
+        fadeAnim.setValue(0);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }).start();
+
+        fetchPlants();
+        return () => setActiveMenuId(null);
+      }, [fadeAnim])
   );
 
   // ✅ [API 명세 반영] 메인 식물 전환 핸들러
@@ -65,10 +76,10 @@ export default function PlantScreen({ navigation }: any) {
 
     // 1. UI 선반영 (Optimistic Update)
     setPlants((prev) =>
-      prev.map((p) => ({
-        ...p,
-        is_main: p.plant_id === id, // 선택한 것만 true
-      }))
+        prev.map((p) => ({
+          ...p,
+          is_main: p.plant_id === id, // 선택한 것만 true
+        }))
     );
     setActiveMenuId(null);
 
@@ -133,112 +144,114 @@ export default function PlantScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.fixedHeader}>
-        <Text style={styles.headerTitle}>나의 식물</Text>
-      </View>
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.fixedHeader}>
+            <Text style={styles.headerTitle}>나의 식물</Text>
+          </View>
 
-      <Pressable style={{ flex: 1 }} onPress={() => setActiveMenuId(null)}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {loading ? (
-            <View style={{ marginTop: 50 }}>
-              <ActivityIndicator size="large" color="#75A743" />
-            </View>
-          ) : (
-            <>
-              <View style={styles.gridContainer}>
-                {plants.map((plant) => {
-                  const speciesInfo = getSpeciesInfo(plant.species_id);
-                  const displayName = plant.name ? plant.name : speciesInfo.defaultName;
+          <Pressable style={{ flex: 1 }} onPress={() => setActiveMenuId(null)}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+              {loading ? (
+                  <View style={{ marginTop: 50 }}>
+                    <ActivityIndicator size="large" color="#75A743" />
+                  </View>
+              ) : (
+                  <>
+                    <View style={styles.gridContainer}>
+                      {plants.map((plant) => {
+                        const speciesInfo = getSpeciesInfo(plant.species_id);
+                        const displayName = plant.name ? plant.name : speciesInfo.defaultName;
 
-                  return (
-                    <View key={plant.plant_id} style={styles.cardWrapper}>
-                      <PixelBox>
-                        <View style={styles.cardHeader}>
-                          <View style={styles.nameRow}>
-                            {/* ✅ 연결 상태 점 (is_connected 값에 따라 색상 변경) */}
-                            <View
-                              style={[
-                                styles.statusDot,
-                                { backgroundColor: plant.is_connected ? "#75A743" : "#CCC" },
-                              ]}
-                            />
-                            <Text style={styles.plantNickname} numberOfLines={1}>
-                              {displayName}
-                            </Text>
-                          </View>
+                        return (
+                            <View key={plant.plant_id} style={styles.cardWrapper}>
+                              <PixelBox>
+                                <View style={styles.cardHeader}>
+                                  <View style={styles.nameRow}>
+                                    {/* ✅ 연결 상태 점 (is_connected 값에 따라 색상 변경) */}
+                                    <View
+                                        style={[
+                                          styles.statusDot,
+                                          { backgroundColor: plant.is_connected ? "#75A743" : "#CCC" },
+                                        ]}
+                                    />
+                                    <Text style={styles.plantNickname} numberOfLines={1}>
+                                      {displayName}
+                                    </Text>
+                                  </View>
 
-                          <Pressable
-                            onPress={() =>
-                              setActiveMenuId((cur) =>
-                                cur === plant.plant_id ? null : plant.plant_id
-                              )
-                            }
-                            hitSlop={10}
-                          >
-                            <Text style={styles.menuDots}>•••</Text>
-                          </Pressable>
-                        </View>
+                                  <Pressable
+                                      onPress={() =>
+                                          setActiveMenuId((cur) =>
+                                              cur === plant.plant_id ? null : plant.plant_id
+                                          )
+                                      }
+                                      hitSlop={10}
+                                  >
+                                    <Text style={styles.menuDots}>•••</Text>
+                                  </Pressable>
+                                </View>
 
-                        <View style={styles.imageContainer}>
-                          {speciesInfo.image ? (
-                            <Image
-                              source={speciesInfo.image}
-                              style={styles.plantImage}
-                              resizeMode="contain"
-                            />
-                          ) : (
-                            <Text style={styles.emojiText}>🌱</Text>
-                          )}
-                        </View>
+                                <View style={styles.imageContainer}>
+                                  {speciesInfo.image ? (
+                                      <Image
+                                          source={speciesInfo.image}
+                                          style={styles.plantImage}
+                                          resizeMode="contain"
+                                      />
+                                  ) : (
+                                      <Text style={styles.emojiText}>🌱</Text>
+                                  )}
+                                </View>
 
-                        {/* ✅ 메인 선택 버튼 (is_main 값에 따라 상태 변경) */}
-                        <PixelButton
-                          text={plant.is_main ? "선택됨" : "선택하기"}
-                          disabled={plant.is_main} // 이미 메인이면 버튼 비활성화
-                          onPress={() => handleSelectMain(plant.plant_id)}
-                          style={{ marginTop: 10, width: "100%" }}
-                        />
+                                {/* ✅ 메인 선택 버튼 (is_main 값에 따라 상태 변경) */}
+                                <PixelButton
+                                    text={plant.is_main ? "선택됨" : "선택하기"}
+                                    disabled={plant.is_main} // 이미 메인이면 버튼 비활성화
+                                    onPress={() => handleSelectMain(plant.plant_id)}
+                                    style={{ marginTop: 10, width: "100%" }}
+                                />
 
-                        {activeMenuId === plant.plant_id && (
-                          <View style={styles.popupMenu}>
-                            <Pressable
-                              onPress={() => handleEdit(plant)}
-                              style={styles.menuItem}
-                            >
-                              <Text style={styles.menuText}>수정하기</Text>
-                            </Pressable>
-                            <View style={styles.menuDivider} />
-                            <Pressable
-                              onPress={() => handleDelete(plant.plant_id)}
-                              style={styles.menuItem}
-                            >
-                              <Text style={[styles.menuText, styles.deleteText]}>
-                                삭제하기
-                              </Text>
-                            </Pressable>
-                          </View>
-                        )}
-                      </PixelBox>
+                                {activeMenuId === plant.plant_id && (
+                                    <View style={styles.popupMenu}>
+                                      <Pressable
+                                          onPress={() => handleEdit(plant)}
+                                          style={styles.menuItem}
+                                      >
+                                        <Text style={styles.menuText}>수정하기</Text>
+                                      </Pressable>
+                                      <View style={styles.menuDivider} />
+                                      <Pressable
+                                          onPress={() => handleDelete(plant.plant_id)}
+                                          style={styles.menuItem}
+                                      >
+                                        <Text style={[styles.menuText, styles.deleteText]}>
+                                          삭제하기
+                                        </Text>
+                                      </Pressable>
+                                    </View>
+                                )}
+                              </PixelBox>
+                            </View>
+                        );
+                      })}
                     </View>
-                  );
-                })}
-              </View>
 
-              <PixelWideButton
-                text="+ 식물 추가"
-                onPress={() => navigation.navigate("PlantAddEdit", { mode: "add" })}
-                style={{ marginTop: 18 }}
-              />
-              <View style={{ height: 40 }} />
-            </>
-          )}
-        </ScrollView>
-      </Pressable>
-    </SafeAreaView>
+                    <PixelWideButton
+                        text="+ 식물 추가"
+                        onPress={() => navigation.navigate("PlantAddEdit", { mode: "add" })}
+                        style={{ marginTop: 18 }}
+                    />
+                    <View style={{ height: 40 }} />
+                  </>
+              )}
+            </ScrollView>
+          </Pressable>
+        </SafeAreaView>
+      </Animated.View>
   );
 }
 
@@ -248,35 +261,35 @@ export default function PlantScreen({ navigation }: any) {
 
 function PixelBox({ children, style }: any) {
   return (
-    <View style={[styles.pixelBoxContainer, style]}>
-      <View style={styles.pixelBgUnderlay} />
-      <View pointerEvents="none" style={[styles.shadeLeft, { left: -PIXEL, opacity: 0.05, width: PIXEL + 1 }]} />
-      <View pointerEvents="none" style={[styles.shadeLeft, { left: -PIXEL, opacity: 0.03, width: PIXEL * 2 }]} />
-      <View pointerEvents="none" style={[styles.shadeLeft, { left: -PIXEL, opacity: 0.015, width: PIXEL * 3 - 1 }]} />
-      <View pointerEvents="none" style={[styles.shadeLeft, { left: -PIXEL, top: PIXEL, bottom: PIXEL, opacity: 0.02, width: PIXEL * 4 - 1 }]} />
-      <View pointerEvents="none" style={[styles.shadeRight, { right: -PIXEL, opacity: 0.05, width: PIXEL + 1 }]} />
-      <View pointerEvents="none" style={[styles.shadeRight, { right: -PIXEL, opacity: 0.03, width: PIXEL * 2 }]} />
-      <View pointerEvents="none" style={[styles.shadeRight, { right: -PIXEL, opacity: 0.015, width: PIXEL * 3 - 1 }]} />
-      <View pointerEvents="none" style={[styles.shadeRight, { right: -PIXEL, top: PIXEL, bottom: PIXEL, opacity: 0.02, width: PIXEL * 4 - 1 }]} />
+      <View style={[styles.pixelBoxContainer, style]}>
+        <View style={styles.pixelBgUnderlay} />
+        <View pointerEvents="none" style={[styles.shadeLeft, { left: -PIXEL, opacity: 0.05, width: PIXEL + 1 }]} />
+        <View pointerEvents="none" style={[styles.shadeLeft, { left: -PIXEL, opacity: 0.03, width: PIXEL * 2 }]} />
+        <View pointerEvents="none" style={[styles.shadeLeft, { left: -PIXEL, opacity: 0.015, width: PIXEL * 3 - 1 }]} />
+        <View pointerEvents="none" style={[styles.shadeLeft, { left: -PIXEL, top: PIXEL, bottom: PIXEL, opacity: 0.02, width: PIXEL * 4 - 1 }]} />
+        <View pointerEvents="none" style={[styles.shadeRight, { right: -PIXEL, opacity: 0.05, width: PIXEL + 1 }]} />
+        <View pointerEvents="none" style={[styles.shadeRight, { right: -PIXEL, opacity: 0.03, width: PIXEL * 2 }]} />
+        <View pointerEvents="none" style={[styles.shadeRight, { right: -PIXEL, opacity: 0.015, width: PIXEL * 3 - 1 }]} />
+        <View pointerEvents="none" style={[styles.shadeRight, { right: -PIXEL, top: PIXEL, bottom: PIXEL, opacity: 0.02, width: PIXEL * 4 - 1 }]} />
 
-      <View style={styles.pixelTop} />
-      <View style={styles.pixelBottom} />
-      <View style={styles.pixelLeft} />
-      <View style={styles.pixelRight} />
-      <View style={styles.pixelCornerTL1} />
-      <View style={styles.pixelCornerTL2} />
-      <View style={styles.pixelCornerTL3} />
-      <View style={styles.pixelCornerTR1} />
-      <View style={styles.pixelCornerTR2} />
-      <View style={styles.pixelCornerTR3} />
-      <View style={styles.pixelCornerBL1} />
-      <View style={styles.pixelCornerBL2} />
-      <View style={styles.pixelCornerBL3} />
-      <View style={styles.pixelCornerBR1} />
-      <View style={styles.pixelCornerBR2} />
-      <View style={styles.pixelCornerBR3} />
-      <View style={styles.cardInner}>{children}</View>
-    </View>
+        <View style={styles.pixelTop} />
+        <View style={styles.pixelBottom} />
+        <View style={styles.pixelLeft} />
+        <View style={styles.pixelRight} />
+        <View style={styles.pixelCornerTL1} />
+        <View style={styles.pixelCornerTL2} />
+        <View style={styles.pixelCornerTL3} />
+        <View style={styles.pixelCornerTR1} />
+        <View style={styles.pixelCornerTR2} />
+        <View style={styles.pixelCornerTR3} />
+        <View style={styles.pixelCornerBL1} />
+        <View style={styles.pixelCornerBL2} />
+        <View style={styles.pixelCornerBL3} />
+        <View style={styles.pixelCornerBR1} />
+        <View style={styles.pixelCornerBR2} />
+        <View style={styles.pixelCornerBR3} />
+        <View style={styles.cardInner}>{children}</View>
+      </View>
   );
 }
 
@@ -286,19 +299,19 @@ function PixelButton({ text, onPress, disabled, style }: any) {
   const pressOut = () => Animated.timing(v, { toValue: 0, duration: 80, useNativeDriver: false }).start();
 
   return (
-    <Pressable onPress={onPress} disabled={disabled} onPressIn={pressIn} onPressOut={pressOut} style={style}>
-      <Animated.View style={[
-        styles.pixelBtn,
-        disabled && styles.pixelBtnDisabled,
-        {
-          borderBottomWidth: v.interpolate({ inputRange: [0, 1], outputRange: [4, 2] }) as any,
-          borderRightWidth: v.interpolate({ inputRange: [0, 1], outputRange: [4, 2] }) as any,
-          marginTop: v.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }) as any,
-        }
-      ]}>
-        <Text style={[styles.pixelBtnText, disabled && styles.pixelBtnTextDisabled]}>{text}</Text>
-      </Animated.View>
-    </Pressable>
+      <Pressable onPress={onPress} disabled={disabled} onPressIn={pressIn} onPressOut={pressOut} style={style}>
+        <Animated.View style={[
+          styles.pixelBtn,
+          disabled && styles.pixelBtnDisabled,
+          {
+            borderBottomWidth: v.interpolate({ inputRange: [0, 1], outputRange: [4, 2] }) as any,
+            borderRightWidth: v.interpolate({ inputRange: [0, 1], outputRange: [4, 2] }) as any,
+            marginTop: v.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }) as any,
+          }
+        ]}>
+          <Text style={[styles.pixelBtnText, disabled && styles.pixelBtnTextDisabled]}>{text}</Text>
+        </Animated.View>
+      </Pressable>
   );
 }
 
@@ -308,18 +321,18 @@ function PixelWideButton({ text, onPress, style }: any) {
   const pressOut = () => Animated.timing(v, { toValue: 0, duration: 80, useNativeDriver: false }).start();
 
   return (
-    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={style}>
-      <Animated.View style={[
-        styles.pixelWideBtn,
-        {
-          borderBottomWidth: v.interpolate({ inputRange: [0, 1], outputRange: [4, 2] }) as any,
-          borderRightWidth: v.interpolate({ inputRange: [0, 1], outputRange: [4, 2] }) as any,
-          marginTop: v.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }) as any,
-        }
-      ]}>
-        <Text style={styles.pixelWideBtnText}>{text}</Text>
-      </Animated.View>
-    </Pressable>
+      <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={style}>
+        <Animated.View style={[
+          styles.pixelWideBtn,
+          {
+            borderBottomWidth: v.interpolate({ inputRange: [0, 1], outputRange: [4, 2] }) as any,
+            borderRightWidth: v.interpolate({ inputRange: [0, 1], outputRange: [4, 2] }) as any,
+            marginTop: v.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }) as any,
+          }
+        ]}>
+          <Text style={styles.pixelWideBtnText}>{text}</Text>
+        </Animated.View>
+      </Pressable>
   );
 }
 
