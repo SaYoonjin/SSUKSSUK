@@ -102,9 +102,8 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
     @Query("""
         select up
         from UserPlant up
-        join fetch up.species s
-        left join fetch up.device d
         where up.user.id = :userId
+          and up.removedAt is null
     """)
     List<UserPlant> findAllByUserIdWithJoin(Long userId);
 

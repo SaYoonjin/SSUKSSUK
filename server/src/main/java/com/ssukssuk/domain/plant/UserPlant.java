@@ -89,6 +89,7 @@ public class UserPlant {
     }
 
     public void unbindDevice() {
+        this.device = null;
         this.isConnected = false;
     }
 }
