@@ -21,7 +21,7 @@ public class HistoryController {
     private final PlantImageQueryService plantImageQueryService;
     private final PlantHistoryQueryService plantHistoryQueryService;
 
-    @GetMapping("/plants/{plantId}/sensor/latest")
+    @GetMapping("/{plantId}/sensors/latest")
     public ResponseEntity<SensorLogResponse> getLatestSensor(
             @PathVariable Long plantId
     ) {

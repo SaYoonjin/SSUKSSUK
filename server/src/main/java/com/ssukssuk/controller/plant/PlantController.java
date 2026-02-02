@@ -93,4 +93,13 @@ public class PlantController {
         return ApiResponse.ok();
     }
 
+    @PatchMapping("/{plantId}/main")
+    public ApiResponse<Void> switchMainPlant(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long plantId
+    ) {
+        userPlantService.switchMainPlant(userId, plantId);
+        return ApiResponse.ok();
+    }
+
 }

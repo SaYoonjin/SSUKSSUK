@@ -199,4 +199,25 @@ public class UserPlantService {
         plant.remove();
     }
 
+    @Transactional
+    public void switchMainPlant(Long userId, Long plantId) {
+
+        // 1. 요청 plant 조회 (본인 + 삭제 안 된 식물)
+        UserPlant targetPlant =
+                userPlantRepository.findByPlantIdAndUser_IdAndRemovedAtIsNull(plantId, userId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+
+        // 2. 이미 메인이면 그대로 종료
+        if (targetPlant.isMain()) return;
+
+        // 3. 기존 메인 식물 있으면 해제
+        userPlantRepository
+                .findByUser_IdAndIsMainTrueAndRemovedAtIsNull(userId)
+                .ifPresent(mainPlant -> mainPlant.changeMain(false));
+
+        // 4. 현재 식물 메인 설정
+        targetPlant.changeMain(true);
+    }
+
+
 }

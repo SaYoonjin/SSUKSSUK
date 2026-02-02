@@ -76,8 +76,12 @@ public class UserPlant {
         this.isMain = false;
     }
 
-    public void changeMain(boolean isMain) {
-        this.isMain = isMain;
+    public boolean isMain() {
+        return Boolean.TRUE.equals(this.isMain);
+    }
+
+    public void changeMain(boolean main) {
+        this.isMain = main;
     }
 
     public void changeName(String name) {

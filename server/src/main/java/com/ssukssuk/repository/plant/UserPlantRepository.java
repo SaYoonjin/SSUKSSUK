@@ -66,6 +66,16 @@ public interface UserPlantRepository extends JpaRepository<UserPlant, Long> {
             @Param("userId") Long userId
     );
 
+    // 요청 plant 조회 (본인 + 삭제 안 된 식물)
+    Optional<UserPlant> findByPlantIdAndUser_IdAndRemovedAtIsNull(
+            Long plantId, Long userId
+    );
+
+    // 현재 메인 식물 조회
+    Optional<UserPlant> findByUser_IdAndIsMainTrueAndRemovedAtIsNull(
+            Long userId
+    );
+
     // 사용자의 활성 식물-디바이스 연결 조회 (모드 변경 시 MQTT 전송용)
     @Query("""
         select up from UserPlant up
