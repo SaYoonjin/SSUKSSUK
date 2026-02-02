@@ -18,7 +18,11 @@ public class NutrientSensorService {
     private final UserPlantRepository userPlantRepository;
     private final SensorLogRepository sensorLogRepository;
 
-    public NutrientCardResponse getNutrientCard(Long plantId) {
+    public NutrientCardResponse getNutrientCard(Long userId, Long plantId) {
+
+        // 본인 식물 + 삭제 안 된 식물 검증
+        userPlantRepository.findByPlantIdAndUserId(plantId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
 
         Float idealMin = userPlantRepository.findNutrientMinByPlantId(plantId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));

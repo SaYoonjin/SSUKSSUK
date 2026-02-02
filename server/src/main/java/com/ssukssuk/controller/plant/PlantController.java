@@ -78,7 +78,7 @@ public class PlantController {
             @PathVariable Long plantId
     ) {
         return ApiResponse.ok(
-                waterSensorService.getWaterCard(plantId)
+                waterSensorService.getWaterCard(userId, plantId)
         );
     }
 
@@ -88,7 +88,7 @@ public class PlantController {
             @PathVariable Long plantId
     ) {
         return ApiResponse.ok(
-                nutrientSensorService.getNutrientCard(plantId)
+                nutrientSensorService.getNutrientCard(userId, plantId)
         );
     }
 

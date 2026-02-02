@@ -18,7 +18,11 @@ public class WaterSensorService {
     private final UserPlantRepository userPlantRepository;
     private final SensorLogRepository sensorLogRepository;
 
-    public WaterCardResponse getWaterCard(Long plantId) {
+    public WaterCardResponse getWaterCard(Long userId, Long plantId) {
+
+        // 본인 식물 + 삭제 안 된 식물 검증
+        userPlantRepository.findByPlantIdAndUserId(plantId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
 
         Float idealMin = userPlantRepository.findWaterMinByPlantId(plantId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
