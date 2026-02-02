@@ -125,6 +125,12 @@ const styles = StyleSheet.create({
   container: {
     height: 90,
     borderTopWidth: 0,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+    elevation: 0,
   },
   row: {
     flex: 1,
