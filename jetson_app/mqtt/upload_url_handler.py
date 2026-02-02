@@ -2,6 +2,7 @@
 
 import json
 import os
+import cv2
 from pathlib import Path
 from datetime import datetime
 
@@ -9,7 +10,7 @@ from config_loader import load_json
 from mqtt.ack_builder import build_ack
 from camera.camera_manager import CameraManager, CameraError
 from uploader.s3_uploader import S3Uploader, UploadError
-from telemetry.image_inference import build_image_inference
+from telemetry.image_inference import PlantInference
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config.json"
@@ -34,17 +35,9 @@ def handle_upload_url(payload: dict, mqtt_client, telemetry_base: str) -> dict:
     1. 카메라 촬영 (TOP, SIDE)
     2. data 폴더에 저장
     3. Presigned URL로 S3 업로드
-    4. 업로드 후 로컬 파일 삭제
-    5. IMAGE_INFERENCE 메시지 발행
+    4. IMAGE_INFERENCE 메시지 발행 (추론 포함)
+    5. 업로드 후 로컬 파일 삭제
     6. ACK 반환
-
-    Args:
-        payload: UPLOAD_URL 메시지
-        mqtt_client: MQTT 클라이언트 (IMAGE_INFERENCE 발행용)
-        telemetry_base: telemetry 베이스 토픽 (예: "devices/{serial}/telemetry")
-
-    Returns:
-        ACK dict
     """
 
     captured_paths = []  # 촬영된 파일 경로 (삭제용)
@@ -128,44 +121,54 @@ def handle_upload_url(payload: dict, mqtt_client, telemetry_base: str) -> dict:
         print(f"[UPLOAD_URL] uploaded to S3")
 
         # =========================
-        # 6) 업로드 성공 후 로컬 파일 삭제
+        # 6) IMAGE_INFERENCE 추론 및 발행
+        # (주의: 이미지를 읽어야 하므로 파일 삭제보다 먼저 실행)
+        # =========================
+        try:
+            # 1. 모델 로드
+            inference_engine = PlantInference(model_dir='models')
+
+            # 2. 로컬 이미지 읽기
+            side_path = captured["SIDE"]["path"]
+            top_path = captured["TOP"]["path"]
+            
+            side_img = cv2.imread(side_path)
+            top_img = cv2.imread(top_path)
+
+            if side_img is not None:
+                # 3. 추론 실행
+                inference_msg, _ = inference_engine.run_inference(
+                    serial_num=serial_num,
+                    plant_id=plant_id,
+                    top_img_path=upload_results["TOP"]["public_url"],
+                    side_img_path=upload_results["SIDE"]["public_url"],
+                    top_img_data=top_img if top_img is not None else side_img,
+                    side_img_data=side_img,
+                    top_time=upload_results["TOP"]["measured_at"],
+                    side_time=upload_results["SIDE"]["measured_at"]
+                )
+
+                # 4. MQTT 발행
+                mqtt_client.publish(
+                    f"{telemetry_base}/image-inference",
+                    json.dumps(inference_msg, ensure_ascii=False),
+                    qos=1,
+                    retain=False
+                )
+                print("[UPLOAD_URL] IMAGE_INFERENCE published (with Diagnosis)")
+            else:
+                print("[ERROR][UPLOAD_URL] Failed to load Side image for inference")
+
+        except Exception as e:
+            print(f"[WARNING][UPLOAD_URL] Inference failed (Skipping): {e}")
+
+        # =========================
+        # 7) 업로드 및 분석 완료 후 로컬 파일 삭제
         # =========================
         _delete_files(captured_paths)
 
-        # =========================
-        # 7) IMAGE_INFERENCE 발행
-        # =========================
-        # === TODO: 추론 구현 후 아래 부분 수정 ===
-        # 현재는 촬영/업로드만 수행하고 추론은 생략
-        # inference_result = model.predict(captured_paths)
-        # 아래 필드들을 채워넣기:
-        # - height, width, anomaly, symptom_enum, confidence
-
-        inference_msg = build_image_inference(
-            serial_num=serial_num,
-            plant_id=plant_id,
-            image_top=upload_results["TOP"],
-            image_side=upload_results["SIDE"],
-            # 추론 필드는 null
-            height=None,
-            width=None,
-            anomaly=None,
-            symptom_enum=None,
-            confidence=None
-        )
-
-        mqtt_client.publish(
-            f"{telemetry_base}/image-inference",
-            json.dumps(inference_msg),
-            qos=1,
-            retain=False
-        )
-
-        print("[UPLOAD_URL] IMAGE_INFERENCE published")
-
     except CameraError as e:
         print(f"[ERROR][UPLOAD_URL] camera failure: {e}")
-        # 카메라 에러 시에도 촬영된 파일 삭제
         _delete_files(captured_paths)
         return build_ack(
             ref_payload=payload,
@@ -176,7 +179,6 @@ def handle_upload_url(payload: dict, mqtt_client, telemetry_base: str) -> dict:
 
     except UploadError as e:
         print(f"[ERROR][UPLOAD_URL] upload failure: {e}")
-        # 업로드 실패 시에도 로컬 파일 삭제
         _delete_files(captured_paths)
         return build_ack(
             ref_payload=payload,
@@ -187,7 +189,6 @@ def handle_upload_url(payload: dict, mqtt_client, telemetry_base: str) -> dict:
 
     except Exception as e:
         print(f"[ERROR][UPLOAD_URL] internal failure: {e}")
-        # 기타 에러 시에도 로컬 파일 삭제
         _delete_files(captured_paths)
         return build_ack(
             ref_payload=payload,

@@ -53,6 +53,13 @@ BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 SETTING_PATH = BASE_DIR / "setting.json"
 
+def bump_seq(setting: dict, key: str):
+    setting["seq"][key] += 1
+
+    # 즉시 파일에 반영 (중요)
+    with open(SETTING_PATH, "w") as f:
+        json.dump(setting, f, indent=2)
+
 def main():
     # 초기 센서 1회 전송 제어
     boot_sensor_sent = False
@@ -285,6 +292,8 @@ def main():
                     
                     temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
                     
+                    bump_seq(setting, "SENSOR_UPLINK")
+                    
                     uplink = build_sensor_uplink(
                         serial_num=serial,
                         plant_id=setting["binding"]["plant_id"],
@@ -317,7 +326,9 @@ def main():
                         if pkt_sub == EVENT_WATER_ACTION_SUCCESS
                         else "NUTRI_ADD"
                     )
-                
+                    
+                    bump_seq(setting, "ACTION_RESULT")
+
                     action_uplink = build_action_uplink(
                         serial_num=serial,
                         plant_id=setting["binding"]["plant_id"],
@@ -378,6 +389,8 @@ def main():
                         action_type = "NUTRI_ADD"
                     else:
                         continue
+                    
+                    bump_seq(setting, "ACTION_RESULT")
                 
                     action_uplink = build_action_uplink(
                         serial_num=serial,
@@ -408,7 +421,9 @@ def main():
                     EVENT_EC_HIGH,
                 ):
                     continue
-            
+                
+                bump_seq(setting, "SENSOR_UPLINK")
+                
                 if pkt_sub in (EVENT_WATER_LOW, EVENT_WATER_HIGH):
                     trigger = "WATER_LEVEL"
                 else:
