@@ -62,5 +62,33 @@ public class PlantBindingService {
         );
         plant.bindDevice(newDevice);
         newDevice.bindPlant();
+
+        // 이 식물을 main으로 설정
+        userPlantRepository.findMainPlantByUserId(plant.getUser().getId())
+                .ifPresent(UserPlant::changeMainFalse);
+        plant.changeMain(true);
+    }
+
+    /**
+     * 식물-디바이스 연결 (검증 포함)
+     * - 디바이스 소유권 검증
+     * - 디바이스 중복 연결 검증
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void bindWithValidation(Long userId, Long plantId, Long deviceId) {
+        Device device = deviceRepository.findById(deviceId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
+
+        // 디바이스 소유자 검증
+        if (device.getUser() == null || !device.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
+        }
+
+        // 이미 다른 식물에 연결된 디바이스인지 확인
+        if (userPlantRepository.findConnectedPlantByDeviceId(deviceId).isPresent()) {
+            throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
+        }
+
+        bind(plantId, deviceId);
     }
 }

@@ -4,13 +4,17 @@ import com.ssukssuk.common.exception.CustomException;
 import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.history.PlantImage;
 import com.ssukssuk.dto.history.GetPlantImagesResponse;
+import com.ssukssuk.dto.history.PlantHistoryResponse;
 import com.ssukssuk.repository.history.PlantImageRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import com.ssukssuk.service.s3.S3PresignService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -30,8 +34,8 @@ public class PlantImageQueryService {
 
     // 특정 식물의 최근 14일간 이미지 조회 (사용자 소유 여부 검증 포함)
     public GetPlantImagesResponse getRecent14DaysImages(Long userId, Long plantId) {
-        // // 사용자-식물 소유 관계 검증
-        if (!userPlantRepository.existsByPlantIdAndUserId(userId, plantId)) {
+        // 사용자-식물 소유 관계 검증
+        if (!userPlantRepository.existsByPlantIdAndUserId(plantId, userId)) {
             throw new CustomException(ErrorCode.PLANT_ACCESS_DENIED);
         }
 
@@ -58,5 +62,42 @@ public class PlantImageQueryService {
                 .period(FIXED_PERIOD_DAYS)
                 .images(images)
                 .build();
+    }
+
+    // 히스토리 탭에 최근 사진
+    public PlantHistoryResponse.CurrentImage getLatestTopSideImage(Long userId, Long plantId) {
+
+        // 사용자-식물 소유 관계 검증
+        if (!userPlantRepository.existsByPlantIdAndUserId(plantId, userId)) {
+            throw new CustomException(ErrorCode.PLANT_ACCESS_DENIED);
+        }
+
+        PlantImage latest = plantImageRepository
+                .findLatestByPlantId(plantId, (Pageable) PageRequest.of(0, 1))
+                .stream()
+                .findFirst()
+                .orElse(null);
+
+        // 이미지가 아예 없는 경우
+        if (latest == null) {
+            return PlantHistoryResponse.CurrentImage.builder()
+                    .imageUrl_top(null)
+                    .imageUrl_side(null)
+                    .capturedAt(null)
+                    .build();
+        }
+
+        return PlantHistoryResponse.CurrentImage.builder()
+                .imageUrl_top(safePublicUrl(latest.getImageUrlTop()))
+                .imageUrl_side(safePublicUrl(latest.getImageUrlSide()))
+                .capturedAt(latest.getCapturedAt())
+                .build();
+    }
+
+    /**
+     * null-safe public URL 변환
+     */
+    private String safePublicUrl(String path) {
+        return path == null ? null : s3PresignService.toPublicUrl(path);
     }
 }

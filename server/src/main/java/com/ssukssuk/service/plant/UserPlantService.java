@@ -15,7 +15,6 @@ import com.ssukssuk.repository.device.DeviceRepository;
 import com.ssukssuk.repository.plant.PlantStatusRepository;
 import com.ssukssuk.repository.plant.SpeciesRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
-import com.ssukssuk.service.device.DeviceControlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +31,6 @@ public class UserPlantService {
     private final DeviceRepository deviceRepository;
     private final UserPlantRepository userPlantRepository;
     private final PlantStatusRepository plantStatusRepository;
-    private final DeviceControlService deviceControlService;
     private final PlantBindingService plantBindingService;
 
     public CreatePlantResponse createPlant(
@@ -48,48 +46,13 @@ public class UserPlantService {
         Species species = speciesRepository.findById(speciesId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SPECIES_NOT_FOUND));
 
-        Device device = null;
-        boolean shouldBeMain = false;
-
-        // 디바이스가 있는 경우에만 연결 처리
-        if (deviceId != null) {
-            device = deviceRepository.findById(deviceId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
-
-            // 디바이스 소유자 검증
-            if (device.getUser() == null || !device.getUser().getId().equals(userId)) {
-                throw new CustomException(ErrorCode.DEVICE_NOT_OWNED);
-            }
-
-            // 이미 다른 식물에 연결된 디바이스인지 확인
-            if (userPlantRepository.findConnectedPlantByDeviceId(deviceId).isPresent()) {
-                throw new CustomException(ErrorCode.DEVICE_ALREADY_PAIRED);
-            }
-
-            // MQTT 발송 + ACK 대기 (실패 시 예외 발생, DB 저장 안함)
-            deviceControlService.sendBindingBound(
-                    device.getSerial(),
-                    null,  // plantId는 아직 생성 전이므로 null
-                    species.getSpeciesId()
-            );
-
-            // 디바이스에 식물 연결 상태 설정
-            device.bindPlant();
-
-            // 기존 main 식물이 있으면 해제
-            userPlantRepository.findMainPlantByUserId(userId)
-                    .ifPresent(UserPlant::changeMainFalse);
-
-            shouldBeMain = true;
-        }
-
-        // DB 저장
+        // 1. 식물 생성 (디바이스 없이)
         UserPlant userPlant = UserPlant.builder()
                 .user(user)
                 .species(species)
-                .device(device)
+                .device(null)
                 .plantName(plantName)
-                .isMain(shouldBeMain)
+                .isMain(false)
                 .build();
 
         userPlantRepository.save(userPlant);
@@ -101,12 +64,28 @@ public class UserPlantService {
 
         plantStatusRepository.save(plantStatus);
 
+        // 2. 디바이스가 있으면 바인딩 시도
+        String bindingError = null;
+        Long boundDeviceId = null;
+
+        if (deviceId != null) {
+            try {
+                // 바인딩 (별도 트랜잭션으로 MQTT + DB)
+                plantBindingService.bindWithValidation(userId, userPlant.getPlantId(), deviceId);
+                boundDeviceId = deviceId;
+            } catch (Exception e) {
+                // 바인딩 실패 시 에러 메시지 저장 (식물은 유지)
+                bindingError = e.getMessage();
+            }
+        }
+
         return CreatePlantResponse.builder()
                 .plantId(userPlant.getPlantId())
                 .name(userPlant.getPlantName())
                 .species(species.getSpeciesId())
-                .deviceId(device != null ? device.getDeviceId() : null)
+                .deviceId(boundDeviceId)
                 .characterCode(0)
+                .bindingError(bindingError)
                 .build();
     }
 
@@ -178,5 +157,46 @@ public class UserPlantService {
                 .map(MyPlantResponse::from)
                 .toList();
     }
+
+    @Transactional
+    public void deletePlant(Long userId, Long plantId) {
+
+        UserPlant plant = userPlantRepository.findByPlantIdAndUserId(plantId, userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+
+        boolean connected = Boolean.TRUE.equals(plant.getIsConnected());
+
+        // 디바이스가 연결돼 있으면 먼저 언바인드
+        if (connected) {
+            plantBindingService.unbind(plantId);
+        }
+
+        // - removedAt 설정
+        // - isMain = false
+        // - isConnected = false
+        // - device = null
+        plant.remove();
+    }
+
+    @Transactional
+    public void switchMainPlant(Long userId, Long plantId) {
+
+        // 1. 요청 plant 조회 (본인 + 삭제 안 된 식물)
+        UserPlant targetPlant =
+                userPlantRepository.findByPlantIdAndUser_IdAndRemovedAtIsNull(plantId, userId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+
+        // 2. 이미 메인이면 그대로 종료
+        if (targetPlant.isMain()) return;
+
+        // 3. 기존 메인 식물 있으면 해제
+        userPlantRepository
+                .findByUser_IdAndIsMainTrueAndRemovedAtIsNull(userId)
+                .ifPresent(mainPlant -> mainPlant.changeMain(false));
+
+        // 4. 현재 식물 메인 설정
+        targetPlant.changeMain(true);
+    }
+
 
 }
