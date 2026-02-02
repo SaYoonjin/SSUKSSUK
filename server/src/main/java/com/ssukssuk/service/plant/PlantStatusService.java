@@ -1,10 +1,12 @@
 package com.ssukssuk.service.plant;
 
 import com.ssukssuk.domain.plant.PlantStatus;
+import com.ssukssuk.event.PlantStatusUpdatedEvent;
 import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
 import com.ssukssuk.repository.plant.PlantStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlantStatusService {
 
     private final PlantStatusRepository plantStatusRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 센서 데이터로 PlantStatus 업데이트
@@ -34,6 +37,8 @@ public class PlantStatusService {
                 convertStatus(msg.getWaterLevelStatus()),
                 convertStatus(msg.getNutrientConcStatus())
         );
+
+        eventPublisher.publishEvent(new PlantStatusUpdatedEvent(plantId));
     }
 
     /**
@@ -48,6 +53,8 @@ public class PlantStatusService {
         }
 
         status.updateFromImage(height, width, anomaly);
+
+        eventPublisher.publishEvent(new PlantStatusUpdatedEvent(plantId));
     }
 
     /**
@@ -62,6 +69,8 @@ public class PlantStatusService {
         }
 
         status.markUnreadNotification();
+
+        eventPublisher.publishEvent(new PlantStatusUpdatedEvent(plantId));
     }
 
     // TODO: 알림 읽기 API 구현 시 호출

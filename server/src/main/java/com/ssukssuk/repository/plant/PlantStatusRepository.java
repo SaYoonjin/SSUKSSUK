@@ -18,4 +18,14 @@ public interface PlantStatusRepository
           and up.removedAt is null
     """)
     Optional<PlantStatus> findMainPlantStatusByUserId(@Param("userId") Long userId);
+
+    @Query("""
+        select ps from PlantStatus ps
+        join fetch ps.userPlant up
+        join fetch up.user u
+        where ps.plantId = :plantId
+          and up.isMain = true
+          and up.removedAt is null
+    """)
+    Optional<PlantStatus> findMainPlantStatusByPlantId(@Param("plantId") Long plantId);
 }
