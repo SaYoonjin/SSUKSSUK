@@ -2,7 +2,9 @@ package com.ssukssuk.controller.history;
 
 import com.ssukssuk.common.response.ApiResponse;
 import com.ssukssuk.dto.history.GetPlantImagesResponse;
+import com.ssukssuk.dto.history.PlantHistoryResponse;
 import com.ssukssuk.dto.history.SensorLogResponse;
+import com.ssukssuk.service.history.PlantHistoryQueryService;
 import com.ssukssuk.service.history.PlantImageQueryService;
 import com.ssukssuk.service.history.SensorLogService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ public class HistoryController {
 
     private final SensorLogService sensorLogService;
     private final PlantImageQueryService plantImageQueryService;
+    private final PlantHistoryQueryService plantHistoryQueryService;
 
     @GetMapping("/plants/{plantId}/sensor/latest")
     public ResponseEntity<SensorLogResponse> getLatestSensor(
@@ -36,4 +39,17 @@ public class HistoryController {
         GetPlantImagesResponse data = plantImageQueryService.getRecent14DaysImages(userId, plantId);
         return ResponseEntity.ok(ApiResponse.ok(data));
     }
+
+    // 히스토리 메인 화면 api
+    @GetMapping("/plants/{plantId}")
+    public ResponseEntity<ApiResponse<PlantHistoryResponse>> getPlantHistory(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long plantId
+    ) {
+        PlantHistoryResponse data =
+                plantHistoryQueryService.getPlantHistory(userId, plantId);
+
+        return ResponseEntity.ok(ApiResponse.ok(data));
+    }
+
 }

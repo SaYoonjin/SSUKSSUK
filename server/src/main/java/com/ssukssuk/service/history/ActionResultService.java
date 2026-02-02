@@ -53,7 +53,7 @@ public class ActionResultService {
 
             // 4. OPEN 이벤트 조회
             var sensorEvent = sensorEventRepository
-                    .findTopByPlant_PlantIdAndSensorCodeAndStateOrderByStartedAtDesc(
+                    .findLatestByPlantIdAndSensorCodeAndState(
                             msg.getPlantId(), sensorCode, true
                     )
                     .orElseThrow(() -> new IllegalStateException(
