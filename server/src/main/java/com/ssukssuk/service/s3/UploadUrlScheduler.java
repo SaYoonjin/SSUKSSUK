@@ -21,16 +21,24 @@ public class UploadUrlScheduler {
     private final UserPlantRepository userPlantRepository;
     private final UploadUrlPublishService uploadUrlPublishService;
 
-    @Scheduled(cron = "0 0 6 * * *", zone = "Asia/Seoul")
-    public void scheduleMorning() {
-        log.info("[UploadUrlScheduler] Morning batch started (06:00 KST)");
-        publishToAllConnectedPlants("0600");
-    }
+    // === 운영용 스케줄러 (6시, 18시) ===
+    // @Scheduled(cron = "0 0 6 * * *", zone = "Asia/Seoul")
+    // public void scheduleMorning() {
+    //     log.info("[UploadUrlScheduler] Morning batch started (06:00 KST)");
+    //     publishToAllConnectedPlants("0600");
+    // }
 
-    @Scheduled(cron = "0 0 18 * * *", zone = "Asia/Seoul")
-    public void scheduleEvening() {
-        log.info("[UploadUrlScheduler] Evening batch started (18:00 KST)");
-        publishToAllConnectedPlants("1800");
+    // @Scheduled(cron = "0 0 18 * * *", zone = "Asia/Seoul")
+    // public void scheduleEvening() {
+    //     log.info("[UploadUrlScheduler] Evening batch started (18:00 KST)");
+    //     publishToAllConnectedPlants("1800");
+    // }
+
+    // === 테스트용 스케줄러 (5분마다) ===
+    @Scheduled(cron = "0 */5 * * * *", zone = "Asia/Seoul")
+    public void scheduleTest() {
+        log.info("[UploadUrlScheduler] Test batch started (every 5 minutes)");
+        publishToAllConnectedPlants("TEST");
     }
 
     public void publishToAllConnectedPlants(String slot) {
