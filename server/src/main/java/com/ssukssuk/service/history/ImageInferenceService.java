@@ -166,18 +166,20 @@ public class ImageInferenceService {
         List<DailyHeightRow> rows =
                 imageInferenceRepository.findDailyLastHeight(plantId, startDt, endExclusive);
 
-        Map<LocalDate, Double> map = rows.stream()
+        Map<LocalDate, DailyHeightRow> map = rows.stream()
                 .collect(Collectors.toMap(
                         DailyHeightRow::getD,
-                        DailyHeightRow::getHeight
+                        row -> row
                 ));
 
         List<PlantHistoryResponse.GrowthPoint> data = new ArrayList<>(FIXED_PERIOD_DAYS);
         for (int i = 0; i < FIXED_PERIOD_DAYS; i++) {
             LocalDate d = start.plusDays(i);
+            DailyHeightRow row = map.get(d);
             data.add(PlantHistoryResponse.GrowthPoint.builder()
                     .date(d.toString())
-                    .height(map.get(d))
+                    .height(row != null ? row.getHeight() : null)
+                    .width(row != null ? row.getWidth() : null)
                     .build());
         }
 

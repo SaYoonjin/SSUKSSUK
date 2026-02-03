@@ -45,6 +45,7 @@ public class PlantHistoryResponse {
     public static class GrowthPoint {
         private String date;
         private Double height;
+        private Double width;
     }
 
     @Getter

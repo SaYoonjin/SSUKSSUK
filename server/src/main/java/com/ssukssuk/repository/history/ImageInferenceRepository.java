@@ -13,7 +13,8 @@ public interface ImageInferenceRepository
 
     @Query(value = """
         SELECT DATE(ii.inference_at) AS d,
-               ii.height AS height
+               ii.height AS height,
+               ii.width AS width
         FROM image_inference ii
         JOIN (
             SELECT DATE(inference_at) AS d,
