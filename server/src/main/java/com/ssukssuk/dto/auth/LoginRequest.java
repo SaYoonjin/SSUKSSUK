@@ -7,5 +7,6 @@ public record LoginRequest(
         @NotBlank @Email
         String email,
         @NotBlank
-        String password
+        String password,
+        String deviceId
 ) {}

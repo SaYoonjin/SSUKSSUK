@@ -11,6 +11,7 @@ import com.ssukssuk.dto.auth.*;
 import com.ssukssuk.repository.auth.RefreshTokenRepository;
 import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
+import com.ssukssuk.repository.push.PushTokenRepository;
 import com.ssukssuk.service.device.DeviceControlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +28,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserPlantRepository userPlantRepository;
+    private final PushTokenRepository pushTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final DeviceControlService deviceControlService;
@@ -86,6 +88,12 @@ public class UserService {
                         .expiresAt(jwtTokenProvider.getRefreshTokenExpiry())
                         .build()
         );
+
+        // deviceId가 있으면 fcm_token 테이블에서 user_id 매핑
+        if (req.deviceId() != null && !req.deviceId().isBlank()) {
+            pushTokenRepository.findByDeviceId(req.deviceId())
+                    .ifPresent(pushToken -> pushToken.setUserId(user.getId()));
+        }
 
         return new LoginResponse(
                 user.getId(),
@@ -218,8 +226,14 @@ public class UserService {
         로그아웃
      ========================= */
     @Transactional
-    public void logout(Long userId) {
+    public void logout(Long userId, LogoutRequest req) {
         refreshTokenRepository.deleteByUser_Id(userId);
+
+        // deviceId가 있으면 fcm_token 테이블에서 user_id 해제
+        if (req != null && req.deviceId() != null && !req.deviceId().isBlank()) {
+            pushTokenRepository.findByDeviceId(req.deviceId())
+                    .ifPresent(pushToken -> pushToken.setUserId(null));
+        }
     }
 
     /* =========================
