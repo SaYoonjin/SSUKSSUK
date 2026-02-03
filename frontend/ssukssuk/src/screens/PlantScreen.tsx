@@ -37,13 +37,15 @@ export default function PlantScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
-  // ✅ 탭 전환(포커스) 시 페이드 인
+  // 탭 전환(포커스) 시 페이드 인 애니메이션
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // ✅ 식물 목록 가져오기
-  const fetchPlants = async () => {
+  // ✅ [수정] 식물 목록 가져오기 (showLoading 파라미터 추가)
+  // showLoading이 false면 로딩 스피너를 띄우지 않고 데이터만 갱신합니다.
+  const fetchPlants = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true); // 로딩 표시 여부 제어
+
       const res = await client.get("/plants");
       if (res.data.success) {
         setPlants(res.data.data);
@@ -51,13 +53,13 @@ export default function PlantScreen({ navigation }: any) {
     } catch (error) {
       console.error("식물 목록 로드 실패:", error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useFocusEffect(
       useCallback(() => {
-        // 페이드 인
+        // 화면 진입 시 페이드 인 & 로딩 표시하며 데이터 조회
         fadeAnim.setValue(0);
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -65,45 +67,38 @@ export default function PlantScreen({ navigation }: any) {
           useNativeDriver: true,
         }).start();
 
-        fetchPlants();
+        fetchPlants(true); // 처음 들어올 땐 로딩 보여줌
         return () => setActiveMenuId(null);
       }, [fadeAnim])
   );
 
-  // ✅ [API 명세 반영] 메인 식물 전환 핸들러
+  // ✅ 메인 식물 전환 핸들러
   const handleSelectMain = async (id: number) => {
-    // const prevPlants = [...plants];
-
     // 1. UI 선반영 (Optimistic Update)
+    // 화면 깜빡임 없이 즉시 체크 표시가 바뀜
     setPlants((prev) =>
         prev.map((p) => ({
           ...p,
-          is_main: p.plant_id === id, // 선택한 것만 true
+          is_main: p.plant_id === id,
         }))
     );
     setActiveMenuId(null);
 
     try {
-      // 2. 서버 요청: 명세서에 있는 '메인 식물 전환' 전용 엔드포인트 호출
-      // PATCH /plants/{plantId}/main
+      // 2. 서버 요청
       const res = await client.patch(`/plants/${id}/main`, {});
 
       if (res.data.success) {
-        // 성공 시 목록 재조회
-        fetchPlants();
+        // ✅ [수정] 성공 시 '조용히' 데이터 갱신 (로딩 스피너 X)
+        // 이렇게 하면 화면이 번쩍거리지 않고 데이터만 최신화됩니다.
+        fetchPlants(false);
       } else {
         throw new Error(res.data.message || "서버 내부 오류");
       }
 
     } catch (error: any) {
       console.error("메인 전환 에러:", error);
-
-      // BE 미구현 상태이므로 에러 발생 시 로그만 찍고,
-      // 나중에 BE 구현되면 아래 주석 해제하여 롤백 처리 등 활성화
-
-      /* Alert.alert("실패", "아직 서버에 반영되지 않았습니다.");
-      setPlants(prevPlants); // 롤백
-      */
+      // 에러 발생 시 필요하다면 여기서 롤백 처리나 알림 표시
     }
   };
 
@@ -117,6 +112,7 @@ export default function PlantScreen({ navigation }: any) {
         onPress: async () => {
           try {
             await client.delete(`/plants/${id}`);
+            // 삭제 후에도 로딩 없이 목록 갱신
             setPlants((prev) => prev.filter((p) => p.plant_id !== id));
           } catch (error) {
             console.error("삭제 실패:", error);
@@ -155,6 +151,7 @@ export default function PlantScreen({ navigation }: any) {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+              {/* 로딩 중일 때만 스피너 표시 */}
               {loading ? (
                   <View style={{ marginTop: 50 }}>
                     <ActivityIndicator size="large" color="#75A743" />
@@ -171,7 +168,6 @@ export default function PlantScreen({ navigation }: any) {
                               <PixelBox>
                                 <View style={styles.cardHeader}>
                                   <View style={styles.nameRow}>
-                                    {/* ✅ 연결 상태 점 (is_connected 값에 따라 색상 변경) */}
                                     <View
                                         style={[
                                           styles.statusDot,
@@ -207,10 +203,9 @@ export default function PlantScreen({ navigation }: any) {
                                   )}
                                 </View>
 
-                                {/* ✅ 메인 선택 버튼 (is_main 값에 따라 상태 변경) */}
                                 <PixelButton
                                     text={plant.is_main ? "선택됨" : "선택하기"}
-                                    disabled={plant.is_main} // 이미 메인이면 버튼 비활성화
+                                    disabled={plant.is_main}
                                     onPress={() => handleSelectMain(plant.plant_id)}
                                     style={{ marginTop: 10, width: "100%" }}
                                 />
@@ -256,7 +251,7 @@ export default function PlantScreen({ navigation }: any) {
 }
 
 // ---------------------------
-// 픽셀 UI 컴포넌트들
+// 픽셀 UI 컴포넌트들 (스타일은 그대로 유지)
 // ---------------------------
 
 function PixelBox({ children, style }: any) {
