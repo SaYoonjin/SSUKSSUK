@@ -1,3 +1,4 @@
+// sensor.c
 #include "sensor.h"
 #include "protocol.h"
 #include "auto_recovery.h"
@@ -33,12 +34,32 @@ uint8_t g_active_anomaly_mask = 0;
 
 static bool sensor_check_suspended = false;
 
+// 최종 센서 값 (filtered)
 SensorData_t g_sensor = {0};
+
+// =======================
+// 필터 파라미터
+// =======================
+
+#define WATER_MA_SIZE   3
+#define EC_ALPHA        0.2f
+
+// =======================
+// 내부 필터 상태
+// =======================
+
+// 수위 Moving Average
+static float water_ma_buf[WATER_MA_SIZE] = {0};
+static uint8_t water_ma_idx = 0;
+static bool water_ma_init = false;
+
+// EC EMA
+static float ec_ema = 0.0f;
+static bool ec_ema_init = false;
 
 // =======================
 // 내부 유틸
 // =======================
-
 void sensor_suspend_check(bool suspend)
 {
     sensor_check_suspended = suspend;
@@ -49,6 +70,14 @@ static float ads1115_to_voltage(int16_t raw)
     return (raw * 4.096f) / 32768.0f;
 }
 
+static float moving_average(float *buf, uint8_t size)
+{
+    float sum = 0.0f;
+    for (uint8_t i = 0; i < size; i++) {
+        sum += buf[i];
+    }
+    return sum / size;
+}
 // =======================
 // 센서 읽기
 // =======================
@@ -62,9 +91,10 @@ void sensor_read_all(void)
     int16_t water_raw = last_water_raw;
     int16_t ec_raw    = last_ec_raw;
 
-    // AHT20
+    // ---- AHT20 ----
     AHT20_Read(&g_sensor.temperature, &g_sensor.humidity);
 
+    // ---- ADS1115 ----
     HAL_StatusTypeDef st0 =
         ADS1115_ReadSingleEnded(&hi2c1, 0, &water_raw);
     HAL_StatusTypeDef st1 =
@@ -85,13 +115,48 @@ void sensor_read_all(void)
         }
     }
 
+    // =======================
+    // RAW → 물리값 변환
+    // =======================
+
     float water_v = ads1115_to_voltage(last_water_raw);
     float ec_v    = ads1115_to_voltage(last_ec_raw);
 
-    g_sensor.water_level = (water_v / 3.3f) * 100.0f;
-    g_sensor.ec          = ec_v * 1000.0f;
-}
+    float water_raw_percent = (water_v / 3.3f) * 100.0f;
+    float ec_raw_ppm        = ec_v * 1000.0f;
 
+    // =======================
+    // 수위: Moving Average (3)
+    // =======================
+
+    water_ma_buf[water_ma_idx++] = water_raw_percent;
+    water_ma_idx %= WATER_MA_SIZE;
+
+    if (!water_ma_init && water_ma_idx == 0) {
+        water_ma_init = true;
+    }
+
+    if (water_ma_init) {
+        g_sensor.water_level =
+            moving_average(water_ma_buf, WATER_MA_SIZE);
+    } else {
+        g_sensor.water_level = water_raw_percent;
+    }
+
+    // =======================
+    // EC: EMA (α = 0.2)
+    // =======================
+
+    if (!ec_ema_init) {
+        ec_ema = ec_raw_ppm;
+        ec_ema_init = true;
+    } else {
+        ec_ema = EC_ALPHA * ec_raw_ppm +
+                 (1.0f - EC_ALPHA) * ec_ema;
+    }
+
+    g_sensor.ec = ec_ema;
+}
 // =======================
 // INIT 전용: 상태 선언 1회
 //  - CMD_REQ_SENSOR 첫 응답 직후 1번만 호출
