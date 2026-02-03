@@ -3,6 +3,8 @@ __pycache__/
 *.pyc
 build/
 devel/
+venv/
+.venv/
 
 # STM
 # Build artifacts (컴파일 결과물)
