@@ -4,6 +4,7 @@ import com.ssukssuk.domain.plant.PlantStatus;
 import com.ssukssuk.domain.plant.UserPlant;
 
 public record HomeResponse(
+        Long plantId,
         String plantName,
         Integer characterCode,
         Integer healthScore,
@@ -17,6 +18,7 @@ public record HomeResponse(
 ) {
     public static HomeResponse from(UserPlant userPlant, PlantStatus status) {
         return new HomeResponse(
+                userPlant.getPlantId(),
                 userPlant.getPlantName(),
                 status.getCharacterCode(),
                 status.getHealthScore(),
