@@ -35,20 +35,28 @@ type DeviceData = {
 export default function PlantAddEditScreen({ route, navigation }: any) {
   const { mode, plantData } = route.params || { mode: 'add' };
   const isEdit = mode === 'edit';
-  const currentPlantId = isEdit ? plantData?.plantId : null;
+
+  // ✅ [수정 1] 서버 데이터 키(snake_case)와 매칭하여 ID 추출
+  const currentPlantId = isEdit
+    ? plantData?.plant_id || plantData?.plantId
+    : null;
 
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
-  // 식물 종류 (ID or Name)
+  // ✅ [수정 2] 초기값 매핑 (species_id -> type)
   const [type, setType] = useState<string | number>(
-    isEdit ? plantData.type : '',
+    isEdit ? plantData.species_id ?? plantData.type : '',
   );
-  const [nickname, setNickname] = useState(isEdit ? plantData.nickname : '');
 
-  // [수정] 초기값: 수정 모드면 기존 ID, 추가 모드면 null (선택 안 함)
+  // ✅ [수정 3] 초기값 매핑 (name -> nickname)
+  const [nickname, setNickname] = useState(
+    isEdit ? plantData.name || plantData.nickname : '',
+  );
+
+  // ✅ [수정 4] 초기값 매핑 (device_id -> selectedDevice)
   const [selectedDevice, setSelectedDevice] = useState<string | null>(
-    isEdit && plantData.deviceId ? String(plantData.deviceId) : null,
+    isEdit ? String(plantData.device_id ?? plantData.deviceId ?? '') : null,
   );
 
   const [speciesList, setSpeciesList] = useState<PlantSpecies[]>([]);
@@ -80,40 +88,50 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
     fetchData();
   }, []);
 
-  // [수정] 드롭다운 아이템 생성 로직
+  // ✅ [수정 5] 디바이스 상태별 라벨 및 색상 지정 로직
   const dropdownDeviceItems = useMemo(() => {
     const items = deviceList.map(d => {
+      // 현재 수정 중인 식물과 연결된 디바이스인가?
       const isMyDevice = isEdit && d.connectedPlantId === currentPlantId;
+
+      // 선택 가능한가? (연결 안 되어 있거나, 이미 내꺼거나)
       const isAvailable = !d.plantConnected || isMyDevice;
+
+      let statusText = '';
+      let statusColor = '';
+
+      if (isMyDevice) {
+        statusText = '현재 연결됨';
+        statusColor = '#2E5A35'; // 진한 녹색 (강조)
+      } else if (isAvailable) {
+        statusText = '선택 가능';
+        statusColor = '#75A743'; // 연한 녹색
+      } else {
+        statusText = `사용 중 (${d.connectedPlantName || '다른 식물'})`;
+        statusColor = '#E04B4B'; // 빨간색
+      }
 
       return {
         label: d.serial,
         value: String(d.deviceId),
-        active: isAvailable,
-        statusText: isAvailable
-          ? '선택 가능'
-          : `사용 중 (${d.connectedPlantName || '다른 식물'})`,
+        active: isAvailable, // 사용 중인건 선택 불가(active: false)
+        statusText: statusText,
+        color: statusColor, // UI에 전달할 색상
       };
     });
-
-    // ❌ [삭제] '연결 해제' 옵션 제거 (NOT NULL 제약조건 때문)
-    // items.push({ label: '연결 해제', value: 'none', ... });
 
     return items;
   }, [deviceList, isEdit, currentPlantId]);
 
   const handleSave = async () => {
-    // 1. 식물 종류 체크
     if (!type) {
       Alert.alert('알림', '식물 종류를 선택해주세요.');
       return;
     }
-    // 2. 닉네임 체크
     if (!nickname.trim()) {
       Alert.alert('알림', '식물 닉네임을 입력해주세요.');
       return;
     }
-    // 3. [추가] 디바이스 선택 강제 (NOT NULL 대응)
     if (!selectedDevice || selectedDevice === 'none') {
       Alert.alert(
         '알림',
@@ -130,8 +148,9 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
       if (isEdit) {
         // [수정 모드]
         const res = await client.patch(`/plants/${currentPlantId}`, {
-          nickname: nickname.trim(),
-          deviceId: deviceIdPayload,
+          name: nickname.trim(),
+          species_id: Number(type),
+          device_id: deviceIdPayload,
         });
 
         if (res.data.success) {
@@ -145,8 +164,8 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
         // [추가 모드]
         const res = await client.post('/plants', {
           name: nickname.trim(),
-          species: Number(type),
-          deviceId: deviceIdPayload, // 무조건 숫자 전송
+          species_id: Number(type),
+          device_id: deviceIdPayload,
         });
 
         if (res.data.success) {
@@ -159,12 +178,6 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
       }
     } catch (error: any) {
       console.error('식물 저장 에러 상세:', error);
-
-      if (error.response) {
-        console.log('서버 응답 데이터:', error.response.data);
-        console.log('서버 응답 상태:', error.response.status);
-      }
-
       const msg =
         error.response?.data?.message || '서버 통신 중 오류가 발생했습니다.';
       Alert.alert('오류', msg);
@@ -209,14 +222,17 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
         <View style={{ zIndex: 3000, marginBottom: 20 }}>
           <Text style={styles.label}>식물 종류</Text>
           {isEdit ? (
+            // 수정 모드: 종류 변경 불가 (읽기 전용)
             <PixelBox style={{ backgroundColor: '#fafaf6', opacity: 0.8 }}>
               <View style={styles.inputInner}>
                 <Text style={[styles.inputText, { color: '#666' }]}>
-                  {type}
+                  {speciesList.find(s => s.speciesId === Number(type))?.name ||
+                    '로딩 중...'}
                 </Text>
               </View>
             </PixelBox>
           ) : (
+            // 추가 모드: 선택 가능
             <PixelDropdown
               placeholder="식물 종류 선택"
               items={speciesList.map(t => ({
@@ -249,7 +265,7 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
             selectedValue={selectedDevice}
             onSelect={(val: string) => setSelectedDevice(val)}
             items={dropdownDeviceItems}
-            hasSeparateItem={false} // 분리선 불필요
+            hasSeparateItem={false}
           />
         </View>
 
@@ -270,7 +286,7 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
   );
 }
 
-// ---------------- 픽셀 UI 컴포넌트들 (기존과 동일) ----------------
+// ---------------- 픽셀 UI 컴포넌트들 ----------------
 
 function PixelBox({ children, style, isDropdownList }: any) {
   return (
@@ -419,21 +435,31 @@ function PixelDropdown({
                             }
                           }}
                         >
+                          {/* ✅ [UI 수정] 상태에 따른 라벨 스타일 (내꺼는 볼드체) */}
                           <Text
                             style={[
                               styles.itemLabel,
                               isDisconnectItem && { color: '#E04B4B' },
+                              item.statusText === '현재 연결됨' && {
+                                color: '#2E5A35',
+                              },
                             ]}
                           >
                             {item.label}
                           </Text>
+
+                          {/* ✅ [UI 수정] 상태 텍스트 색상 적용 */}
                           {item.statusText ? (
                             <Text
                               style={[
                                 styles.itemStatus,
-                                item.active
-                                  ? { color: '#75A743' }
-                                  : { color: '#E04B4B' },
+                                {
+                                  color: item.color
+                                    ? item.color
+                                    : item.active
+                                    ? '#75A743'
+                                    : '#E04B4B',
+                                },
                               ]}
                             >
                               {item.statusText}
@@ -615,7 +641,6 @@ const styles = StyleSheet.create({
     color: '#555',
     fontSize: 16,
   },
-  // PixelBox 스타일 (기존 유지)
   pixelBoxContainer: {
     position: 'relative',
     marginHorizontal: PIXEL * 2,
