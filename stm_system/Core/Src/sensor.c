@@ -40,7 +40,6 @@ SensorData_t g_sensor = {0};
 // =======================
 // 필터 파라미터
 // =======================
-
 #define WATER_MA_SIZE   3
 #define EC_ALPHA        0.2f
 
@@ -78,6 +77,7 @@ static float moving_average(float *buf, uint8_t size)
     }
     return sum / size;
 }
+
 // =======================
 // 센서 읽기
 // =======================
