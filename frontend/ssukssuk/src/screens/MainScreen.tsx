@@ -52,9 +52,9 @@ const NOTIF_CARD_MIN_H = 62;
 const NOTIF_CARD_GAP = 8;
 const MAX_VISIBLE_NOTIF_CARDS = 4;
 const LIST_MODAL_MAX_HEIGHT =
-    NOTIF_CARD_MIN_H * MAX_VISIBLE_NOTIF_CARDS +
-    NOTIF_CARD_GAP * (MAX_VISIBLE_NOTIF_CARDS - 1) +
-    4;
+  NOTIF_CARD_MIN_H * MAX_VISIBLE_NOTIF_CARDS +
+  NOTIF_CARD_GAP * (MAX_VISIBLE_NOTIF_CARDS - 1) +
+  4;
 
 type TodayNotificationsResponse = {
   success: boolean;
@@ -116,91 +116,94 @@ type SeenState = {
 };
 
 type HomeResponse =
-    | {
-  success: true;
-  data: {
-    header?: {
-      todayNotificationCount?: number;
-      asOf?: string;
-    };
-    user?: {
-      userId: number;
-      nickname: string;
-    };
-    mainPlant?: {
-      plantId: number;
-      name: string;
-      species: string;
-      characterCode: string;
-      ageDays: number;
-    };
-    plantName?: string;
-    characterCode?: number;
-    healthScore?: number;
-    waterLevelStatus?: string;
-    nutrientStatus?: string;
-    temperature?: number;
-    humidity?: number;
-    temperatureStatus?: string;
-    humidityStatus?: string;
-    hasUnreadNotification?: boolean;
-    currentSensor?: {
-      waterLevel?: { value: number; status: string; updatedAt: string };
-      nutrient?: { value: number; status: string; updatedAt: string };
-      temperatureHumidity?: {
-        temperature: number;
-        humidity: number;
-        status: string;
-        updatedAt: string;
+  | {
+      success: true;
+      data: {
+        header?: {
+          todayNotificationCount?: number;
+          asOf?: string;
+        };
+        user?: {
+          userId: number;
+          nickname: string;
+        };
+        mainPlant?: {
+          plantId: number;
+          name: string;
+          species: string;
+          characterCode: string;
+          ageDays: number;
+        };
+        plantName?: string;
+        characterCode?: number;
+        healthScore?: number;
+        waterLevelStatus?: string;
+        nutrientStatus?: string;
+        temperature?: number;
+        humidity?: number;
+        temperatureStatus?: string;
+        humidityStatus?: string;
+        hasUnreadNotification?: boolean;
+        currentSensor?: {
+          waterLevel?: { value: number; status: string; updatedAt: string };
+          nutrient?: { value: number; status: string; updatedAt: string };
+          temperatureHumidity?: {
+            temperature: number;
+            humidity: number;
+            status: string;
+            updatedAt: string;
+          };
+        };
+        growthStatus?: { label: string; percentage: number };
+        environmentStatus?: { label: string; percentage: number };
+        statusMessage?: { statusMessage: string };
+        device?: { connected: boolean; deviceId?: string };
       };
+      error?: null;
+    }
+  | {
+      success: false;
+      message?: string;
+      error?: any;
+      data?: any;
     };
-    growthStatus?: { label: string; percentage: number };
-    environmentStatus?: { label: string; percentage: number };
-    statusMessage?: { statusMessage: string };
-    device?: { connected: boolean; deviceId?: string };
-  };
-  error?: null;
-}
-    | {
-  success: false;
-  message?: string;
-  error?: any;
-  data?: any;
-};
 
 function PixelBox({ children, style, innerStyle }: any) {
   return (
-      <View style={[styles.pixelBoxContainer, style]}>
-        <View style={styles.pixelBgUnderlay} />
-        <View
-            pointerEvents="none"
-            style={[styles.shadeLeft, { left: -PIXEL, opacity: 0.05, width: PIXEL }]}
-        />
-        <View
-            pointerEvents="none"
-            style={[
-              styles.shadeRight,
-              { right: -PIXEL, opacity: 0.05, width: PIXEL },
-            ]}
-        />
-        <View style={styles.pixelTop} />
-        <View style={styles.pixelBottom} />
-        <View style={styles.pixelLeft} />
-        <View style={styles.pixelRight} />
-        <View style={styles.pixelCornerTL1} />
-        <View style={styles.pixelCornerTL2} />
-        <View style={styles.pixelCornerTL3} />
-        <View style={styles.pixelCornerTR1} />
-        <View style={styles.pixelCornerTR2} />
-        <View style={styles.pixelCornerTR3} />
-        <View style={styles.pixelCornerBL1} />
-        <View style={styles.pixelCornerBL2} />
-        <View style={styles.pixelCornerBL3} />
-        <View style={styles.pixelCornerBR1} />
-        <View style={styles.pixelCornerBR2} />
-        <View style={styles.pixelCornerBR3} />
-        <View style={[styles.cardInner, innerStyle]}>{children}</View>
-      </View>
+    <View style={[styles.pixelBoxContainer, style]}>
+      <View style={styles.pixelBgUnderlay} />
+      <View
+        pointerEvents="none"
+        style={[
+          styles.shadeLeft,
+          { left: -PIXEL, opacity: 0.05, width: PIXEL },
+        ]}
+      />
+      <View
+        pointerEvents="none"
+        style={[
+          styles.shadeRight,
+          { right: -PIXEL, opacity: 0.05, width: PIXEL },
+        ]}
+      />
+      <View style={styles.pixelTop} />
+      <View style={styles.pixelBottom} />
+      <View style={styles.pixelLeft} />
+      <View style={styles.pixelRight} />
+      <View style={styles.pixelCornerTL1} />
+      <View style={styles.pixelCornerTL2} />
+      <View style={styles.pixelCornerTL3} />
+      <View style={styles.pixelCornerTR1} />
+      <View style={styles.pixelCornerTR2} />
+      <View style={styles.pixelCornerTR3} />
+      <View style={styles.pixelCornerBL1} />
+      <View style={styles.pixelCornerBL2} />
+      <View style={styles.pixelCornerBL3} />
+      <View style={styles.pixelCornerBR1} />
+      <View style={styles.pixelCornerBR2} />
+      <View style={styles.pixelCornerBR3} />
+      <View style={[styles.cardInner, innerStyle]}>{children}</View>
+    </View>
   );
 }
 
@@ -247,10 +250,10 @@ function buildDomain(min: number, max: number) {
 }
 
 function getGuideKeywords(
-    kind: SensorKind,
-    current: number,
-    min: number,
-    max: number,
+  kind: SensorKind,
+  current: number,
+  min: number,
+  max: number,
 ) {
   const status = getLevelText(current, min, max);
   if (status === '정상') return ['정상'];
@@ -263,13 +266,13 @@ function renderHighlightedGuide(message: string, keywords: string[]) {
   if (!message) return null;
 
   const ks = Array.from(new Set(keywords.filter(Boolean))).sort(
-      (a, b) => b.length - a.length,
+    (a, b) => b.length - a.length,
   );
   if (ks.length === 0) {
     return (
-        <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
-          {message}
-        </Text>
+      <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
+        {message}
+      </Text>
     );
   }
 
@@ -278,16 +281,16 @@ function renderHighlightedGuide(message: string, keywords: string[]) {
   const parts = message.split(pattern);
 
   return (
-      <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
-        {parts.map((p, i) => {
-          const isHit = ks.includes(p);
-          return (
-              <Text key={i} style={isHit ? styles.guideKeyword : undefined}>
-                {p}
-              </Text>
-          );
-        })}
-      </Text>
+    <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
+      {parts.map((p, i) => {
+        const isHit = ks.includes(p);
+        return (
+          <Text key={i} style={isHit ? styles.guideKeyword : undefined}>
+            {p}
+          </Text>
+        );
+      })}
+    </Text>
   );
 }
 
@@ -305,46 +308,48 @@ function SensorBar({ data }: { data: SensorBarData }) {
   const pointerColor = status === '정상' ? '#222' : '#D25353';
 
   return (
-      <View style={styles.sensorBlock}>
-        <Text style={styles.sensorTitle}>{getSensorTitle(kind)}</Text>
+    <View style={styles.sensorBlock}>
+      <Text style={styles.sensorTitle}>{getSensorTitle(kind)}</Text>
 
-        <View style={styles.sensorBarWrap}>
-          <View style={styles.sensorBar}>
-            <LinearGradient
-                colors={['#D98F8F', '#F6F0EE', '#99BDEB']}
-                locations={[0, 0.5, 1]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={StyleSheet.absoluteFill}
-            />
+      <View style={styles.sensorBarWrap}>
+        <View style={styles.sensorBar}>
+          <LinearGradient
+            colors={['#D98F8F', '#F6F0EE', '#99BDEB']}
+            locations={[0, 0.5, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
 
-            <View style={[styles.normalTick, { left: `${normalStart * 100}%` }]} />
-            <View style={[styles.normalTick, { left: `${normalEnd * 100}%` }]} />
+          <View
+            style={[styles.normalTick, { left: `${normalStart * 100}%` }]}
+          />
+          <View style={[styles.normalTick, { left: `${normalEnd * 100}%` }]} />
 
-            <View
-                style={[
-                  styles.sensorPointer,
-                  { left: `${p * 100}%`, backgroundColor: pointerColor },
-                ]}
-            />
-          </View>
+          <View
+            style={[
+              styles.sensorPointer,
+              { left: `${p * 100}%`, backgroundColor: pointerColor },
+            ]}
+          />
+        </View>
 
-          <View style={styles.sensorLabels}>
-            <Text style={styles.sensorLabelText}>낮음</Text>
-            <Text style={styles.sensorLabelText}>정상</Text>
-            <Text style={styles.sensorLabelText}>높음</Text>
-          </View>
+        <View style={styles.sensorLabels}>
+          <Text style={styles.sensorLabelText}>낮음</Text>
+          <Text style={styles.sensorLabelText}>정상</Text>
+          <Text style={styles.sensorLabelText}>높음</Text>
+        </View>
 
-          <View style={styles.sensorMetaRow}>
-            <Text style={styles.sensorMetaText}>
-              {`현재: ${Number.isFinite(current) ? current.toFixed(1) : '-'}`}
-            </Text>
-            <Text style={styles.sensorMetaText}>
-              {`기준: ${ideal_min.toFixed(1)} ~ ${ideal_max.toFixed(1)}`}
-            </Text>
-          </View>
+        <View style={styles.sensorMetaRow}>
+          <Text style={styles.sensorMetaText}>
+            {`현재: ${Number.isFinite(current) ? current.toFixed(1) : '-'}`}
+          </Text>
+          <Text style={styles.sensorMetaText}>
+            {`기준: ${ideal_min.toFixed(1)} ~ ${ideal_max.toFixed(1)}`}
+          </Text>
         </View>
       </View>
+    </View>
   );
 }
 
@@ -392,17 +397,30 @@ export default function MainScreen() {
   const translateY_jump = useRef(new Animated.Value(0)).current;
   const combinedTranslateY = Animated.add(translateY_walk, translateY_jump);
 
-  const backgroundSource = useMemo(() => (useDayBg ? BG_DAY : BG_NIGHT), [useDayBg]);
-  const toggleTranslateX = toggleAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 50] });
-  const toggleBgColor = toggleAnim.interpolate({ inputRange: [0, 1], outputRange: ['#75A743', '#a1a1a1'] });
+  const backgroundSource = useMemo(
+    () => (useDayBg ? BG_DAY : BG_NIGHT),
+    [useDayBg],
+  );
+  const toggleTranslateX = toggleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 50],
+  });
+  const toggleBgColor = toggleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['#75A743', '#a1a1a1'],
+  });
 
-  const getNotifListSeenKey = (plantId: number) => `${NOTIF_SEEN_STATE_KEY}:list:${plantId}`;
-  const getNotifBalloonSeenKey = (plantId: number) => `${NOTIF_SEEN_STATE_KEY}:balloon:${plantId}`;
+  const getNotifListSeenKey = (plantId: number) =>
+    `${NOTIF_SEEN_STATE_KEY}:list:${plantId}`;
+  const getNotifBalloonSeenKey = (plantId: number) =>
+    `${NOTIF_SEEN_STATE_KEY}:balloon:${plantId}`;
 
   const formatTimeHHmm = (iso: string) => {
     if (!iso) return '';
     const d = new Date(iso);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return `${String(d.getHours()).padStart(2, '0')}:${String(
+      d.getMinutes(),
+    ).padStart(2, '0')}`;
   };
 
   const getTagFromMessage = (msg: string) => {
@@ -412,7 +430,11 @@ export default function MainScreen() {
     return '알림';
   };
 
-  const openModal = (title: string, content: string | any[], type: 'list' | 'sign' = 'sign') => {
+  const openModal = (
+    title: string,
+    content: string | any[],
+    type: 'list' | 'sign' = 'sign',
+  ) => {
     setModalTitle(title);
     setModalType(type);
 
@@ -425,15 +447,31 @@ export default function MainScreen() {
     setIsModalVisible(true);
 
     Animated.parallel([
-      Animated.timing(modalOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.timing(modalScale, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(modalOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalScale, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
     ]).start();
   };
 
   const closeModal = () => {
     Animated.parallel([
-      Animated.timing(modalOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-      Animated.timing(modalScale, { toValue: 0.96, duration: 180, useNativeDriver: true }),
+      Animated.timing(modalOpacity, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalScale, {
+        toValue: 0.96,
+        duration: 180,
+        useNativeDriver: true,
+      }),
     ]).start(() => setIsModalVisible(false));
   };
 
@@ -441,7 +479,10 @@ export default function MainScreen() {
     const schedule = () => {
       const now = new Date();
       setUseDayBg(isDayTime(now));
-      setTimeout(schedule, Math.max(500, getNextSwitchTime(now).getTime() - now.getTime()));
+      setTimeout(
+        schedule,
+        Math.max(500, getNextSwitchTime(now).getTime() - now.getTime()),
+      );
     };
     schedule();
   }, []);
@@ -473,23 +514,47 @@ export default function MainScreen() {
   }, []);
 
   const moveRandomly = useCallback(() => {
-    const toX = Math.floor(Math.random() * (MOVE_RANGE_X * 2 + 1)) - MOVE_RANGE_X;
-    const toY = Math.floor(Math.random() * (MOVE_RANGE_Y * 2 + 1)) - MOVE_RANGE_Y;
+    const toX =
+      Math.floor(Math.random() * (MOVE_RANGE_X * 2 + 1)) - MOVE_RANGE_X;
+    const toY =
+      Math.floor(Math.random() * (MOVE_RANGE_Y * 2 + 1)) - MOVE_RANGE_Y;
     const duration = 3000 + Math.random() * 3000;
     Animated.parallel([
-      Animated.timing(translateX, { toValue: toX, duration, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-      Animated.timing(translateY_walk, { toValue: toY, duration, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+      Animated.timing(translateX, {
+        toValue: toX,
+        duration,
+        useNativeDriver: true,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      Animated.timing(translateY_walk, {
+        toValue: toY,
+        duration,
+        useNativeDriver: true,
+        easing: Easing.inOut(Easing.ease),
+      }),
     ]).start(({ finished }) => {
       if (finished) setTimeout(moveRandomly, 1000 + Math.random() * 2000);
     });
   }, [translateX, translateY_walk]);
 
-  useEffect(() => { moveRandomly(); }, [moveRandomly]);
+  useEffect(() => {
+    moveRandomly();
+  }, [moveRandomly]);
 
   const handleCharacterPress = () => {
     Animated.sequence([
-      Animated.timing(translateY_jump, { toValue: -50, duration: 250, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
-      Animated.timing(translateY_jump, { toValue: 0, duration: 350, useNativeDriver: true, easing: Easing.bounce }),
+      Animated.timing(translateY_jump, {
+        toValue: -50,
+        duration: 250,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.quad),
+      }),
+      Animated.timing(translateY_jump, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+        easing: Easing.bounce,
+      }),
     ]).start();
   };
 
@@ -499,7 +564,11 @@ export default function MainScreen() {
     const prev = isAutoMode;
 
     setIsAutoMode(auto);
-    Animated.timing(toggleAnim, { toValue: auto ? 0 : 1, duration: 250, useNativeDriver: false }).start();
+    Animated.timing(toggleAnim, {
+      toValue: auto ? 0 : 1,
+      duration: 250,
+      useNativeDriver: false,
+    }).start();
 
     setIsModeSaving(true);
     try {
@@ -507,9 +576,9 @@ export default function MainScreen() {
       if (!token) throw new Error('NO_TOKEN');
 
       const resp = await client.patch(
-          '/auth/mode',
-          { mode: auto ? 'AUTO' : 'MANUAL' },
-          { headers: { Authorization: `Bearer ${token}` } }
+        '/auth/mode',
+        { mode: auto ? 'AUTO' : 'MANUAL' },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       console.log('mode patch ok:', resp?.data);
@@ -517,13 +586,17 @@ export default function MainScreen() {
       await AsyncStorage.setItem(MODE_STORAGE_KEY, auto ? 'AUTO' : 'MANUAL');
     } catch (e: any) {
       console.log(
-          'mode patch failed:',
-          e?.response?.status,
-          e?.response?.data || e?.message || e
+        'mode patch failed:',
+        e?.response?.status,
+        e?.response?.data || e?.message || e,
       );
 
       setIsAutoMode(prev);
-      Animated.timing(toggleAnim, { toValue: prev ? 0 : 1, duration: 250, useNativeDriver: false }).start();
+      Animated.timing(toggleAnim, {
+        toValue: prev ? 0 : 1,
+        duration: 250,
+        useNativeDriver: false,
+      }).start();
     } finally {
       setIsModeSaving(false);
     }
@@ -533,7 +606,8 @@ export default function MainScreen() {
     const cached = await AsyncStorage.getItem('plantId');
     const cachedName = await AsyncStorage.getItem(PLANT_NAME_STORAGE_KEY);
 
-    const cachedPid = cached && !Number.isNaN(Number(cached)) ? Number(cached) : null;
+    const cachedPid =
+      cached && !Number.isNaN(Number(cached)) ? Number(cached) : null;
 
     if (cachedName) setPlantName(cachedName);
 
@@ -542,7 +616,9 @@ export default function MainScreen() {
     try {
       const token = await AsyncStorage.getItem('accessToken');
 
-      const res = await client.get('/plants', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await client.get('/plants', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const list = res?.data?.data || [];
       const main = list.find((p: any) => p?.is_main === true) || list[0];
@@ -552,7 +628,9 @@ export default function MainScreen() {
 
       if (pname) {
         setPlantName(String(pname));
-        try { await AsyncStorage.setItem(PLANT_NAME_STORAGE_KEY, String(pname)); } catch {}
+        try {
+          await AsyncStorage.setItem(PLANT_NAME_STORAGE_KEY, String(pname));
+        } catch {}
       }
 
       if (pid && !Number.isNaN(Number(pid))) {
@@ -564,7 +642,9 @@ export default function MainScreen() {
     return cachedPid;
   }, []);
 
-  useEffect(() => { getPlantId(); }, [getPlantId]);
+  useEffect(() => {
+    getPlantId();
+  }, [getPlantId]);
 
   const readSeenAt = async (key: string, serverDate: string) => {
     try {
@@ -579,9 +659,16 @@ export default function MainScreen() {
     }
   };
 
-  const writeSeenAt = async (key: string, serverDate: string, lastSeenAt: string) => {
+  const writeSeenAt = async (
+    key: string,
+    serverDate: string,
+    lastSeenAt: string,
+  ) => {
     try {
-      await AsyncStorage.setItem(key, JSON.stringify({ date: serverDate, lastSeenAt }));
+      await AsyncStorage.setItem(
+        key,
+        JSON.stringify({ date: serverDate, lastSeenAt }),
+      );
     } catch {}
   };
 
@@ -613,28 +700,34 @@ export default function MainScreen() {
 
         if (serverPlantId !== currentCachedId) {
           await AsyncStorage.setItem('plantId', serverPlantId);
-          console.log(`🔄 메인 식물 ID 동기화: ${currentCachedId} -> ${serverPlantId}`);
+          console.log(
+            `🔄 메인 식물 ID 동기화: ${currentCachedId} -> ${serverPlantId}`,
+          );
         }
       }
 
       const pname = d?.mainPlant?.name ?? d?.plantName;
       if (typeof pname === 'string') {
         setPlantName(prev => (prev === pname ? prev : pname));
-        try { await AsyncStorage.setItem(PLANT_NAME_STORAGE_KEY, pname); } catch {}
+        try {
+          await AsyncStorage.setItem(PLANT_NAME_STORAGE_KEY, pname);
+        } catch {}
       }
 
       const hsRaw =
-          typeof d?.healthScore === 'number'
-              ? d.healthScore
-              : typeof d?.growthStatus?.percentage === 'number'
-                  ? d.growthStatus.percentage
-                  : 0;
+        typeof d?.healthScore === 'number'
+          ? d.healthScore
+          : typeof d?.growthStatus?.percentage === 'number'
+          ? d.growthStatus.percentage
+          : 0;
 
       const nextHs = clamp(Number(hsRaw) || 0, 0, 100);
       setHealthScore(prev => (prev === nextHs ? prev : nextHs));
 
-      const waterStatus = d?.waterLevelStatus ?? d?.currentSensor?.waterLevel?.status;
-      const nutrientStatus = d?.nutrientStatus ?? d?.currentSensor?.nutrient?.status;
+      const waterStatus =
+        d?.waterLevelStatus ?? d?.currentSensor?.waterLevel?.status;
+      const nutrientStatus =
+        d?.nutrientStatus ?? d?.currentSensor?.nutrient?.status;
 
       const waterOk = isOkLike(waterStatus);
       const nutrientOk = isOkLike(nutrientStatus);
@@ -642,35 +735,41 @@ export default function MainScreen() {
       const nextWaterText = waterOk ? '적정함' : '확인\n필요';
       const nextNutText = nutrientOk ? '적정함' : '확인\n필요';
 
-      setWaterStatusText(prev => (prev === nextWaterText ? prev : nextWaterText));
-      setNutrientStatusText(prev => (prev === nextNutText ? prev : nextNutText));
+      setWaterStatusText(prev =>
+        prev === nextWaterText ? prev : nextWaterText,
+      );
+      setNutrientStatusText(prev =>
+        prev === nextNutText ? prev : nextNutText,
+      );
 
       setWaterNeedCheck(prev => (prev === !waterOk ? prev : !waterOk));
       setNutrientNeedCheck(prev => (prev === !nutrientOk ? prev : !nutrientOk));
 
       const temp =
-          typeof d?.temperature === 'number'
-              ? d.temperature
-              : d?.currentSensor?.temperatureHumidity?.temperature;
+        typeof d?.temperature === 'number'
+          ? d.temperature
+          : d?.currentSensor?.temperatureHumidity?.temperature;
       const hum =
-          typeof d?.humidity === 'number'
-              ? d.humidity
-              : d?.currentSensor?.temperatureHumidity?.humidity;
+        typeof d?.humidity === 'number'
+          ? d.humidity
+          : d?.currentSensor?.temperatureHumidity?.humidity;
 
       const tNum = typeof temp === 'number' ? temp : null;
       const hNum = typeof hum === 'number' ? hum : null;
 
       const nextTempHum =
-          tNum == null || hNum == null ? '-' : `   ${tNum.toFixed(1)}°C / \n ${hNum.toFixed(0)}%`;
+        tNum == null || hNum == null
+          ? '-'
+          : `   ${tNum.toFixed(1)}°C / \n ${hNum.toFixed(0)}%`;
 
       setTempHumText(prev => (prev === nextTempHum ? prev : nextTempHum));
 
       const cnt =
-          typeof d?.header?.todayNotificationCount === 'number'
-              ? d.header.todayNotificationCount
-              : typeof d?.todayNotificationCount === 'number'
-                  ? d.todayNotificationCount
-                  : null;
+        typeof d?.header?.todayNotificationCount === 'number'
+          ? d.header.todayNotificationCount
+          : typeof d?.todayNotificationCount === 'number'
+          ? d.todayNotificationCount
+          : null;
 
       if (typeof cnt === 'number') {
         setTodayCount(prev => (prev === cnt ? prev : cnt));
@@ -693,13 +792,19 @@ export default function MainScreen() {
       const plantId = await getPlantId();
       if (!plantId) return;
 
-      const res = await client.post<TodayNotificationsResponse>('/notifications/list', {});
+      const res = await client.post<TodayNotificationsResponse>(
+        '/notifications/list',
+        {},
+      );
       const data = res.data.data;
       if (!data) return;
 
       const list = data.notifications
-          .slice()
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
 
       const listSeenKey = getNotifListSeenKey(plantId);
       const balloonSeenKey = getNotifBalloonSeenKey(plantId);
@@ -708,12 +813,19 @@ export default function MainScreen() {
       const balloonSeenAt = await readSeenAt(balloonSeenKey, data.date);
 
       const unreadForBadge = listSeenAt
-          ? list.filter(n => new Date(n.createdAt).getTime() > new Date(listSeenAt).getTime())
-          : list;
+        ? list.filter(
+            n =>
+              new Date(n.createdAt).getTime() > new Date(listSeenAt).getTime(),
+          )
+        : list;
 
       const balloonCandidate = balloonSeenAt
-          ? list.find(n => new Date(n.createdAt).getTime() > new Date(balloonSeenAt).getTime()) || null
-          : list[0] || null;
+        ? list.find(
+            n =>
+              new Date(n.createdAt).getTime() >
+              new Date(balloonSeenAt).getTime(),
+          ) || null
+        : list[0] || null;
 
       setTodayNotifications({ ...data, notifications: list });
       setTodayCount(unreadForBadge.length);
@@ -733,8 +845,11 @@ export default function MainScreen() {
       if (!plantId) return;
 
       const list = (todayNotifications?.notifications ?? [])
-          .slice()
-          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        .slice()
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
 
       if (list.length === 0) {
         openModal('오늘의 알림', '현재 알람이 없습니다', 'list');
@@ -745,8 +860,16 @@ export default function MainScreen() {
 
       if (todayNotifications?.date && list.length > 0) {
         const latestAt = list[0].createdAt;
-        await writeSeenAt(getNotifListSeenKey(plantId), todayNotifications.date, latestAt);
-        await writeSeenAt(getNotifBalloonSeenKey(plantId), todayNotifications.date, latestAt);
+        await writeSeenAt(
+          getNotifListSeenKey(plantId),
+          todayNotifications.date,
+          latestAt,
+        );
+        await writeSeenAt(
+          getNotifBalloonSeenKey(plantId),
+          todayNotifications.date,
+          latestAt,
+        );
 
         setTodayCount(0);
         setLatestNotification(null);
@@ -764,7 +887,11 @@ export default function MainScreen() {
       openModal('최신 알림', [latestNotification], 'list');
 
       if (todayNotifications?.date && latestNotification?.createdAt) {
-        await writeSeenAt(getNotifBalloonSeenKey(plantId), todayNotifications.date, latestNotification.createdAt);
+        await writeSeenAt(
+          getNotifBalloonSeenKey(plantId),
+          todayNotifications.date,
+          latestNotification.createdAt,
+        );
       }
 
       setLatestNotification(null);
@@ -773,14 +900,18 @@ export default function MainScreen() {
   };
 
   const buildWaterGuide = (current: number, min: number, max: number) => {
-    if (current > max) return '물 수위가 높아요. \n수위가 높으면 뿌리 손상이 \n생길 수 있으니 급수 중지가 필요해요!';
-    if (current < min) return '물 수위가 낮아요. \n뿌리가 충분한 수분을 흡수하지 \n못할 수 있으니 급수가 필요해요!';
+    if (current > max)
+      return '물 수위가 높아요. \n수위가 높으면 뿌리 손상이 \n생길 수 있으니 급수 중지가 필요해요!';
+    if (current < min)
+      return '물 수위가 낮아요. \n뿌리가 충분한 수분을 흡수하지 \n못할 수 있으니 급수가 필요해요!';
     return '물 수위가 정상이에요.\n따로 조치할 필요 없어요.';
   };
 
   const buildNutrientGuide = (current: number, min: number, max: number) => {
-    if (current > max) return '영양분 농도가 높아요. \n뿌리에 부담이 생겨 영양분 흡수가 \n어려울 수 있으니 농도를 낮춰주세요!';
-    if (current < min) return '영양분 농도가 낮아요. \n식물이 필요한 영양분을 충분히 \n흡수하지 못 할 수 있으니 영양분 보충이 필요해요!';
+    if (current > max)
+      return '영양분 농도가 높아요. \n뿌리에 부담이 생겨 영양분 흡수가 \n어려울 수 있으니 농도를 낮춰주세요!';
+    if (current < min)
+      return '영양분 농도가 낮아요. \n식물이 필요한 영양분을 충분히 \n흡수하지 못 할 수 있으니 영양분 보충이 필요해요!';
     return '영양분 농도가 정상이에요. \n따로 조치할 필요 없어요.';
   };
 
@@ -791,13 +922,20 @@ export default function MainScreen() {
       const token = await AsyncStorage.getItem('accessToken');
 
       if (!plantId) {
-        openModal('수위 정보', '식물 정보를 찾지 못했습니다. (plantId 없음)', 'sign');
+        openModal(
+          '수위 정보',
+          '식물 정보를 찾지 못했습니다. (plantId 없음)',
+          'sign',
+        );
         return;
       }
 
-      const res = await client.get<WaterSensorCardResponse>(`/plants/${plantId}/sensors/water`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await client.get<WaterSensorCardResponse>(
+        `/plants/${plantId}/sensors/water`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       const data = res.data.data;
       if (!data) {
@@ -805,23 +943,27 @@ export default function MainScreen() {
         return;
       }
 
-      const guide = buildWaterGuide(data.current_water, data.ideal_min, data.ideal_max);
+      const guide = buildWaterGuide(
+        data.current_water,
+        data.ideal_min,
+        data.ideal_max,
+      );
 
       openModal(
-          '수위 정보',
-          [
-            {
-              message: guide,
-              sensor: {
-                kind: 'water',
-                measuredAt: data.measuredAt,
-                current: data.current_water,
-                ideal_min: data.ideal_min,
-                ideal_max: data.ideal_max,
-              },
+        '수위 정보',
+        [
+          {
+            message: guide,
+            sensor: {
+              kind: 'water',
+              measuredAt: data.measuredAt,
+              current: data.current_water,
+              ideal_min: data.ideal_min,
+              ideal_max: data.ideal_max,
             },
-          ],
-          'sign'
+          },
+        ],
+        'sign',
       );
     } catch (e) {
       openModal('수위 정보', '정보를 불러오지 못했습니다.', 'sign');
@@ -835,13 +977,20 @@ export default function MainScreen() {
       const token = await AsyncStorage.getItem('accessToken');
 
       if (!plantId) {
-        openModal('농도 정보', '식물 정보를 찾지 못했습니다. (plantId 없음)', 'sign');
+        openModal(
+          '농도 정보',
+          '식물 정보를 찾지 못했습니다. (plantId 없음)',
+          'sign',
+        );
         return;
       }
 
-      const res = await client.get<NutrientSensorCardResponse>(`/plants/${plantId}/sensors/nutrient`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await client.get<NutrientSensorCardResponse>(
+        `/plants/${plantId}/sensors/nutrient`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       const data = res.data.data;
       if (!data) {
@@ -849,166 +998,241 @@ export default function MainScreen() {
         return;
       }
 
-      const guide = buildNutrientGuide(data.current_nutrient, data.ideal_min, data.ideal_max);
+      const guide = buildNutrientGuide(
+        data.current_nutrient,
+        data.ideal_min,
+        data.ideal_max,
+      );
 
       openModal(
-          '농도 정보',
-          [
-            {
-              message: guide,
-              sensor: {
-                kind: 'nutrient',
-                measuredAt: data.measuredAt,
-                current: data.current_nutrient,
-                ideal_min: data.ideal_min,
-                ideal_max: data.ideal_max,
-              },
+        '농도 정보',
+        [
+          {
+            message: guide,
+            sensor: {
+              kind: 'nutrient',
+              measuredAt: data.measuredAt,
+              current: data.current_nutrient,
+              ideal_min: data.ideal_min,
+              ideal_max: data.ideal_max,
             },
-          ],
-          'sign'
+          },
+        ],
+        'sign',
       );
     } catch (e) {
       openModal('농도 정보', '정보를 불러오지 못했습니다.', 'sign');
     }
   }, [getPlantId]);
 
-  const hpPercent = useMemo(() => clamp(Number(healthScore) || 0, 0, 100), [healthScore]);
+  const hpPercent = useMemo(
+    () => clamp(Number(healthScore) || 0, 0, 100),
+    [healthScore],
+  );
 
   return (
-      <View style={styles.root}>
-        <ImageBackground source={backgroundSource} style={styles.bg} resizeMode="cover">
-          <Pressable style={styles.topBellIconBtn} onPress={onPressBell}>
-            <Image source={ALARM_BELL} style={styles.bellImage} />
-            {todayCount > 0 && (
-                <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>{todayCount > 99 ? '99+' : todayCount}</Text>
-                </View>
-            )}
-          </Pressable>
+    <View style={styles.root}>
+      <ImageBackground
+        source={backgroundSource}
+        style={styles.bg}
+        resizeMode="cover"
+      >
+        <Pressable style={styles.topBellIconBtn} onPress={onPressBell}>
+          <Image source={ALARM_BELL} style={styles.bellImage} />
+          {todayCount > 0 && (
+            <View style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>
+                {todayCount > 99 ? '99+' : todayCount}
+              </Text>
+            </View>
+          )}
+        </Pressable>
 
-          <View style={styles.modeToggleContainer}>
-            <Animated.View style={[styles.toggleSlider, { transform: [{ translateX: toggleTranslateX }], backgroundColor: toggleBgColor }]} />
-            <Pressable onPress={() => handleToggle(true)} style={styles.togglePiece}>
-              <Text style={[styles.togglePieceText, isAutoMode && styles.textActive]}>AUTO</Text>
-            </Pressable>
-            <Pressable onPress={() => handleToggle(false)} style={styles.togglePiece}>
-              <Text style={[styles.togglePieceText, !isAutoMode && styles.textActive]}>MANU</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.plantNameWrap} pointerEvents="none">
+        <View style={styles.modeToggleContainer}>
+          <Animated.View
+            style={[
+              styles.toggleSlider,
+              {
+                transform: [{ translateX: toggleTranslateX }],
+                backgroundColor: toggleBgColor,
+              },
+            ]}
+          />
+          <Pressable
+            onPress={() => handleToggle(true)}
+            style={styles.togglePiece}
+          >
             <Text
-                style={[styles.plantNameText, { fontSize: plantNameFontSize }]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                onTextLayout={(e) => {
-                  // ✅ Android에서도 길면 자동 축소 (한 번만 줄어들게)
-                  if (e.nativeEvent.lines.length > 1 && plantNameFontSize > 28) {
-                    setPlantNameFontSize((s) => s - 2);
-                  }
-                }}
+              style={[styles.togglePieceText, isAutoMode && styles.textActive]}
             >
-              {plantName ? plantName : ''}
+              AUTO
             </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleToggle(false)}
+            style={styles.togglePiece}
+          >
+            <Text
+              style={[styles.togglePieceText, !isAutoMode && styles.textActive]}
+            >
+              MANU
+            </Text>
+          </Pressable>
+        </View>
 
-            <View style={styles.hpRow}>
-              <Text style={styles.hpLabel}>현재{'\n'}상태</Text>
+        <View style={styles.plantNameWrap} pointerEvents="none">
+          <Text
+            style={[styles.plantNameText, { fontSize: plantNameFontSize }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            onTextLayout={e => {
+              // ✅ Android에서도 길면 자동 축소 (한 번만 줄어들게)
+              if (e.nativeEvent.lines.length > 1 && plantNameFontSize > 28) {
+                setPlantNameFontSize(s => s - 2);
+              }
+            }}
+          >
+            {plantName ? plantName : ''}
+          </Text>
 
-              <View style={styles.hpOuter}>
-                <View style={[styles.hpFill, { width: `${hpPercent}%` }]} />
-              </View>
+          <View style={styles.hpRow}>
+            <Text style={styles.hpLabel}>현재{'\n'}상태</Text>
+
+            <View style={styles.hpOuter}>
+              <View style={[styles.hpFill, { width: `${hpPercent}%` }]} />
             </View>
           </View>
+        </View>
 
+        <Pressable
+          style={[styles.signTouchArea, { left: '3%', top: '24%' }]}
+          onPress={onPressWaterSign}
+        >
+          {waterNeedCheck && (
+            <View style={styles.signAlertBadge}>
+              <Text style={styles.signAlertBadgeText}>!</Text>
+            </View>
+          )}
+          <Text style={styles.signTitleText}>수위</Text>
+          <Text style={styles.signSubText}>{waterStatusText}</Text>
+        </Pressable>
 
-          <Pressable style={[styles.signTouchArea, { left: '3%', top: '24%' }]} onPress={onPressWaterSign}>
-            {waterNeedCheck && (
-                <View style={styles.signAlertBadge}>
-                  <Text style={styles.signAlertBadgeText}>!</Text>
-                </View>
-            )}
-            <Text style={styles.signTitleText}>수위</Text>
-            <Text style={styles.signSubText}>{waterStatusText}</Text>
-          </Pressable>
+        <Pressable
+          style={[styles.signTouchArea, { left: '36%', top: '24%' }]}
+          onPress={onPressNutrientSign}
+        >
+          {nutrientNeedCheck && (
+            <View style={styles.signAlertBadge}>
+              <Text style={styles.signAlertBadgeText}>!</Text>
+            </View>
+          )}
+          <Text style={styles.signTitleText}>농도</Text>
+          <Text style={styles.signSubText}>{nutrientStatusText}</Text>
+        </Pressable>
 
-          <Pressable style={[styles.signTouchArea, { left: '36%', top: '24%' }]} onPress={onPressNutrientSign}>
-            {nutrientNeedCheck && (
-                <View style={styles.signAlertBadge}>
-                  <Text style={styles.signAlertBadgeText}>!</Text>
-                </View>
-            )}
-            <Text style={styles.signTitleText}>농도</Text>
-            <Text style={styles.signSubText}>{nutrientStatusText}</Text>
-          </Pressable>
+        <View style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}>
+          <Text style={styles.signTitleText}>온습도</Text>
+          <Text style={styles.signSubText}>{tempHumText}</Text>
+        </View>
 
-          <View style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}>
-            <Text style={styles.signTitleText}>온습도</Text>
-            <Text style={styles.signSubText}>{tempHumText}</Text>
-          </View>
-
-          <Animated.View style={[styles.characterWrapper, { transform: [{ translateX }, { translateY: combinedTranslateY }] }]}>
-            {latestNotification && (
-                <Pressable style={styles.alarmWrap} onPress={onPressBalloon}>
-                  <View style={styles.alarmBox}>
-                    <Image source={ALARM_ICON} style={styles.alarmIcon} />
-                  </View>
-                </Pressable>
-            )}
-            <Pressable onPress={handleCharacterPress}>
-              <Image source={TOMATO_NORMAL} style={styles.tomatoImage} />
+        <Animated.View
+          style={[
+            styles.characterWrapper,
+            { transform: [{ translateX }, { translateY: combinedTranslateY }] },
+          ]}
+        >
+          {latestNotification && (
+            <Pressable style={styles.alarmWrap} onPress={onPressBalloon}>
+              <View style={styles.alarmBox}>
+                <Image source={ALARM_ICON} style={styles.alarmIcon} />
+              </View>
             </Pressable>
+          )}
+          <Pressable onPress={handleCharacterPress}>
+            <Image source={TOMATO_NORMAL} style={styles.tomatoImage} />
+          </Pressable>
+        </Animated.View>
+      </ImageBackground>
+
+      <Modal
+        transparent
+        visible={isModalVisible}
+        animationType="none"
+        onRequestClose={closeModal}
+        statusBarTranslucent
+      >
+        <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
+          <Animated.View
+            onStartShouldSetResponder={() => true}
+            style={{ transform: [{ scale: modalScale }] }}
+          >
+            <PixelBox
+              style={styles.modalContent}
+              innerStyle={styles.modalInner}
+            >
+              <View style={styles.modalHeaderCustom}>
+                <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
+                <Pressable style={styles.closeBtn} onPress={closeModal}>
+                  <Text style={styles.closeBtnText}>X</Text>
+                </Pressable>
+              </View>
+
+              <ScrollView
+                style={[
+                  styles.modalScroll,
+                  modalTitle === '오늘의 알림' && styles.modalScrollLimit4,
+                ]}
+                contentContainerStyle={styles.modalScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {modalBodyItems.length > 0 ? (
+                  modalBodyItems.map((item, idx) => (
+                    <View key={idx} style={styles.notifCard}>
+                      <View style={styles.notifRow}>
+                        {modalType === 'list' && (
+                          <Text style={styles.tagBadgeText}>
+                            [{getTagFromMessage(item.message)}]
+                          </Text>
+                        )}
+
+                        {modalType === 'sign' && item.sensor ? (
+                          renderHighlightedGuide(
+                            item.message,
+                            getGuideKeywords(
+                              item.sensor.kind,
+                              item.sensor.current,
+                              item.sensor.ideal_min,
+                              item.sensor.ideal_max,
+                            ),
+                          )
+                        ) : (
+                          <Text style={styles.notifMessage}>
+                            {item.message}
+                          </Text>
+                        )}
+                      </View>
+
+                      {modalType === 'sign' && item.sensor && (
+                        <SensorBar data={item.sensor} />
+                      )}
+
+                      {item.createdAt && (
+                        <Text style={styles.notifTime}>
+                          {formatTimeHHmm(item.createdAt)}
+                        </Text>
+                      )}
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}>데이터가 없습니다.</Text>
+                )}
+              </ScrollView>
+            </PixelBox>
           </Animated.View>
-        </ImageBackground>
-
-        <Modal transparent visible={isModalVisible} animationType="none" onRequestClose={closeModal} statusBarTranslucent>
-          <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
-            <Animated.View onStartShouldSetResponder={() => true} style={{ transform: [{ scale: modalScale }] }}>
-              <PixelBox style={styles.modalContent} innerStyle={styles.modalInner}>
-                <View style={styles.modalHeaderCustom}>
-                  <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
-                  <Pressable style={styles.closeBtn} onPress={closeModal}>
-                    <Text style={styles.closeBtnText}>X</Text>
-                  </Pressable>
-                </View>
-
-                <ScrollView
-                    style={[styles.modalScroll, modalTitle === '오늘의 알림' && styles.modalScrollLimit4]}
-                    contentContainerStyle={styles.modalScrollContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                  {modalBodyItems.length > 0 ? (
-                      modalBodyItems.map((item, idx) => (
-                          <View key={idx} style={styles.notifCard}>
-                            <View style={styles.notifRow}>
-                              {modalType === 'list' && (
-                                  <Text style={styles.tagBadgeText}>[{getTagFromMessage(item.message)}]</Text>
-                              )}
-
-                              {modalType === 'sign' && item.sensor ? (
-                                  renderHighlightedGuide(
-                                      item.message,
-                                      getGuideKeywords(item.sensor.kind, item.sensor.current, item.sensor.ideal_min, item.sensor.ideal_max)
-                                  )
-                              ) : (
-                                  <Text style={styles.notifMessage}>{item.message}</Text>
-                              )}
-                            </View>
-
-                            {modalType === 'sign' && item.sensor && <SensorBar data={item.sensor} />}
-
-                            {item.createdAt && <Text style={styles.notifTime}>{formatTimeHHmm(item.createdAt)}</Text>}
-                          </View>
-                      ))
-                  ) : (
-                      <Text style={styles.emptyText}>데이터가 없습니다.</Text>
-                  )}
-                </ScrollView>
-              </PixelBox>
-            </Animated.View>
-          </Animated.View>
-        </Modal>
-      </View>
+        </Animated.View>
+      </Modal>
+    </View>
   );
 }
 
@@ -1044,9 +1268,26 @@ const styles = StyleSheet.create({
     zIndex: 60,
     overflow: 'hidden',
   },
-  toggleSlider: { position: 'absolute', top: 0, left: 0, width: 50, height: '100%' },
-  togglePiece: { width: 50, paddingVertical: 7, alignItems: 'center', justifyContent: 'center' },
-  togglePieceText: { fontFamily: FONT, fontSize: 14, color: BORDER_COLOR, opacity: 0.4, zIndex: 10 },
+  toggleSlider: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 50,
+    height: '100%',
+  },
+  togglePiece: {
+    width: 50,
+    paddingVertical: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  togglePieceText: {
+    fontFamily: FONT,
+    fontSize: 14,
+    color: BORDER_COLOR,
+    opacity: 0.4,
+    zIndex: 10,
+  },
   textActive: { color: '#FFF', opacity: 1 },
 
   plantNameWrap: {
@@ -1103,16 +1344,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#75A743',
   },
 
+  signTouchArea: {
+    position: 'absolute',
+    width: '28%',
+    height: '11%',
+    alignItems: 'center',
+  },
+  signTitleText: {
+    fontFamily: FONT,
+    fontSize: 16,
+    color: SIGN_TEXT_COLOR,
+    textAlign: 'center',
+    marginTop: 40,
+  },
+  signSubText: {
+    marginTop: 10,
+    fontFamily: FONT,
+    fontSize: 20,
+    color: SIGN_TEXT_COLOR,
+    textAlign: 'center',
+  },
 
-  signTouchArea: { position: 'absolute', width: '28%', height: '11%', alignItems: 'center' },
-  signTitleText: { fontFamily: FONT, fontSize: 16, color: SIGN_TEXT_COLOR, textAlign: 'center', marginTop: 40 },
-  signSubText: { marginTop: 10, fontFamily: FONT, fontSize: 20, color: SIGN_TEXT_COLOR, textAlign: 'center' },
-
-  characterWrapper: { position: 'absolute', bottom: 150, alignSelf: 'center', zIndex: 10, alignItems: 'center' },
+  characterWrapper: {
+    position: 'absolute',
+    bottom: 150,
+    alignSelf: 'center',
+    zIndex: 10,
+    alignItems: 'center',
+  },
   tomatoImage: { width: 320, height: 320, resizeMode: 'contain' },
 
   alarmWrap: { position: 'absolute', top: 20, right: 30, zIndex: 20 },
-  alarmBox: { width: 78, height: 78, justifyContent: 'center', alignItems: 'center' },
+  alarmBox: {
+    width: 78,
+    height: 78,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   alarmIcon: { width: 70, height: 70, resizeMode: 'contain' },
 
   modalOverlay: {
@@ -1136,7 +1404,11 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     marginBottom: 10,
   },
-  modalHeaderTextCustom: { fontFamily: FONT, fontSize: 20, color: BORDER_COLOR },
+  modalHeaderTextCustom: {
+    fontFamily: FONT,
+    fontSize: 20,
+    color: BORDER_COLOR,
+  },
   closeBtn: { padding: 4 },
   closeBtnText: { fontFamily: FONT, fontSize: 18, color: '#999' },
 
@@ -1155,15 +1427,44 @@ const styles = StyleSheet.create({
     borderColor: '#e6e6e0',
   },
   notifRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  tagBadgeText: { fontFamily: FONT, fontSize: 13, color: '#75A743', marginRight: 6 },
-  notifMessage: { flex: 1, fontFamily: FONT, fontSize: 14, color: '#333', lineHeight: 18 },
-  notifTime: { alignSelf: 'flex-end', fontFamily: FONT, fontSize: 11, color: '#bbb', marginTop: 4 },
-  emptyText: { fontFamily: FONT, fontSize: 14, color: '#999', textAlign: 'center', marginTop: 40 },
+  tagBadgeText: {
+    fontFamily: FONT,
+    fontSize: 13,
+    color: '#75A743',
+    marginRight: 6,
+  },
+  notifMessage: {
+    flex: 1,
+    fontFamily: FONT,
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 18,
+  },
+  notifTime: {
+    alignSelf: 'flex-end',
+    fontFamily: FONT,
+    fontSize: 11,
+    color: '#bbb',
+    marginTop: 4,
+  },
+  emptyText: {
+    fontFamily: FONT,
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 40,
+  },
 
   guideKeyword: { fontFamily: FONT, fontSize: 18, color: BORDER_COLOR },
 
   sensorBlock: { marginTop: 12, width: '100%' },
-  sensorTitle: { fontFamily: FONT, fontSize: 13, color: '#4A2A1E', marginBottom: 8, textAlign: 'left' },
+  sensorTitle: {
+    fontFamily: FONT,
+    fontSize: 13,
+    color: '#4A2A1E',
+    marginBottom: 8,
+    textAlign: 'left',
+  },
   sensorBarWrap: { width: '100%' },
 
   sensorBar: {
@@ -1186,41 +1487,194 @@ const styles = StyleSheet.create({
     marginLeft: -1,
   },
 
-  sensorPointer: { position: 'absolute', top: -4, width: 3, height: 24, marginLeft: -1.5, borderRadius: 2 },
+  sensorPointer: {
+    position: 'absolute',
+    top: -4,
+    width: 3,
+    height: 24,
+    marginLeft: -1.5,
+    borderRadius: 2,
+  },
 
-  sensorLabels: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  sensorLabels: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
   sensorLabelText: { fontFamily: FONT, fontSize: 11, color: '#333' },
 
-  sensorMetaRow: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  sensorMetaRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
   sensorMetaText: { fontFamily: FONT, fontSize: 11, color: '#666' },
 
   pixelBoxContainer: { position: 'relative', marginHorizontal: PIXEL * 2 },
-  pixelBgUnderlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: CARD_BG },
-  cardInner: { padding: 15, alignItems: 'center', position: 'relative', zIndex: 10 },
+  pixelBgUnderlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: CARD_BG,
+  },
+  cardInner: {
+    padding: 15,
+    alignItems: 'center',
+    position: 'relative',
+    zIndex: 10,
+  },
 
-  shadeLeft: { position: 'absolute', top: PIXEL, bottom: PIXEL, backgroundColor: '#000', zIndex: 1 },
-  shadeRight: { position: 'absolute', top: PIXEL, bottom: PIXEL, backgroundColor: '#000', zIndex: 1 },
+  shadeLeft: {
+    position: 'absolute',
+    top: PIXEL,
+    bottom: PIXEL,
+    backgroundColor: '#000',
+    zIndex: 1,
+  },
+  shadeRight: {
+    position: 'absolute',
+    top: PIXEL,
+    bottom: PIXEL,
+    backgroundColor: '#000',
+    zIndex: 1,
+  },
 
-  pixelTop: { position: 'absolute', top: -PIXEL, left: PIXEL, right: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelBottom: { position: 'absolute', bottom: -PIXEL, left: PIXEL, right: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelLeft: { position: 'absolute', top: PIXEL, bottom: PIXEL, left: -PIXEL, width: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelRight: { position: 'absolute', top: PIXEL, bottom: PIXEL, right: -PIXEL, width: PIXEL, backgroundColor: BORDER_COLOR },
+  pixelTop: {
+    position: 'absolute',
+    top: -PIXEL,
+    left: PIXEL,
+    right: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelBottom: {
+    position: 'absolute',
+    bottom: -PIXEL,
+    left: PIXEL,
+    right: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelLeft: {
+    position: 'absolute',
+    top: PIXEL,
+    bottom: PIXEL,
+    left: -PIXEL,
+    width: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelRight: {
+    position: 'absolute',
+    top: PIXEL,
+    bottom: PIXEL,
+    right: -PIXEL,
+    width: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
 
-  pixelCornerTL1: { position: 'absolute', top: 0, left: -PIXEL, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelCornerTL2: { position: 'absolute', top: -PIXEL, left: 0, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelCornerTL3: { position: 'absolute', top: 0, left: 0, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
+  pixelCornerTL1: {
+    position: 'absolute',
+    top: 0,
+    left: -PIXEL,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelCornerTL2: {
+    position: 'absolute',
+    top: -PIXEL,
+    left: 0,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelCornerTL3: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
 
-  pixelCornerTR1: { position: 'absolute', top: 0, right: -PIXEL, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelCornerTR2: { position: 'absolute', top: -PIXEL, right: 0, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelCornerTR3: { position: 'absolute', top: 0, right: 0, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
+  pixelCornerTR1: {
+    position: 'absolute',
+    top: 0,
+    right: -PIXEL,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelCornerTR2: {
+    position: 'absolute',
+    top: -PIXEL,
+    right: 0,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelCornerTR3: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
 
-  pixelCornerBL1: { position: 'absolute', bottom: 0, left: -PIXEL, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelCornerBL2: { position: 'absolute', bottom: -PIXEL, left: 0, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelCornerBL3: { position: 'absolute', bottom: 0, left: 0, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
+  pixelCornerBL1: {
+    position: 'absolute',
+    bottom: 0,
+    left: -PIXEL,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelCornerBL2: {
+    position: 'absolute',
+    bottom: -PIXEL,
+    left: 0,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelCornerBL3: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
 
-  pixelCornerBR1: { position: 'absolute', bottom: 0, right: -PIXEL, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelCornerBR2: { position: 'absolute', bottom: -PIXEL, right: 0, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
-  pixelCornerBR3: { position: 'absolute', bottom: 0, right: 0, width: PIXEL, height: PIXEL, backgroundColor: BORDER_COLOR },
+  pixelCornerBR1: {
+    position: 'absolute',
+    bottom: 0,
+    right: -PIXEL,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelCornerBR2: {
+    position: 'absolute',
+    bottom: -PIXEL,
+    right: 0,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
+  pixelCornerBR3: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: PIXEL,
+    height: PIXEL,
+    backgroundColor: BORDER_COLOR,
+  },
 
   signAlertBadge: {
     position: 'absolute',
@@ -1236,5 +1690,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 999,
   },
-  signAlertBadgeText: { fontFamily: FONT, fontSize: 14, color: '#FFF', lineHeight: 16 },
+  signAlertBadgeText: {
+    fontFamily: FONT,
+    fontSize: 14,
+    color: '#FFF',
+    lineHeight: 16,
+  },
 });

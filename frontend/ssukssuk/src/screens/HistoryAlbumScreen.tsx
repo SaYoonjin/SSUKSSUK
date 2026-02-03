@@ -9,7 +9,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import client from '../api'; // API client import
+import client from '../api';
 
 const BG_COLOR = '#EDEDE9';
 const BORDER = '#300e08';
@@ -27,7 +27,7 @@ type PlantImage = {
 
 // UI 표시용 데이터 타입
 type DisplayPhoto = {
-  id: string; // 고유 키
+  id: string;
   imgUri: string;
   dateLabel: string;
   tapeStyle: {
@@ -66,18 +66,28 @@ const PixelTape = ({ style, width }: any) => (
   </View>
 );
 
-export default function HistoryAlbumScreen({ navigation, route }: any) {
-  // HistoryScreen 등에서 넘어올 때 plantId를 받아올 수 있음. 기본값 1
-  const { plantId = 1 } = route.params || {};
-
+export default function HistoryAlbumScreen({ navigation }: any) {
   const [photoData, setPhotoData] = useState<DisplayPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodText, setPeriodText] = useState('');
 
   useEffect(() => {
-    const fetchAllImages = async () => {
+    const fetchMainPlantImages = async () => {
       try {
-        const res = await client.get(`/history/plants/${plantId}/images`);
+        // 1. 전체 식물 목록 조회 및 메인 식물 탐색
+        const plantsRes = await client.get('/plants');
+        const plants = plantsRes.data?.data || [];
+        const mainPlant = plants.find((p: any) => p.is_main);
+
+        if (!mainPlant) {
+          // 메인 식물이 없는 경우 로딩 종료
+          setLoading(false);
+          return;
+        }
+
+        // 2. 메인 식물 ID로 이미지 조회
+        const targetId = mainPlant.plant_id;
+        const res = await client.get(`/history/plants/${targetId}/images`);
 
         if (res.data.success && res.data.data.images) {
           const images: PlantImage[] = res.data.data.images;
@@ -89,18 +99,17 @@ export default function HistoryAlbumScreen({ navigation, route }: any) {
               new Date(a.capturedAt).getTime(),
           );
 
-          // 전체 기간 텍스트 설정 (가장 과거 ~ 가장 최신)
+          // 전체 기간 텍스트 설정
           if (images.length > 0) {
             const start = formatDotDate(images[images.length - 1].capturedAt);
             const end = formatDotDate(images[0].capturedAt);
             setPeriodText(`${start} - ${end}`);
           }
 
-          // UI 데이터로 변환 (Top, Side 각각 카드로 만듦)
+          // UI 데이터로 변환
           const displayList: DisplayPhoto[] = images.flatMap(item => {
             const dateLabel = formatDotDate(item.capturedAt);
 
-            // 랜덤 테이프 스타일 생성기
             const getTapeStyle = () => ({
               rotate: `${(Math.random() * 14 - 9).toFixed(1)}deg`,
               translateX: Math.random() * 20 - 10,
@@ -139,8 +148,8 @@ export default function HistoryAlbumScreen({ navigation, route }: any) {
       }
     };
 
-    fetchAllImages();
-  }, [plantId]);
+    fetchMainPlantImages();
+  }, []);
 
   return (
     <SafeAreaView style={styles.root}>
