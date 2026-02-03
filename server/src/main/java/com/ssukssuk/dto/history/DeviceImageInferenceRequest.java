@@ -20,14 +20,20 @@ public class DeviceImageInferenceRequest {
     @JsonProperty("plant_id")
     private Long plantId;
 
+    @JsonProperty("type")
     private String type; // IMAGE_INFERENCE
 
+    @JsonProperty("symptom_enum")
     private String symptomEnum;
 
     // inference 결과
+    @JsonProperty("height")
     private Double height;
+    @JsonProperty("width")
     private Double width;
+    @JsonProperty("anomaly")
     private Integer anomaly;
+    @JsonProperty("confidence")
     private Integer confidence;
 
     @JsonProperty("diagnosis_message")

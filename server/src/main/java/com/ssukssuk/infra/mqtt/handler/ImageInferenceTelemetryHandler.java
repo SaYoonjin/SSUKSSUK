@@ -19,15 +19,11 @@ public class ImageInferenceTelemetryHandler implements MqttMessageHandler {
     @Override
     public void handle(MqttEnvelope envelope) {
         try {
-
-            log.debug("parcing stratASDAFSDSFAFSAADSFFDADAFASDFASDFASDGADGAFWEFAWEFGASDGAG");
             DeviceImageInferenceRequest req =
                     objectMapper.treeToValue(
                             envelope.getPayloadJson(),
                             DeviceImageInferenceRequest.class
-                    );
-
-            log.debug("parcing endendnendnennendndenndndndASDAFSDSFAFSAADSFFDADAFASDFASDFASDGADGAFWEFAWEFGASDGAG");
+                    );  
 
             imageInferenceService.handle(req);
 
