@@ -73,13 +73,21 @@ public class PlantStatusService {
         eventPublisher.publishEvent(new PlantStatusUpdatedEvent(plantId));
     }
 
-    // TODO: 알림 읽기 API 구현 시 호출
-    // @Transactional
-    // public void clearUnreadNotification(Long plantId) {
-    //     PlantStatus status = plantStatusRepository.findById(plantId).orElse(null);
-    //     if (status == null) return;
-    //     status.clearUnreadNotification();
-    // }
+    /**
+     * 알림 읽음 처리 시 안읽은 알림 표시 해제
+     */
+    @Transactional
+    public void clearUnreadNotification(Long plantId) {
+        PlantStatus status = plantStatusRepository.findById(plantId).orElse(null);
+        if (status == null) {
+            log.warn("[PlantStatus] not found for plantId={}", plantId);
+            return;
+        }
+
+        status.clearUnreadNotification();
+
+        eventPublisher.publishEvent(new PlantStatusUpdatedEvent(plantId));
+    }
 
     private PlantStatus.SensorStatusType convertStatus(SensorUplinkMessage.SensorStatus status) {
         if (status == null) return null;

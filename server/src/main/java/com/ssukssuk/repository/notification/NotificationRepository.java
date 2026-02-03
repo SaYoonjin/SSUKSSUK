@@ -43,4 +43,37 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             @Param("userId") Long userId,
             @Param("now") LocalDateTime now
     );
+
+    /**
+     * 특정 식물의 오늘 알림 리스트 조회 (createdAt: [start, end))
+     */
+    @Query("""
+        select n
+        from Notification n
+        where n.plant.plantId = :plantId
+          and n.createdAt >= :start
+          and n.createdAt < :end
+        order by n.createdAt desc
+    """)
+    List<Notification> findTodayByPlantId(
+            @Param("plantId") Long plantId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
+
+    /**
+     * 특정 식물의 미읽음 알림 전체 읽음 처리
+     * @return 업데이트된 row 수 = updatedCount
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Notification n
+        set n.readAt = :now
+        where n.plant.plantId = :plantId
+          and n.readAt is null
+    """)
+    int markAllReadByPlantId(
+            @Param("plantId") Long plantId,
+            @Param("now") LocalDateTime now
+    );
 }

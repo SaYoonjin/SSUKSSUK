@@ -6,10 +6,13 @@ import com.ssukssuk.domain.history.SensorEvent;
 import com.ssukssuk.domain.notification.Notification;
 import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.notification.NotificationResponse;
+import com.ssukssuk.common.exception.CustomException;
+import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.history.SensorEventRepository;
 import com.ssukssuk.repository.notification.NotificationRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
+import com.ssukssuk.service.plant.PlantStatusService;
 import java.time.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,7 @@ public class NotificationService {
     private final UserPlantRepository userPlantRepository;
     private final UserRepository userRepository;
     private final SensorEventRepository sensorEventRepository;
+    private final PlantStatusService plantStatusService;
 
     @Transactional
     public Long notifySensorAnomalyAndReturnId(
@@ -74,8 +78,6 @@ public class NotificationService {
 
     /**
      * 디바이스 자동 조치 완료 알림 생성
-     * TODO: 이 메서드를 호출하는 곳에서 plantStatusService.markUnreadNotification(plantId)도 함께 호출해야 함
-     *       (SensorTelemetryService의 ANOMALY_DETECTED, RECOVERY_DONE 처리 패턴 참고)
      */
     @Transactional
     public Long notifyActionDoneAndReturnId(
@@ -102,8 +104,6 @@ public class NotificationService {
 
     /**
      * 디바이스 자동 조치 실패 알림 생성
-     * TODO: 이 메서드를 호출하는 곳에서 plantStatusService.markUnreadNotification(plantId)도 함께 호출해야 함
-     *       (SensorTelemetryService의 ANOMALY_DETECTED, RECOVERY_DONE 처리 패턴 참고)
      */
     @Transactional
     public Long notifyActionFailAndReturnId(
@@ -185,12 +185,18 @@ public class NotificationService {
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.plusDays(1).atStartOfDay();
 
-        // 1) 벨 아이콘 클릭 시 전체 읽음 처리
-        LocalDateTime now = LocalDateTime.now(zoneId);
-        int updatedCount = notificationRepository.markAllReadByUserId(userId, now);
+        // 0) 메인 식물 조회
+        UserPlant mainPlant = userPlantRepository.findMainPlantByUserId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
 
-        // 2) 오늘 알림 리스트 조회
-        List<Notification> list = notificationRepository.findTodayByUserId(userId, start, end);
+        Long plantId = mainPlant.getPlantId();
+
+        // 1) 벨 아이콘 클릭 시 메인 식물의 알림만 읽음 처리
+        LocalDateTime now = LocalDateTime.now(zoneId);
+        int updatedCount = notificationRepository.markAllReadByPlantId(plantId, now);
+
+        // 2) 메인 식물의 오늘 알림 리스트 조회
+        List<Notification> list = notificationRepository.findTodayByPlantId(plantId, start, end);
 
         List<NotificationResponse.NotificationItem> items = list.stream()
                 .map(n -> NotificationResponse.NotificationItem.builder()
@@ -200,6 +206,9 @@ public class NotificationService {
                         .build()
                 )
                 .toList();
+
+        // 3) 메인 식물의 hasUnreadNotification 해제
+        plantStatusService.clearUnreadNotification(plantId);
 
         return NotificationResponse.of(today, updatedCount, items);
     }

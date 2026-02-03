@@ -5,6 +5,7 @@ import com.ssukssuk.infra.mqtt.dto.MqttEnvelope;
 import com.ssukssuk.repository.history.SensorEventRepository;
 import com.ssukssuk.service.device.DeviceBindingValidator;
 import com.ssukssuk.service.notification.NotificationService;
+import com.ssukssuk.service.plant.PlantStatusService;
 import com.ssukssuk.service.push.PushService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class ActionResultService {
     private final SensorEventRepository sensorEventRepository;
     private final ActionLogService actionLogService;
     private final NotificationService notificationService;
+    private final PlantStatusService plantStatusService;
     private final PushService pushService;
 
     @Transactional
@@ -72,7 +74,10 @@ public class ActionResultService {
                             : notificationService.notifyActionFailAndReturnId(
                             msg.getPlantId(), sensorEvent.getEventId());
 
-            // 7. AFTER COMMIT 푸시
+            // 7. 안읽은 알림 표시
+            plantStatusService.markUnreadNotification(msg.getPlantId());
+
+            // 8. AFTER COMMIT 푸시
             TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronization() {
                         @Override
