@@ -5,6 +5,7 @@ import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.auth.User;
 import com.ssukssuk.domain.device.Device;
 import com.ssukssuk.domain.plant.UserPlant;
+import com.ssukssuk.repository.auth.UserRepository;
 import com.ssukssuk.repository.device.DeviceRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DeviceClaimService {
 
     private final DeviceRepository deviceRepository;
+    private final UserRepository userRepository;
     private final UserPlantRepository userPlantRepository;
     private final DeviceControlService deviceControlService;
 
@@ -29,14 +31,23 @@ public class DeviceClaimService {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
 
+        // REQUIRES_NEW 트랜잭션이므로 user를 다시 조회
+        User managedUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
         deviceControlService.sendClaimUpdate(
                 device.getSerial(),
-                user.getId(),
+                managedUser.getId(),
                 "CLAIMED",
-                user.getMode().name()
+                managedUser.getMode().name()
         );
 
-        device.claim(user);
+        device.claim(managedUser);
+
+        // 디바이스 등록 시 사용자 초기화 완료 처리
+        if (!managedUser.isInitialized()) {
+            managedUser.markInitialized();
+        }
     }
 
     /**
