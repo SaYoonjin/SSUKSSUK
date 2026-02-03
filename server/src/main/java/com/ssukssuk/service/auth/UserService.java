@@ -89,9 +89,9 @@ public class UserService {
                         .build()
         );
 
-        // deviceId가 있으면 fcm_token 테이블에서 user_id 매핑
-        if (req.deviceId() != null && !req.deviceId().isBlank()) {
-            pushTokenRepository.findByDeviceId(req.deviceId())
+        // mobileDeviceId가 있으면 fcm_token 테이블에서 user_id 매핑
+        if (req.mobileDeviceId() != null && !req.mobileDeviceId().isBlank()) {
+            pushTokenRepository.findByDeviceId(req.mobileDeviceId())
                     .ifPresent(pushToken -> pushToken.setUserId(user.getId()));
         }
 
@@ -229,9 +229,9 @@ public class UserService {
     public void logout(Long userId, LogoutRequest req) {
         refreshTokenRepository.deleteByUser_Id(userId);
 
-        // deviceId가 있으면 fcm_token 테이블에서 user_id 해제
-        if (req != null && req.deviceId() != null && !req.deviceId().isBlank()) {
-            pushTokenRepository.findByDeviceId(req.deviceId())
+        // mobileDeviceId가 있으면 fcm_token 테이블에서 user_id 해제
+        if (req != null && req.mobileDeviceId() != null && !req.mobileDeviceId().isBlank()) {
+            pushTokenRepository.findByDeviceId(req.mobileDeviceId())
                     .ifPresent(pushToken -> pushToken.setUserId(null));
         }
     }

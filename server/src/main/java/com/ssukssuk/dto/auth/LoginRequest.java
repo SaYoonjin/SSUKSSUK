@@ -8,5 +8,5 @@ public record LoginRequest(
         String email,
         @NotBlank
         String password,
-        String deviceId
+        String mobileDeviceId
 ) {}
