@@ -256,25 +256,17 @@ function buildDomain(min: number, max: number) {
   return { dmin: min - pad, dmax: max + pad };
 }
 
-function getGuideKeywords(
-    kind: SensorKind,
-    current: number,
-    min: number,
-    max: number,
-) {
+function getGuideKeywords(kind: SensorKind, current: number, min: number, max: number) {
   const status = getLevelText(current, min, max);
   if (status === '정상') return ['정상'];
-  if (kind === 'water')
-    return status === '낮음' ? ['낮아요', '낮음'] : ['높아요', '높음'];
+  if (kind === 'water') return status === '낮음' ? ['낮아요', '낮음'] : ['높아요', '높음'];
   return status === '낮음' ? ['낮아요', '낮음'] : ['높아요', '높음'];
 }
 
 function renderHighlightedGuide(message: string, keywords: string[]) {
   if (!message) return null;
 
-  const ks = Array.from(new Set(keywords.filter(Boolean))).sort(
-      (a, b) => b.length - a.length,
-  );
+  const ks = Array.from(new Set(keywords.filter(Boolean))).sort((a, b) => b.length - a.length);
   if (ks.length === 0) {
     return (
         <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
@@ -328,9 +320,7 @@ function SensorBar({ data }: { data: SensorBarData }) {
                 style={StyleSheet.absoluteFill}
             />
 
-            <View
-                style={[styles.normalTick, { left: `${normalStart * 100}%` }]}
-            />
+            <View style={[styles.normalTick, { left: `${normalStart * 100}%` }]} />
             <View style={[styles.normalTick, { left: `${normalEnd * 100}%` }]} />
 
             <View
@@ -407,10 +397,7 @@ export default function MainScreen() {
   const translateY_jump = useRef(new Animated.Value(0)).current;
   const combinedTranslateY = Animated.add(translateY_walk, translateY_jump);
 
-  const backgroundSource = useMemo(
-      () => (useDayBg ? BG_DAY : BG_NIGHT),
-      [useDayBg],
-  );
+  const backgroundSource = useMemo(() => (useDayBg ? BG_DAY : BG_NIGHT), [useDayBg]);
   const toggleTranslateX = toggleAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 50],
@@ -420,17 +407,14 @@ export default function MainScreen() {
     outputRange: ['#75A743', '#a1a1a1'],
   });
 
-  const getNotifListSeenKey = (plantId: number) =>
-      `${NOTIF_SEEN_STATE_KEY}:list:${plantId}`;
-  const getNotifBalloonSeenKey = (plantId: number) =>
-      `${NOTIF_SEEN_STATE_KEY}:balloon:${plantId}`;
+  // ✅ plantId 종속 제거: 유저-오늘 기준으로 통일
+  const getNotifListSeenKey = () => `${NOTIF_SEEN_STATE_KEY}:list`;
+  const getNotifBalloonSeenKey = () => `${NOTIF_SEEN_STATE_KEY}:balloon`;
 
   const formatTimeHHmm = (iso: string) => {
     if (!iso) return '';
     const d = new Date(iso);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(
-        d.getMinutes(),
-    ).padStart(2, '0')}`;
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
   const getTagFromMessage = (msg: string) => {
@@ -523,10 +507,8 @@ export default function MainScreen() {
   }, []);
 
   const moveRandomly = useCallback(() => {
-    const toX =
-        Math.floor(Math.random() * (MOVE_RANGE_X * 2 + 1)) - MOVE_RANGE_X;
-    const toY =
-        Math.floor(Math.random() * (MOVE_RANGE_Y * 2 + 1)) - MOVE_RANGE_Y;
+    const toX = Math.floor(Math.random() * (MOVE_RANGE_X * 2 + 1)) - MOVE_RANGE_X;
+    const toY = Math.floor(Math.random() * (MOVE_RANGE_Y * 2 + 1)) - MOVE_RANGE_Y;
     const duration = 3000 + Math.random() * 3000;
     Animated.parallel([
       Animated.timing(translateX, {
@@ -608,8 +590,7 @@ export default function MainScreen() {
     const cached = await AsyncStorage.getItem('plantId');
     const cachedName = await AsyncStorage.getItem(PLANT_NAME_STORAGE_KEY);
 
-    const cachedPid =
-        cached && !Number.isNaN(Number(cached)) ? Number(cached) : null;
+    const cachedPid = cached && !Number.isNaN(Number(cached)) ? Number(cached) : null;
 
     if (cachedName) setPlantName(cachedName);
 
@@ -663,10 +644,7 @@ export default function MainScreen() {
 
   const writeSeenAt = async (key: string, serverDate: string, lastSeenAt: string) => {
     try {
-      await AsyncStorage.setItem(
-          key,
-          JSON.stringify({ date: serverDate, lastSeenAt }),
-      );
+      await AsyncStorage.setItem(key, JSON.stringify({ date: serverDate, lastSeenAt }));
     } catch {}
   };
 
@@ -714,9 +692,7 @@ export default function MainScreen() {
 
         if (serverPlantId !== currentCachedId) {
           await AsyncStorage.setItem('plantId', serverPlantId);
-          console.log(
-              `🔄 메인 식물 ID 동기화: ${currentCachedId} -> ${serverPlantId}`,
-          );
+          console.log(`🔄 메인 식물 ID 동기화: ${currentCachedId} -> ${serverPlantId}`);
         }
       }
 
@@ -728,10 +704,7 @@ export default function MainScreen() {
         } catch {}
       }
 
-      const rawCode =
-          d?.characterCode ??
-          d?.mainPlant?.characterCode ??
-          null;
+      const rawCode = d?.characterCode ?? d?.mainPlant?.characterCode ?? null;
 
       const nextCode = Number(rawCode);
       if (Number.isFinite(nextCode)) {
@@ -752,10 +725,8 @@ export default function MainScreen() {
       const nextHs = clamp(Number(hsRaw) || 0, 0, 100);
       setHealthScore(prev => (prev === nextHs ? prev : nextHs));
 
-      const waterStatus =
-          d?.waterLevelStatus ?? d?.currentSensor?.waterLevel?.status;
-      const nutrientStatus =
-          d?.nutrientStatus ?? d?.currentSensor?.nutrient?.status;
+      const waterStatus = d?.waterLevelStatus ?? d?.currentSensor?.waterLevel?.status;
+      const nutrientStatus = d?.nutrientStatus ?? d?.currentSensor?.nutrient?.status;
 
       const waterOk = isOkLike(waterStatus);
       const nutrientOk = isOkLike(nutrientStatus);
@@ -774,17 +745,12 @@ export default function MainScreen() {
               ? d.temperature
               : d?.currentSensor?.temperatureHumidity?.temperature;
       const hum =
-          typeof d?.humidity === 'number'
-              ? d.humidity
-              : d?.currentSensor?.temperatureHumidity?.humidity;
+          typeof d?.humidity === 'number' ? d.humidity : d?.currentSensor?.temperatureHumidity?.humidity;
 
       const tNum = typeof temp === 'number' ? temp : null;
       const hNum = typeof hum === 'number' ? hum : null;
 
-      const nextTempHum =
-          tNum == null || hNum == null
-              ? '-'
-              : `   ${tNum.toFixed(1)}°C / \n ${hNum.toFixed(0)}%`;
+      const nextTempHum = tNum == null || hNum == null ? '-' : `   ${tNum.toFixed(1)}°C / \n ${hNum.toFixed(0)}%`;
 
       setTempHumText(prev => (prev === nextTempHum ? prev : nextTempHum));
 
@@ -820,39 +786,26 @@ export default function MainScreen() {
       const plantId = await getPlantId();
       if (!plantId) return;
 
-      const res = await client.post<TodayNotificationsResponse>(
-          '/notifications/list',
-          {},
-      );
+      const res = await client.post<TodayNotificationsResponse>('/notifications/list', {});
       const data = res.data.data;
       if (!data) return;
 
       const list = data.notifications
           .slice()
-          .sort(
-              (a, b) =>
-                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      const listSeenKey = getNotifListSeenKey(plantId);
-      const balloonSeenKey = getNotifBalloonSeenKey(plantId);
+      const listSeenKey = getNotifListSeenKey();
+      const balloonSeenKey = getNotifBalloonSeenKey();
 
       const listSeenAt = await readSeenAt(listSeenKey, data.date);
       const balloonSeenAt = await readSeenAt(balloonSeenKey, data.date);
 
       const unreadForBadge = listSeenAt
-          ? list.filter(
-              n =>
-                  new Date(n.createdAt).getTime() > new Date(listSeenAt).getTime(),
-          )
+          ? list.filter(n => new Date(n.createdAt).getTime() > new Date(listSeenAt).getTime())
           : list;
 
       const balloonCandidate = balloonSeenAt
-          ? list.find(
-          n =>
-              new Date(n.createdAt).getTime() >
-              new Date(balloonSeenAt).getTime(),
-      ) || null
+          ? list.find(n => new Date(n.createdAt).getTime() > new Date(balloonSeenAt).getTime()) || null
           : list[0] || null;
 
       setTodayNotifications({ ...data, notifications: list });
@@ -895,10 +848,7 @@ export default function MainScreen() {
 
       const list = (todayNotifications?.notifications ?? [])
           .slice()
-          .sort(
-              (a: any, b: any) =>
-                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
+          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       if (list.length === 0) {
         openModal('오늘의 알림', '현재 알람이 없습니다', 'list');
@@ -909,16 +859,8 @@ export default function MainScreen() {
 
       if (todayNotifications?.date && list.length > 0) {
         const latestAt = list[0].createdAt;
-        await writeSeenAt(
-            getNotifListSeenKey(plantId),
-            todayNotifications.date,
-            latestAt,
-        );
-        await writeSeenAt(
-            getNotifBalloonSeenKey(plantId),
-            todayNotifications.date,
-            latestAt,
-        );
+        await writeSeenAt(getNotifListSeenKey(), todayNotifications.date, latestAt);
+        await writeSeenAt(getNotifBalloonSeenKey(), todayNotifications.date, latestAt);
 
         setTodayCount(0);
         setLatestNotification(null);
@@ -938,11 +880,7 @@ export default function MainScreen() {
       openModal('최신 알림', [latestNotification], 'list');
 
       if (todayNotifications?.date && latestNotification?.createdAt) {
-        await writeSeenAt(
-            getNotifBalloonSeenKey(plantId),
-            todayNotifications.date,
-            latestNotification.createdAt,
-        );
+        await writeSeenAt(getNotifBalloonSeenKey(), todayNotifications.date, latestNotification.createdAt);
       }
 
       setLatestNotification(null);
@@ -950,13 +888,7 @@ export default function MainScreen() {
     } catch (e) {
       console.error(e);
     }
-  }, [
-    getPlantId,
-    latestNotification,
-    todayNotifications,
-    openModal,
-    fetchTodayNotifications,
-  ]);
+  }, [getPlantId, latestNotification, todayNotifications, openModal, fetchTodayNotifications]);
 
   const buildWaterGuide = (current: number, min: number, max: number) => {
     if (current > max)
@@ -981,20 +913,13 @@ export default function MainScreen() {
       const token = await AsyncStorage.getItem('accessToken');
 
       if (!plantId) {
-        openModal(
-            '수위 정보',
-            '식물 정보를 찾지 못했습니다. (plantId 없음)',
-            'sign',
-        );
+        openModal('수위 정보', '식물 정보를 찾지 못했습니다. (plantId 없음)', 'sign');
         return;
       }
 
-      const res = await client.get<WaterSensorCardResponse>(
-          `/plants/${plantId}/sensors/water`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-      );
+      const res = await client.get<WaterSensorCardResponse>(`/plants/${plantId}/sensors/water`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const data = res.data.data;
       if (!data) {
@@ -1002,11 +927,7 @@ export default function MainScreen() {
         return;
       }
 
-      const guide = buildWaterGuide(
-          data.current_water,
-          data.ideal_min,
-          data.ideal_max,
-      );
+      const guide = buildWaterGuide(data.current_water, data.ideal_min, data.ideal_max);
 
       openModal(
           '수위 정보',
@@ -1036,20 +957,13 @@ export default function MainScreen() {
       const token = await AsyncStorage.getItem('accessToken');
 
       if (!plantId) {
-        openModal(
-            '농도 정보',
-            '식물 정보를 찾지 못했습니다. (plantId 없음)',
-            'sign',
-        );
+        openModal('농도 정보', '식물 정보를 찾지 못했습니다. (plantId 없음)', 'sign');
         return;
       }
 
-      const res = await client.get<NutrientSensorCardResponse>(
-          `/plants/${plantId}/sensors/nutrient`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-      );
+      const res = await client.get<NutrientSensorCardResponse>(`/plants/${plantId}/sensors/nutrient`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const data = res.data.data;
       if (!data) {
@@ -1057,11 +971,7 @@ export default function MainScreen() {
         return;
       }
 
-      const guide = buildNutrientGuide(
-          data.current_nutrient,
-          data.ideal_min,
-          data.ideal_max,
-      );
+      const guide = buildNutrientGuide(data.current_nutrient, data.ideal_min, data.ideal_max);
 
       openModal(
           '농도 정보',
@@ -1084,10 +994,7 @@ export default function MainScreen() {
     }
   }, [getPlantId, openModal]);
 
-  const hpPercent = useMemo(
-      () => clamp(Number(healthScore) || 0, 0, 100),
-      [healthScore],
-  );
+  const hpPercent = useMemo(() => clamp(Number(healthScore) || 0, 0, 100), [healthScore]);
 
   const level = useMemo(() => getLevelFromCode(characterCode), [characterCode, getLevelFromCode]);
 
@@ -1102,17 +1009,13 @@ export default function MainScreen() {
         <ImageBackground source={backgroundSource} style={styles.bg} resizeMode="cover">
           <ScrollView
               contentContainerStyle={{ flexGrow: 1 }}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-              }
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           >
             <Pressable style={styles.topBellIconBtn} onPress={onPressBell}>
               <Image source={ALARM_BELL} style={styles.bellImage} />
               {todayCount > 0 && (
                   <View style={styles.bellBadge}>
-                    <Text style={styles.bellBadgeText}>
-                      {todayCount > 99 ? '99+' : todayCount}
-                    </Text>
+                    <Text style={styles.bellBadgeText}>{todayCount > 99 ? '99+' : todayCount}</Text>
                   </View>
               )}
             </Pressable>
@@ -1128,14 +1031,10 @@ export default function MainScreen() {
                   ]}
               />
               <Pressable onPress={() => handleToggle(true)} style={styles.togglePiece}>
-                <Text style={[styles.togglePieceText, isAutoMode && styles.textActive]}>
-                  AUTO
-                </Text>
+                <Text style={[styles.togglePieceText, isAutoMode && styles.textActive]}>AUTO</Text>
               </Pressable>
               <Pressable onPress={() => handleToggle(false)} style={styles.togglePiece}>
-                <Text style={[styles.togglePieceText, !isAutoMode && styles.textActive]}>
-                  MANU
-                </Text>
+                <Text style={[styles.togglePieceText, !isAutoMode && styles.textActive]}>MANU</Text>
               </Pressable>
             </View>
 
@@ -1156,7 +1055,9 @@ export default function MainScreen() {
                     </Text>
 
                     <View style={styles.hpRow}>
-                      <Text style={styles.hpLabel}>현재{'\n'}상태</Text>
+                      <Text style={styles.hpLabel}>
+                        현재{'\n'}상태
+                      </Text>
 
                       <View style={styles.hpArea}>
                         <Text style={styles.levelText}>Lv {level}</Text>
@@ -1166,13 +1067,9 @@ export default function MainScreen() {
                         </View>
                       </View>
                     </View>
-
                   </View>
 
-                  <Pressable
-                      style={[styles.signTouchArea, { left: '3%', top: '24%' }]}
-                      onPress={onPressWaterSign}
-                  >
+                  <Pressable style={[styles.signTouchArea, { left: '3%', top: '24%' }]} onPress={onPressWaterSign}>
                     {waterNeedCheck && (
                         <View style={styles.signAlertBadge}>
                           <Text style={styles.signAlertBadgeText}>!</Text>
@@ -1182,10 +1079,7 @@ export default function MainScreen() {
                     <Text style={styles.signSubText}>{waterStatusText}</Text>
                   </Pressable>
 
-                  <Pressable
-                      style={[styles.signTouchArea, { left: '36%', top: '24%' }]}
-                      onPress={onPressNutrientSign}
-                  >
+                  <Pressable style={[styles.signTouchArea, { left: '36%', top: '24%' }]} onPress={onPressNutrientSign}>
                     {nutrientNeedCheck && (
                         <View style={styles.signAlertBadge}>
                           <Text style={styles.signAlertBadgeText}>!</Text>
@@ -1247,10 +1141,7 @@ export default function MainScreen() {
         >
           <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
             <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
-            <Animated.View
-                onStartShouldSetResponder={() => true}
-                style={{ transform: [{ scale: modalScale }] }}
-            >
+            <Animated.View onStartShouldSetResponder={() => true} style={{ transform: [{ scale: modalScale }] }}>
               <PixelBox style={styles.modalContent} innerStyle={styles.modalInner}>
                 <View style={styles.modalHeaderCustom}>
                   <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
@@ -1272,9 +1163,7 @@ export default function MainScreen() {
                           <View key={idx} style={styles.notifCard}>
                             <View style={styles.notifRow}>
                               {modalType === 'list' && (
-                                  <Text style={styles.tagBadgeText}>
-                                    [{getTagFromMessage(item.message)}]
-                                  </Text>
+                                  <Text style={styles.tagBadgeText}>[{getTagFromMessage(item.message)}]</Text>
                               )}
 
                               {modalType === 'sign' && item.sensor ? (
@@ -1292,14 +1181,10 @@ export default function MainScreen() {
                               )}
                             </View>
 
-                            {modalType === 'sign' && item.sensor && (
-                                <SensorBar data={item.sensor} />
-                            )}
+                            {modalType === 'sign' && item.sensor && <SensorBar data={item.sensor} />}
 
                             {item.createdAt && (
-                                <Text style={styles.notifTime}>
-                                  {formatTimeHHmm(item.createdAt)}
-                                </Text>
+                                <Text style={styles.notifTime}>{formatTimeHHmm(item.createdAt)}</Text>
                             )}
                           </View>
                       ))
@@ -1439,7 +1324,7 @@ const styles = StyleSheet.create({
     lineHeight: 10,
     marginRight: 10,
     textAlign: 'center',
-    marginTop: 15
+    marginTop: 15,
   },
 
   hpBarWrap: {
@@ -1460,7 +1345,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: SIGN_TEXT_COLOR,
   },
-
 
   hpOuter: {
     width: 120,
