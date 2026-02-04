@@ -33,7 +33,7 @@
   },
   "mode": "AUTO",
   "seq": {
-    "SENSOR_UPLINK": 25,
+    "SENSOR_UPLINK": 26,
     "ACTION_RESULT": 2
   },
   "anomaly_state": {

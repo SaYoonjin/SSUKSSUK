@@ -8,6 +8,14 @@ import sys
 from datetime import datetime
 from ultralytics import YOLO
 
+_inference_singleton = None
+
+def get_inference_engine():
+    global _inference_singleton
+    if _inference_singleton is None:
+        _inference_singleton = PlantInference(model_dir="models")
+    return _inference_singleton
+    
 class PlantInference:
     def __init__(self, model_dir='models'):
         """초기화: 모델 로드 (Engine > ONNX > PT 순서)"""

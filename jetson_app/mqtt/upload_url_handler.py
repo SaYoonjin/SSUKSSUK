@@ -12,6 +12,7 @@ from mqtt.ack_builder import build_ack
 from camera.camera_manager import CameraManager, CameraError
 from uploader.s3_uploader import S3Uploader, UploadError
 from telemetry.image_inference import PlantInference
+from telemetry.image_inference import get_inference_engine
 from uart.packet import CMD_LED_OFF
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -136,7 +137,7 @@ def handle_upload_url(payload: dict, mqtt_client, telemetry_base: str, uart, led
         # =========================
         try:
             # 1. 모델 로드
-            inference_engine = PlantInference(model_dir='models')
+            inference_engine = get_inference_engine()
 
             # 2. 로컬 이미지 읽기
             side_path = captured["SIDE"]["path"]
