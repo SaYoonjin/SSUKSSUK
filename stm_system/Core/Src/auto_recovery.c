@@ -19,6 +19,7 @@ typedef enum {
 } AutoRecoveryState;
 
 static uint8_t pending_recovery_mask = 0;
+static uint8_t running_recovery_mask = 0;  // 현재 진행 중인 센서 마스크
 static AutoRecoveryState ar_state = AR_IDLE;
 static uint32_t ar_tick = 0;
 static uint8_t ar_ec_retry = 0;
@@ -54,7 +55,8 @@ bool auto_recovery_is_active(void)
 
 void auto_recovery_request(uint8_t sensor_mask)
 {
-    uint8_t new_mask = sensor_mask & ~pending_recovery_mask;
+    // 현재 진행 중이거나 이미 pending인 센서는 제외
+    uint8_t new_mask = sensor_mask & ~pending_recovery_mask & ~running_recovery_mask;
     if (new_mask == 0) return;
 
     pending_recovery_mask |= new_mask;
@@ -72,6 +74,7 @@ void auto_recovery_start_if_needed(void)
         g_sensor.water_level < g_threshold.water_min) {
 
         pending_recovery_mask &= ~RECOV_WATER;
+        running_recovery_mask = RECOV_WATER;  // 현재 WATER 진행 중 표시
         ar_active = true;
         sensor_suspend_check(true);
 
@@ -86,6 +89,7 @@ void auto_recovery_start_if_needed(void)
         g_sensor.ec < g_threshold.ec_min) {
 
         pending_recovery_mask &= ~RECOV_EC;
+        running_recovery_mask = RECOV_EC;  // 현재 EC 진행 중 표시
         ar_active = true;
         // sensor_suspend_check(true);
 
@@ -104,6 +108,7 @@ static void auto_recovery_finish(void)
 
     ar_state = AR_IDLE;
     ar_active = false;
+    running_recovery_mask = 0;  // 진행 중 마스크 해제
     sensor_suspend_check(false);
 
     // ⭐ pending_mask가 남아있으면 다음 작업 시작
@@ -197,7 +202,8 @@ void auto_recovery_fsm(void)
                 auto_recovery_finish();
             } else {
                 ar_ec_retry++;
-                if (ar_ec_retry >= 1) {
+                if (ar_ec_retry >= 5) {
+                    // 5번 시도 후 실패
                     proto_send_event_sensor(EVENT_NUTRI_PUMP_FAIL,
                         (uint16_t)(g_sensor.temperature * 10),
                         (uint16_t)(g_sensor.humidity * 10),
@@ -205,7 +211,7 @@ void auto_recovery_fsm(void)
                         (uint16_t)(g_sensor.water_level));
                     auto_recovery_finish();
                 } else {
-                    // 다시 1초 ON 반복
+                    // 다시 700ms ON 반복
                     HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_RESET); // ON
                     ar_state = AR_EC_PUMP_ON;
                     ar_tick = now;
