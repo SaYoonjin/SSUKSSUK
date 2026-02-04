@@ -56,9 +56,9 @@ const NOTIF_CARD_MIN_H = 62;
 const NOTIF_CARD_GAP = 8;
 const MAX_VISIBLE_NOTIF_CARDS = 4;
 const LIST_MODAL_MAX_HEIGHT =
-  NOTIF_CARD_MIN_H * MAX_VISIBLE_NOTIF_CARDS +
-  NOTIF_CARD_GAP * (MAX_VISIBLE_NOTIF_CARDS - 1) +
-  4;
+    NOTIF_CARD_MIN_H * MAX_VISIBLE_NOTIF_CARDS +
+    NOTIF_CARD_GAP * (MAX_VISIBLE_NOTIF_CARDS - 1) +
+    4;
 
 type TodayNotificationsResponse = {
   success: boolean;
@@ -120,7 +120,7 @@ type SeenState = {
 };
 
 type HomeResponse =
-  | {
+    | {
   success: true;
   data: {
     plantId?: number;
@@ -168,7 +168,7 @@ type HomeResponse =
   };
   error?: null;
 }
-  | {
+    | {
   success: false;
   message?: string;
   error?: any;
@@ -177,40 +177,40 @@ type HomeResponse =
 
 function PixelBox({ children, style, innerStyle }: any) {
   return (
-    <View style={[styles.pixelBoxContainer, style]}>
-      <View style={styles.pixelBgUnderlay} />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.shadeLeft,
-          { left: -PIXEL, opacity: 0.05, width: PIXEL },
-        ]}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.shadeRight,
-          { right: -PIXEL, opacity: 0.05, width: PIXEL },
-        ]}
-      />
-      <View style={styles.pixelTop} />
-      <View style={styles.pixelBottom} />
-      <View style={styles.pixelLeft} />
-      <View style={styles.pixelRight} />
-      <View style={styles.pixelCornerTL1} />
-      <View style={styles.pixelCornerTL2} />
-      <View style={styles.pixelCornerTL3} />
-      <View style={styles.pixelCornerTR1} />
-      <View style={styles.pixelCornerTR2} />
-      <View style={styles.pixelCornerTR3} />
-      <View style={styles.pixelCornerBL1} />
-      <View style={styles.pixelCornerBL2} />
-      <View style={styles.pixelCornerBL3} />
-      <View style={styles.pixelCornerBR1} />
-      <View style={styles.pixelCornerBR2} />
-      <View style={styles.pixelCornerBR3} />
-      <View style={[styles.cardInner, innerStyle]}>{children}</View>
-    </View>
+      <View style={[styles.pixelBoxContainer, style]}>
+        <View style={styles.pixelBgUnderlay} />
+        <View
+            pointerEvents="none"
+            style={[
+              styles.shadeLeft,
+              { left: -PIXEL, opacity: 0.05, width: PIXEL },
+            ]}
+        />
+        <View
+            pointerEvents="none"
+            style={[
+              styles.shadeRight,
+              { right: -PIXEL, opacity: 0.05, width: PIXEL },
+            ]}
+        />
+        <View style={styles.pixelTop} />
+        <View style={styles.pixelBottom} />
+        <View style={styles.pixelLeft} />
+        <View style={styles.pixelRight} />
+        <View style={styles.pixelCornerTL1} />
+        <View style={styles.pixelCornerTL2} />
+        <View style={styles.pixelCornerTL3} />
+        <View style={styles.pixelCornerTR1} />
+        <View style={styles.pixelCornerTR2} />
+        <View style={styles.pixelCornerTR3} />
+        <View style={styles.pixelCornerBL1} />
+        <View style={styles.pixelCornerBL2} />
+        <View style={styles.pixelCornerBL3} />
+        <View style={styles.pixelCornerBR1} />
+        <View style={styles.pixelCornerBR2} />
+        <View style={styles.pixelCornerBR3} />
+        <View style={[styles.cardInner, innerStyle]}>{children}</View>
+      </View>
   );
 }
 
@@ -257,10 +257,10 @@ function buildDomain(min: number, max: number) {
 }
 
 function getGuideKeywords(
-  kind: SensorKind,
-  current: number,
-  min: number,
-  max: number,
+    kind: SensorKind,
+    current: number,
+    min: number,
+    max: number,
 ) {
   const status = getLevelText(current, min, max);
   if (status === '정상') return ['정상'];
@@ -273,13 +273,13 @@ function renderHighlightedGuide(message: string, keywords: string[]) {
   if (!message) return null;
 
   const ks = Array.from(new Set(keywords.filter(Boolean))).sort(
-    (a, b) => b.length - a.length,
+      (a, b) => b.length - a.length,
   );
   if (ks.length === 0) {
     return (
-      <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
-        {message}
-      </Text>
+        <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
+          {message}
+        </Text>
     );
   }
 
@@ -288,16 +288,16 @@ function renderHighlightedGuide(message: string, keywords: string[]) {
   const parts = message.split(pattern);
 
   return (
-    <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
-      {parts.map((p, i) => {
-        const isHit = ks.includes(p);
-        return (
-          <Text key={i} style={isHit ? styles.guideKeyword : undefined}>
-            {p}
-          </Text>
-        );
-      })}
-    </Text>
+      <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
+        {parts.map((p, i) => {
+          const isHit = ks.includes(p);
+          return (
+              <Text key={i} style={isHit ? styles.guideKeyword : undefined}>
+                {p}
+              </Text>
+          );
+        })}
+      </Text>
   );
 }
 
@@ -315,48 +315,48 @@ function SensorBar({ data }: { data: SensorBarData }) {
   const pointerColor = status === '정상' ? '#222' : '#D25353';
 
   return (
-    <View style={styles.sensorBlock}>
-      <Text style={styles.sensorTitle}>{getSensorTitle(kind)}</Text>
+      <View style={styles.sensorBlock}>
+        <Text style={styles.sensorTitle}>{getSensorTitle(kind)}</Text>
 
-      <View style={styles.sensorBarWrap}>
-        <View style={styles.sensorBar}>
-          <LinearGradient
-            colors={['#D98F8F', '#F6F0EE', '#99BDEB']}
-            locations={[0, 0.5, 1]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={StyleSheet.absoluteFill}
-          />
+        <View style={styles.sensorBarWrap}>
+          <View style={styles.sensorBar}>
+            <LinearGradient
+                colors={['#D98F8F', '#F6F0EE', '#99BDEB']}
+                locations={[0, 0.5, 1]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={StyleSheet.absoluteFill}
+            />
 
-          <View
-            style={[styles.normalTick, { left: `${normalStart * 100}%` }]}
-          />
-          <View style={[styles.normalTick, { left: `${normalEnd * 100}%` }]} />
+            <View
+                style={[styles.normalTick, { left: `${normalStart * 100}%` }]}
+            />
+            <View style={[styles.normalTick, { left: `${normalEnd * 100}%` }]} />
 
-          <View
-            style={[
-              styles.sensorPointer,
-              { left: `${p * 100}%`, backgroundColor: pointerColor },
-            ]}
-          />
-        </View>
+            <View
+                style={[
+                  styles.sensorPointer,
+                  { left: `${p * 100}%`, backgroundColor: pointerColor },
+                ]}
+            />
+          </View>
 
-        <View style={styles.sensorLabels}>
-          <Text style={styles.sensorLabelText}>낮음</Text>
-          <Text style={styles.sensorLabelText}>정상</Text>
-          <Text style={styles.sensorLabelText}>높음</Text>
-        </View>
+          <View style={styles.sensorLabels}>
+            <Text style={styles.sensorLabelText}>낮음</Text>
+            <Text style={styles.sensorLabelText}>정상</Text>
+            <Text style={styles.sensorLabelText}>높음</Text>
+          </View>
 
-        <View style={styles.sensorMetaRow}>
-          <Text style={styles.sensorMetaText}>
-            {`현재: ${Number.isFinite(current) ? current.toFixed(1) : '-'}`}
-          </Text>
-          <Text style={styles.sensorMetaText}>
-            {`기준: ${ideal_min.toFixed(1)} ~ ${ideal_max.toFixed(1)}`}
-          </Text>
+          <View style={styles.sensorMetaRow}>
+            <Text style={styles.sensorMetaText}>
+              {`현재: ${Number.isFinite(current) ? current.toFixed(1) : '-'}`}
+            </Text>
+            <Text style={styles.sensorMetaText}>
+              {`기준: ${ideal_min.toFixed(1)} ~ ${ideal_max.toFixed(1)}`}
+            </Text>
+          </View>
         </View>
       </View>
-    </View>
   );
 }
 
@@ -408,8 +408,8 @@ export default function MainScreen() {
   const combinedTranslateY = Animated.add(translateY_walk, translateY_jump);
 
   const backgroundSource = useMemo(
-    () => (useDayBg ? BG_DAY : BG_NIGHT),
-    [useDayBg],
+      () => (useDayBg ? BG_DAY : BG_NIGHT),
+      [useDayBg],
   );
   const toggleTranslateX = toggleAnim.interpolate({
     inputRange: [0, 1],
@@ -421,15 +421,15 @@ export default function MainScreen() {
   });
 
   const getNotifListSeenKey = (plantId: number) =>
-    `${NOTIF_SEEN_STATE_KEY}:list:${plantId}`;
+      `${NOTIF_SEEN_STATE_KEY}:list:${plantId}`;
   const getNotifBalloonSeenKey = (plantId: number) =>
-    `${NOTIF_SEEN_STATE_KEY}:balloon:${plantId}`;
+      `${NOTIF_SEEN_STATE_KEY}:balloon:${plantId}`;
 
   const formatTimeHHmm = (iso: string) => {
     if (!iso) return '';
     const d = new Date(iso);
     return `${String(d.getHours()).padStart(2, '0')}:${String(
-      d.getMinutes(),
+        d.getMinutes(),
     ).padStart(2, '0')}`;
   };
 
@@ -440,35 +440,34 @@ export default function MainScreen() {
     return '알림';
   };
 
-  const openModal = useCallback((
-    title: string,
-    content: string | any[],
-    type: 'list' | 'sign' = 'sign',
-  ) => {
-    setModalTitle(title);
-    setModalType(type);
+  const openModal = useCallback(
+      (title: string, content: string | any[], type: 'list' | 'sign' = 'sign') => {
+        setModalTitle(title);
+        setModalType(type);
 
-    if (Array.isArray(content)) setModalBodyItems(content);
-    else setModalBodyItems([{ message: content }]);
+        if (Array.isArray(content)) setModalBodyItems(content);
+        else setModalBodyItems([{ message: content }]);
 
-    modalOpacity.setValue(0);
-    modalScale.setValue(0.96);
+        modalOpacity.setValue(0);
+        modalScale.setValue(0.96);
 
-    setIsModalVisible(true);
+        setIsModalVisible(true);
 
-    Animated.parallel([
-      Animated.timing(modalOpacity, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalScale, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [modalOpacity, modalScale]);
+        Animated.parallel([
+          Animated.timing(modalOpacity, {
+            toValue: 1,
+            duration: 220,
+            useNativeDriver: true,
+          }),
+          Animated.timing(modalScale, {
+            toValue: 1,
+            duration: 220,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      },
+      [modalOpacity, modalScale],
+  );
 
   const closeModal = useCallback(() => {
     Animated.parallel([
@@ -490,8 +489,8 @@ export default function MainScreen() {
       const now = new Date();
       setUseDayBg(isDayTime(now));
       setTimeout(
-        schedule,
-        Math.max(500, getNextSwitchTime(now).getTime() - now.getTime()),
+          schedule,
+          Math.max(500, getNextSwitchTime(now).getTime() - now.getTime()),
       );
     };
     schedule();
@@ -525,9 +524,9 @@ export default function MainScreen() {
 
   const moveRandomly = useCallback(() => {
     const toX =
-      Math.floor(Math.random() * (MOVE_RANGE_X * 2 + 1)) - MOVE_RANGE_X;
+        Math.floor(Math.random() * (MOVE_RANGE_X * 2 + 1)) - MOVE_RANGE_X;
     const toY =
-      Math.floor(Math.random() * (MOVE_RANGE_Y * 2 + 1)) - MOVE_RANGE_Y;
+        Math.floor(Math.random() * (MOVE_RANGE_Y * 2 + 1)) - MOVE_RANGE_Y;
     const duration = 3000 + Math.random() * 3000;
     Animated.parallel([
       Animated.timing(translateX, {
@@ -585,9 +584,9 @@ export default function MainScreen() {
       if (!token) throw new Error('NO_TOKEN');
 
       await client.patch(
-        '/auth/mode',
-        { mode: auto ? 'AUTO' : 'MANUAL' },
-        { headers: { Authorization: `Bearer ${token}` } },
+          '/auth/mode',
+          { mode: auto ? 'AUTO' : 'MANUAL' },
+          { headers: { Authorization: `Bearer ${token}` } },
       );
 
       await AsyncStorage.setItem(MODE_STORAGE_KEY, auto ? 'AUTO' : 'MANUAL');
@@ -610,7 +609,7 @@ export default function MainScreen() {
     const cachedName = await AsyncStorage.getItem(PLANT_NAME_STORAGE_KEY);
 
     const cachedPid =
-      cached && !Number.isNaN(Number(cached)) ? Number(cached) : null;
+        cached && !Number.isNaN(Number(cached)) ? Number(cached) : null;
 
     if (cachedName) setPlantName(cachedName);
 
@@ -662,15 +661,11 @@ export default function MainScreen() {
     }
   };
 
-  const writeSeenAt = async (
-    key: string,
-    serverDate: string,
-    lastSeenAt: string,
-  ) => {
+  const writeSeenAt = async (key: string, serverDate: string, lastSeenAt: string) => {
     try {
       await AsyncStorage.setItem(
-        key,
-        JSON.stringify({ date: serverDate, lastSeenAt }),
+          key,
+          JSON.stringify({ date: serverDate, lastSeenAt }),
       );
     } catch {}
   };
@@ -679,6 +674,14 @@ export default function MainScreen() {
     const s = String(status || '').toUpperCase();
     return s === 'OK' || s === 'NORMAL';
   };
+
+  const [characterCode, setCharacterCode] = useState<number>(0);
+
+  const getLevelFromCode = useCallback((code: number) => {
+    const c = Number(code);
+    if (!Number.isFinite(c)) return 1;
+    return (c % 3) + 1;
+  }, []);
 
   const fetchHome = useCallback(async () => {
     if (homeInFlightRef.current) return;
@@ -712,7 +715,7 @@ export default function MainScreen() {
         if (serverPlantId !== currentCachedId) {
           await AsyncStorage.setItem('plantId', serverPlantId);
           console.log(
-            `🔄 메인 식물 ID 동기화: ${currentCachedId} -> ${serverPlantId}`,
+              `🔄 메인 식물 ID 동기화: ${currentCachedId} -> ${serverPlantId}`,
           );
         }
       }
@@ -725,24 +728,34 @@ export default function MainScreen() {
         } catch {}
       }
 
+      const rawCode =
+          d?.characterCode ??
+          d?.mainPlant?.characterCode ??
+          null;
+
+      const nextCode = Number(rawCode);
+      if (Number.isFinite(nextCode)) {
+        setCharacterCode(prev => (prev === nextCode ? prev : nextCode));
+      }
+
       // [수정] 이미지 URL 저장
       const imgUrl = d?.imageUrl || d?.mainPlant?.imageUrl;
       setCharacterUrl(imgUrl || null);
 
       const hsRaw =
-        typeof d?.healthScore === 'number'
-          ? d.healthScore
-          : typeof d?.growthStatus?.percentage === 'number'
-            ? d.growthStatus.percentage
-            : 0;
+          typeof d?.healthScore === 'number'
+              ? d.healthScore
+              : typeof d?.growthStatus?.percentage === 'number'
+                  ? d.growthStatus.percentage
+                  : 0;
 
       const nextHs = clamp(Number(hsRaw) || 0, 0, 100);
       setHealthScore(prev => (prev === nextHs ? prev : nextHs));
 
       const waterStatus =
-        d?.waterLevelStatus ?? d?.currentSensor?.waterLevel?.status;
+          d?.waterLevelStatus ?? d?.currentSensor?.waterLevel?.status;
       const nutrientStatus =
-        d?.nutrientStatus ?? d?.currentSensor?.nutrient?.status;
+          d?.nutrientStatus ?? d?.currentSensor?.nutrient?.status;
 
       const waterOk = isOkLike(waterStatus);
       const nutrientOk = isOkLike(nutrientStatus);
@@ -750,41 +763,37 @@ export default function MainScreen() {
       const nextWaterText = waterOk ? '적정함' : '확인\n필요';
       const nextNutText = nutrientOk ? '적정함' : '확인\n필요';
 
-      setWaterStatusText(prev =>
-        prev === nextWaterText ? prev : nextWaterText,
-      );
-      setNutrientStatusText(prev =>
-        prev === nextNutText ? prev : nextNutText,
-      );
+      setWaterStatusText(prev => (prev === nextWaterText ? prev : nextWaterText));
+      setNutrientStatusText(prev => (prev === nextNutText ? prev : nextNutText));
 
       setWaterNeedCheck(prev => (prev === !waterOk ? prev : !waterOk));
       setNutrientNeedCheck(prev => (prev === !nutrientOk ? prev : !nutrientOk));
 
       const temp =
-        typeof d?.temperature === 'number'
-          ? d.temperature
-          : d?.currentSensor?.temperatureHumidity?.temperature;
+          typeof d?.temperature === 'number'
+              ? d.temperature
+              : d?.currentSensor?.temperatureHumidity?.temperature;
       const hum =
-        typeof d?.humidity === 'number'
-          ? d.humidity
-          : d?.currentSensor?.temperatureHumidity?.humidity;
+          typeof d?.humidity === 'number'
+              ? d.humidity
+              : d?.currentSensor?.temperatureHumidity?.humidity;
 
       const tNum = typeof temp === 'number' ? temp : null;
       const hNum = typeof hum === 'number' ? hum : null;
 
       const nextTempHum =
-        tNum == null || hNum == null
-          ? '-'
-          : `   ${tNum.toFixed(1)}°C / \n ${hNum.toFixed(0)}%`;
+          tNum == null || hNum == null
+              ? '-'
+              : `   ${tNum.toFixed(1)}°C / \n ${hNum.toFixed(0)}%`;
 
       setTempHumText(prev => (prev === nextTempHum ? prev : nextTempHum));
 
       const cnt =
-        typeof d?.header?.todayNotificationCount === 'number'
-          ? d.header.todayNotificationCount
-          : typeof d?.todayNotificationCount === 'number'
-            ? d.todayNotificationCount
-            : null;
+          typeof d?.header?.todayNotificationCount === 'number'
+              ? d.header.todayNotificationCount
+              : typeof d?.todayNotificationCount === 'number'
+                  ? d.todayNotificationCount
+                  : null;
 
       if (typeof cnt === 'number') {
         setTodayCount(prev => (prev === cnt ? prev : cnt));
@@ -804,7 +813,7 @@ export default function MainScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [getLevelFromCode]);
 
   const fetchTodayNotifications = useCallback(async () => {
     try {
@@ -812,18 +821,18 @@ export default function MainScreen() {
       if (!plantId) return;
 
       const res = await client.post<TodayNotificationsResponse>(
-        '/notifications/list',
-        {},
+          '/notifications/list',
+          {},
       );
       const data = res.data.data;
       if (!data) return;
 
       const list = data.notifications
-        .slice()
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+          .slice()
+          .sort(
+              (a, b) =>
+                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
 
       const listSeenKey = getNotifListSeenKey(plantId);
       const balloonSeenKey = getNotifBalloonSeenKey(plantId);
@@ -832,19 +841,19 @@ export default function MainScreen() {
       const balloonSeenAt = await readSeenAt(balloonSeenKey, data.date);
 
       const unreadForBadge = listSeenAt
-        ? list.filter(
-          n =>
-            new Date(n.createdAt).getTime() > new Date(listSeenAt).getTime(),
-        )
-        : list;
+          ? list.filter(
+              n =>
+                  new Date(n.createdAt).getTime() > new Date(listSeenAt).getTime(),
+          )
+          : list;
 
       const balloonCandidate = balloonSeenAt
-        ? list.find(
-        n =>
-          new Date(n.createdAt).getTime() >
-          new Date(balloonSeenAt).getTime(),
+          ? list.find(
+          n =>
+              new Date(n.createdAt).getTime() >
+              new Date(balloonSeenAt).getTime(),
       ) || null
-        : list[0] || null;
+          : list[0] || null;
 
       setTodayNotifications({ ...data, notifications: list });
       setTodayCount(unreadForBadge.length);
@@ -853,21 +862,21 @@ export default function MainScreen() {
   }, [getPlantId]);
 
   useFocusEffect(
-    useCallback(() => {
-      fetchHome();
-      fetchTodayNotifications();
-
-      const id = setInterval(() => {
+      useCallback(() => {
         fetchHome();
-      }, 10000);
+        fetchTodayNotifications();
 
-      const notifId = setInterval(fetchTodayNotifications, 30000);
+        const id = setInterval(() => {
+          fetchHome();
+        }, 10000);
 
-      return () => {
-        clearInterval(id);
-        clearInterval(notifId);
-      };
-    }, [fetchHome, fetchTodayNotifications])
+        const notifId = setInterval(fetchTodayNotifications, 30000);
+
+        return () => {
+          clearInterval(id);
+          clearInterval(notifId);
+        };
+      }, [fetchHome, fetchTodayNotifications]),
   );
 
   const onRefresh = useCallback(() => {
@@ -885,11 +894,11 @@ export default function MainScreen() {
       }
 
       const list = (todayNotifications?.notifications ?? [])
-        .slice()
-        .sort(
-          (a: any, b: any) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+          .slice()
+          .sort(
+              (a: any, b: any) =>
+                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
 
       if (list.length === 0) {
         openModal('오늘의 알림', '현재 알람이 없습니다', 'list');
@@ -901,14 +910,14 @@ export default function MainScreen() {
       if (todayNotifications?.date && list.length > 0) {
         const latestAt = list[0].createdAt;
         await writeSeenAt(
-          getNotifListSeenKey(plantId),
-          todayNotifications.date,
-          latestAt,
+            getNotifListSeenKey(plantId),
+            todayNotifications.date,
+            latestAt,
         );
         await writeSeenAt(
-          getNotifBalloonSeenKey(plantId),
-          todayNotifications.date,
-          latestAt,
+            getNotifBalloonSeenKey(plantId),
+            todayNotifications.date,
+            latestAt,
         );
 
         setTodayCount(0);
@@ -930,9 +939,9 @@ export default function MainScreen() {
 
       if (todayNotifications?.date && latestNotification?.createdAt) {
         await writeSeenAt(
-          getNotifBalloonSeenKey(plantId),
-          todayNotifications.date,
-          latestNotification.createdAt,
+            getNotifBalloonSeenKey(plantId),
+            todayNotifications.date,
+            latestNotification.createdAt,
         );
       }
 
@@ -941,7 +950,13 @@ export default function MainScreen() {
     } catch (e) {
       console.error(e);
     }
-  }, [getPlantId, latestNotification, todayNotifications, openModal, fetchTodayNotifications]);
+  }, [
+    getPlantId,
+    latestNotification,
+    todayNotifications,
+    openModal,
+    fetchTodayNotifications,
+  ]);
 
   const buildWaterGuide = (current: number, min: number, max: number) => {
     if (current > max)
@@ -967,18 +982,18 @@ export default function MainScreen() {
 
       if (!plantId) {
         openModal(
-          '수위 정보',
-          '식물 정보를 찾지 못했습니다. (plantId 없음)',
-          'sign',
+            '수위 정보',
+            '식물 정보를 찾지 못했습니다. (plantId 없음)',
+            'sign',
         );
         return;
       }
 
       const res = await client.get<WaterSensorCardResponse>(
-        `/plants/${plantId}/sensors/water`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+          `/plants/${plantId}/sensors/water`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
       );
 
       const data = res.data.data;
@@ -988,26 +1003,26 @@ export default function MainScreen() {
       }
 
       const guide = buildWaterGuide(
-        data.current_water,
-        data.ideal_min,
-        data.ideal_max,
+          data.current_water,
+          data.ideal_min,
+          data.ideal_max,
       );
 
       openModal(
-        '수위 정보',
-        [
-          {
-            message: guide,
-            sensor: {
-              kind: 'water',
-              measuredAt: data.measuredAt,
-              current: data.current_water,
-              ideal_min: data.ideal_min,
-              ideal_max: data.ideal_max,
+          '수위 정보',
+          [
+            {
+              message: guide,
+              sensor: {
+                kind: 'water',
+                measuredAt: data.measuredAt,
+                current: data.current_water,
+                ideal_min: data.ideal_min,
+                ideal_max: data.ideal_max,
+              },
             },
-          },
-        ],
-        'sign',
+          ],
+          'sign',
       );
     } catch (e) {
       openModal('수위 정보', '정보를 불러오지 못했습니다.', 'sign');
@@ -1022,18 +1037,18 @@ export default function MainScreen() {
 
       if (!plantId) {
         openModal(
-          '농도 정보',
-          '식물 정보를 찾지 못했습니다. (plantId 없음)',
-          'sign',
+            '농도 정보',
+            '식물 정보를 찾지 못했습니다. (plantId 없음)',
+            'sign',
         );
         return;
       }
 
       const res = await client.get<NutrientSensorCardResponse>(
-        `/plants/${plantId}/sensors/nutrient`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+          `/plants/${plantId}/sensors/nutrient`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
       );
 
       const data = res.data.data;
@@ -1043,26 +1058,26 @@ export default function MainScreen() {
       }
 
       const guide = buildNutrientGuide(
-        data.current_nutrient,
-        data.ideal_min,
-        data.ideal_max,
+          data.current_nutrient,
+          data.ideal_min,
+          data.ideal_max,
       );
 
       openModal(
-        '농도 정보',
-        [
-          {
-            message: guide,
-            sensor: {
-              kind: 'nutrient',
-              measuredAt: data.measuredAt,
-              current: data.current_nutrient,
-              ideal_min: data.ideal_min,
-              ideal_max: data.ideal_max,
+          '농도 정보',
+          [
+            {
+              message: guide,
+              sensor: {
+                kind: 'nutrient',
+                measuredAt: data.measuredAt,
+                current: data.current_nutrient,
+                ideal_min: data.ideal_min,
+                ideal_max: data.ideal_max,
+              },
             },
-          },
-        ],
-        'sign',
+          ],
+          'sign',
       );
     } catch (e) {
       openModal('농도 정보', '정보를 불러오지 못했습니다.', 'sign');
@@ -1070,263 +1085,233 @@ export default function MainScreen() {
   }, [getPlantId, openModal]);
 
   const hpPercent = useMemo(
-    () => clamp(Number(healthScore) || 0, 0, 100),
-    [healthScore],
+      () => clamp(Number(healthScore) || 0, 0, 100),
+      [healthScore],
   );
 
+  const level = useMemo(() => getLevelFromCode(characterCode), [characterCode, getLevelFromCode]);
+
   return (
-    <View style={styles.root}>
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#75A743" />
-        </View>
-      )}
+      <View style={styles.root}>
+        {isLoading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#75A743" />
+            </View>
+        )}
 
-      <ImageBackground
-        source={backgroundSource}
-        style={styles.bg}
-        resizeMode="cover"
-      >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          <Pressable style={styles.topBellIconBtn} onPress={onPressBell}>
-            <Image source={ALARM_BELL} style={styles.bellImage} />
-            {todayCount > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>
-                  {todayCount > 99 ? '99+' : todayCount}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-
-          <View style={styles.modeToggleContainer}>
-            <Animated.View
-              style={[
-                styles.toggleSlider,
-                {
-                  transform: [{ translateX: toggleTranslateX }],
-                  backgroundColor: toggleBgColor,
-                },
-              ]}
-            />
-            <Pressable
-              onPress={() => handleToggle(true)}
-              style={styles.togglePiece}
-            >
-              <Text
-                style={[
-                  styles.togglePieceText,
-                  isAutoMode && styles.textActive,
-                ]}
-              >
-                AUTO
-              </Text>
+        <ImageBackground source={backgroundSource} style={styles.bg} resizeMode="cover">
+          <ScrollView
+              contentContainerStyle={{ flexGrow: 1 }}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
+          >
+            <Pressable style={styles.topBellIconBtn} onPress={onPressBell}>
+              <Image source={ALARM_BELL} style={styles.bellImage} />
+              {todayCount > 0 && (
+                  <View style={styles.bellBadge}>
+                    <Text style={styles.bellBadgeText}>
+                      {todayCount > 99 ? '99+' : todayCount}
+                    </Text>
+                  </View>
+              )}
             </Pressable>
-            <Pressable
-              onPress={() => handleToggle(false)}
-              style={styles.togglePiece}
-            >
-              <Text
-                style={[
-                  styles.togglePieceText,
-                  !isAutoMode && styles.textActive,
-                ]}
-              >
-                MANU
-              </Text>
-            </Pressable>
-          </View>
 
-          {hasPlant ? (
-            <>
-              <View style={styles.plantNameWrap} pointerEvents="none">
-                <Text
-                  style={[styles.plantNameText, { fontSize: plantNameFontSize }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  onTextLayout={e => {
-                    if (
-                      e.nativeEvent.lines.length > 1 &&
-                      plantNameFontSize > 28
-                    ) {
-                      setPlantNameFontSize(s => s - 2);
-                    }
-                  }}
-                >
-                  {plantName ? plantName : ''}
+            <View style={styles.modeToggleContainer}>
+              <Animated.View
+                  style={[
+                    styles.toggleSlider,
+                    {
+                      transform: [{ translateX: toggleTranslateX }],
+                      backgroundColor: toggleBgColor,
+                    },
+                  ]}
+              />
+              <Pressable onPress={() => handleToggle(true)} style={styles.togglePiece}>
+                <Text style={[styles.togglePieceText, isAutoMode && styles.textActive]}>
+                  AUTO
                 </Text>
+              </Pressable>
+              <Pressable onPress={() => handleToggle(false)} style={styles.togglePiece}>
+                <Text style={[styles.togglePieceText, !isAutoMode && styles.textActive]}>
+                  MANU
+                </Text>
+              </Pressable>
+            </View>
 
-                <View style={styles.hpRow}>
-                  <Text style={styles.hpLabel}>현재{'\n'}상태</Text>
+            {hasPlant ? (
+                <>
+                  <View style={styles.plantNameWrap} pointerEvents="none">
+                    <Text
+                        style={[styles.plantNameText, { fontSize: plantNameFontSize }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        onTextLayout={e => {
+                          if (e.nativeEvent.lines.length > 1 && plantNameFontSize > 28) {
+                            setPlantNameFontSize(s => s - 2);
+                          }
+                        }}
+                    >
+                      {plantName ? plantName : ''}
+                    </Text>
 
-                  <View style={styles.hpOuter}>
-                    <View style={[styles.hpFill, { width: `${hpPercent}%` }]} />
+                    <View style={styles.hpRow}>
+                      <Text style={styles.hpLabel}>현재{'\n'}상태</Text>
+
+                      <View style={styles.hpArea}>
+                        <Text style={styles.levelText}>Lv {level}</Text>
+
+                        <View style={styles.hpOuter}>
+                          <View style={[styles.hpFill, { width: `${hpPercent}%` }]} />
+                        </View>
+                      </View>
+                    </View>
+
+                  </View>
+
+                  <Pressable
+                      style={[styles.signTouchArea, { left: '3%', top: '24%' }]}
+                      onPress={onPressWaterSign}
+                  >
+                    {waterNeedCheck && (
+                        <View style={styles.signAlertBadge}>
+                          <Text style={styles.signAlertBadgeText}>!</Text>
+                        </View>
+                    )}
+                    <Text style={styles.signTitleText}>수위</Text>
+                    <Text style={styles.signSubText}>{waterStatusText}</Text>
+                  </Pressable>
+
+                  <Pressable
+                      style={[styles.signTouchArea, { left: '36%', top: '24%' }]}
+                      onPress={onPressNutrientSign}
+                  >
+                    {nutrientNeedCheck && (
+                        <View style={styles.signAlertBadge}>
+                          <Text style={styles.signAlertBadgeText}>!</Text>
+                        </View>
+                    )}
+                    <Text style={styles.signTitleText}>농도</Text>
+                    <Text style={styles.signSubText}>{nutrientStatusText}</Text>
+                  </Pressable>
+
+                  <View style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}>
+                    <Text style={styles.signTitleText}>온습도</Text>
+                    <Text style={styles.signSubText}>{tempHumText}</Text>
+                  </View>
+
+                  <Animated.View
+                      style={[
+                        styles.characterWrapper,
+                        {
+                          transform: [{ translateX }, { translateY: combinedTranslateY }],
+                        },
+                      ]}
+                  >
+                    {latestNotification && (
+                        <Pressable style={styles.alarmWrap} onPress={onPressBalloon}>
+                          <View style={styles.alarmBox}>
+                            <Image source={ALARM_ICON} style={styles.alarmIcon} />
+                          </View>
+                        </Pressable>
+                    )}
+                    <Pressable onPress={handleCharacterPress}>
+                      {/* [수정] 서버 URL 사용, 없으면 기본 이미지 */}
+                      <Image
+                          source={characterUrl ? { uri: characterUrl } : TOMATO_NORMAL}
+                          style={styles.tomatoImage}
+                          resizeMode="contain"
+                      />
+                    </Pressable>
+                  </Animated.View>
+                </>
+            ) : (
+                <View style={styles.emptyContainer}>
+                  <View style={styles.emptyMessageData}>
+                    <Text style={styles.emptyTextTitle}>등록된 식물이 없어요!</Text>
+                    <Text style={styles.emptyTextSub}>
+                      오른쪽 아래 메뉴에서{'\n'}새로운 식물을 등록해주세요 🌱
+                    </Text>
                   </View>
                 </View>
-              </View>
+            )}
+          </ScrollView>
+        </ImageBackground>
 
-              <Pressable
-                style={[styles.signTouchArea, { left: '3%', top: '24%' }]}
-                onPress={onPressWaterSign}
-              >
-                {waterNeedCheck && (
-                  <View style={styles.signAlertBadge}>
-                    <Text style={styles.signAlertBadgeText}>!</Text>
-                  </View>
-                )}
-                <Text style={styles.signTitleText}>수위</Text>
-                <Text style={styles.signSubText}>{waterStatusText}</Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.signTouchArea, { left: '36%', top: '24%' }]}
-                onPress={onPressNutrientSign}
-              >
-                {nutrientNeedCheck && (
-                  <View style={styles.signAlertBadge}>
-                    <Text style={styles.signAlertBadgeText}>!</Text>
-                  </View>
-                )}
-                <Text style={styles.signTitleText}>농도</Text>
-                <Text style={styles.signSubText}>{nutrientStatusText}</Text>
-              </Pressable>
-
-              <View style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}>
-                <Text style={styles.signTitleText}>온습도</Text>
-                <Text style={styles.signSubText}>{tempHumText}</Text>
-              </View>
-
-              <Animated.View
-                style={[
-                  styles.characterWrapper,
-                  {
-                    transform: [
-                      { translateX },
-                      { translateY: combinedTranslateY },
-                    ],
-                  },
-                ]}
-              >
-                {latestNotification && (
-                  <Pressable style={styles.alarmWrap} onPress={onPressBalloon}>
-                    <View style={styles.alarmBox}>
-                      <Image source={ALARM_ICON} style={styles.alarmIcon} />
-                    </View>
-                  </Pressable>
-                )}
-                <Pressable onPress={handleCharacterPress}>
-                  {/* [수정] 서버 URL 사용, 없으면 기본 이미지 */}
-                  <Image
-                    source={
-                      characterUrl
-                        ? { uri: characterUrl }
-                        : TOMATO_NORMAL
-                    }
-                    style={styles.tomatoImage}
-                    resizeMode="contain"
-                  />
-                </Pressable>
-              </Animated.View>
-            </>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyMessageData}>
-                <Text style={styles.emptyTextTitle}>
-                  등록된 식물이 없어요!
-                </Text>
-                <Text style={styles.emptyTextSub}>
-                  오른쪽 아래 메뉴에서{'\n'}새로운 식물을 등록해주세요 🌱
-                </Text>
-              </View>
-            </View>
-          )}
-        </ScrollView>
-      </ImageBackground>
-
-      <Modal
-        transparent
-        visible={isModalVisible}
-        animationType="none"
-        onRequestClose={closeModal}
-        statusBarTranslucent
-      >
-        <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
-          <Animated.View
-            onStartShouldSetResponder={() => true}
-            style={{ transform: [{ scale: modalScale }] }}
-          >
-            <PixelBox
-              style={styles.modalContent}
-              innerStyle={styles.modalInner}
+        <Modal
+            transparent
+            visible={isModalVisible}
+            animationType="none"
+            onRequestClose={closeModal}
+            statusBarTranslucent
+        >
+          <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
+            <Animated.View
+                onStartShouldSetResponder={() => true}
+                style={{ transform: [{ scale: modalScale }] }}
             >
-              <View style={styles.modalHeaderCustom}>
-                <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
-                <Pressable style={styles.closeBtn} onPress={closeModal}>
-                  <Text style={styles.closeBtnText}>X</Text>
-                </Pressable>
-              </View>
+              <PixelBox style={styles.modalContent} innerStyle={styles.modalInner}>
+                <View style={styles.modalHeaderCustom}>
+                  <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
+                  <Pressable style={styles.closeBtn} onPress={closeModal}>
+                    <Text style={styles.closeBtnText}>X</Text>
+                  </Pressable>
+                </View>
 
-              <ScrollView
-                style={[
-                  styles.modalScroll,
-                  modalTitle === '오늘의 알림' && styles.modalScrollLimit4,
-                ]}
-                contentContainerStyle={styles.modalScrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                {modalBodyItems.length > 0 ? (
-                  modalBodyItems.map((item, idx) => (
-                    <View key={idx} style={styles.notifCard}>
-                      <View style={styles.notifRow}>
-                        {modalType === 'list' && (
-                          <Text style={styles.tagBadgeText}>
-                            [{getTagFromMessage(item.message)}]
-                          </Text>
-                        )}
+                <ScrollView
+                    style={[
+                      styles.modalScroll,
+                      modalTitle === '오늘의 알림' && styles.modalScrollLimit4,
+                    ]}
+                    contentContainerStyle={styles.modalScrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                  {modalBodyItems.length > 0 ? (
+                      modalBodyItems.map((item, idx) => (
+                          <View key={idx} style={styles.notifCard}>
+                            <View style={styles.notifRow}>
+                              {modalType === 'list' && (
+                                  <Text style={styles.tagBadgeText}>
+                                    [{getTagFromMessage(item.message)}]
+                                  </Text>
+                              )}
 
-                        {modalType === 'sign' && item.sensor ? (
-                          renderHighlightedGuide(
-                            item.message,
-                            getGuideKeywords(
-                              item.sensor.kind,
-                              item.sensor.current,
-                              item.sensor.ideal_min,
-                              item.sensor.ideal_max,
-                            ),
-                          )
-                        ) : (
-                          <Text style={styles.notifMessage}>
-                            {item.message}
-                          </Text>
-                        )}
-                      </View>
+                              {modalType === 'sign' && item.sensor ? (
+                                  renderHighlightedGuide(
+                                      item.message,
+                                      getGuideKeywords(
+                                          item.sensor.kind,
+                                          item.sensor.current,
+                                          item.sensor.ideal_min,
+                                          item.sensor.ideal_max,
+                                      ),
+                                  )
+                              ) : (
+                                  <Text style={styles.notifMessage}>{item.message}</Text>
+                              )}
+                            </View>
 
-                      {modalType === 'sign' && item.sensor && (
-                        <SensorBar data={item.sensor} />
-                      )}
+                            {modalType === 'sign' && item.sensor && (
+                                <SensorBar data={item.sensor} />
+                            )}
 
-                      {item.createdAt && (
-                        <Text style={styles.notifTime}>
-                          {formatTimeHHmm(item.createdAt)}
-                        </Text>
-                      )}
-                    </View>
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>데이터가 없습니다.</Text>
-                )}
-              </ScrollView>
-            </PixelBox>
+                            {item.createdAt && (
+                                <Text style={styles.notifTime}>
+                                  {formatTimeHHmm(item.createdAt)}
+                                </Text>
+                            )}
+                          </View>
+                      ))
+                  ) : (
+                      <Text style={styles.emptyText}>데이터가 없습니다.</Text>
+                  )}
+                </ScrollView>
+              </PixelBox>
+            </Animated.View>
           </Animated.View>
-        </Animated.View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
   );
 }
 
@@ -1425,7 +1410,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 42,
     left: 8,
-    width: 150,
+    width: 143,
     height: 100,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
@@ -1442,7 +1427,7 @@ const styles = StyleSheet.create({
   },
 
   hpRow: {
-    marginTop: 18,
+    marginTop: 5,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -1454,7 +1439,28 @@ const styles = StyleSheet.create({
     lineHeight: 10,
     marginRight: 10,
     textAlign: 'center',
+    marginTop: 15
   },
+
+  hpBarWrap: {
+    alignItems: 'center',
+  },
+
+  hpArea: {
+    position: 'relative',
+    width: 120,
+    paddingTop: 16,
+  },
+
+  levelText: {
+    position: 'absolute',
+    top: -5,
+    right: 0,
+    fontFamily: FONT,
+    fontSize: 20,
+    color: SIGN_TEXT_COLOR,
+  },
+
 
   hpOuter: {
     width: 120,
