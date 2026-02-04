@@ -9,22 +9,30 @@ import com.ssukssuk.dto.plant.MyPlantResponse;
 import com.ssukssuk.dto.plant.UpdatePlantRequest;
 import com.ssukssuk.repository.device.DeviceRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
+import com.ssukssuk.service.s3.UploadUrlPublishService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class UserPlantService {
 
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     private final DeviceRepository deviceRepository;
     private final UserPlantRepository userPlantRepository;
     private final PlantBindingService plantBindingService;
     private final PlantCreationService plantCreationService;
+    private final UploadUrlPublishService uploadUrlPublishService;
 
     /**
      * 식물 생성 + 디바이스 바인딩
@@ -50,6 +58,18 @@ public class UserPlantService {
                 // 바인딩 (별도 트랜잭션으로 MQTT + DB)
                 plantBindingService.bindWithValidation(userId, userPlant.getPlantId(), deviceId);
                 boundDeviceId = deviceId;
+
+                // 바인딩 성공 시 즉시 초기 이미지 URL 발급
+                Device device = deviceRepository.findById(deviceId)
+                        .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
+                uploadUrlPublishService.publishUploadUrl(
+                        device.getSerial(),
+                        userPlant.getPlantId(),
+                        LocalDate.now(KST),
+                        "INIT"
+                );
+                log.info("[createPlant] Published initial upload URL: plantId={}, deviceId={}",
+                        userPlant.getPlantId(), deviceId);
             } catch (Exception e) {
                 // 바인딩 실패 시 에러 메시지 저장 (식물은 유지)
                 bindingError = e.getMessage();
