@@ -5,6 +5,7 @@ import time
 import struct
 from pathlib import Path
 from datetime import datetime
+import threading
 
 import paho.mqtt.client as mqtt
 
@@ -205,12 +206,20 @@ def main():
             # UPLOAD_URL
             # ======================================================
             elif topic == f"{control_base}/upload-url":
-                # ACK은 보내지 않음, IMAGE_INFERENCE만 발행 (handler 내부에서 처리)
-                handle_upload_url(
-                    payload,
-                    mqtt_client=client,
-                    telemetry_base=telemetry_base
+                print("[MQTT] upload-url received → start worker thread")
+            
+                t = threading.Thread(
+                    target=handle_upload_url,
+                    args=(
+                        payload,
+                        client,
+                        telemetry_base,
+                        uart,
+                        led_scheduler,
+                    ),
+                    daemon=True
                 )
+                t.start()
 
             else:
                 # 예상 못 한 토픽은 그냥 무시

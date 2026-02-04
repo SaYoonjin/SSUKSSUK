@@ -1,6 +1,7 @@
 # mqtt/upload_url_handler.py
 
 import json
+import time
 import os
 import cv2
 from pathlib import Path
@@ -11,6 +12,7 @@ from mqtt.ack_builder import build_ack
 from camera.camera_manager import CameraManager, CameraError
 from uploader.s3_uploader import S3Uploader, UploadError
 from telemetry.image_inference import PlantInference
+from uart.packet import CMD_LED_OFF
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config.json"
@@ -28,7 +30,8 @@ def _delete_files(paths: list):
             print(f"[UPLOAD_URL] failed to delete {p}: {e}")
 
 
-def handle_upload_url(payload: dict, mqtt_client, telemetry_base: str) -> dict:
+def handle_upload_url(payload: dict, mqtt_client, telemetry_base: str, uart, led_scheduler,) -> dict:
+
     """
     UPLOAD_URL 처리
 
@@ -88,7 +91,14 @@ def handle_upload_url(payload: dict, mqtt_client, telemetry_base: str) -> dict:
         # =========================
         # 4) 카메라 촬영
         # =========================
+        # ===== LED 잠시 OFF (촬영용) =====
         camera = CameraManager(camera_config)
+
+        # LED OFF 직전까지는 카메라 준비 완료
+        uart.send_cmd(CMD_LED_OFF)
+        led_scheduler.reset()
+        time.sleep(0.4)
+        
         captured = camera.capture_both(save_dir)
 
         captured_paths = [captured["TOP"]["path"], captured["SIDE"]["path"]]
@@ -196,6 +206,16 @@ def handle_upload_url(payload: dict, mqtt_client, telemetry_base: str) -> dict:
             error_code="INTERNAL_ERROR",
             error_message=str(e)
         )
+    
+    finally:
+        # ===== LED 스케줄 복구 =====
+        try:
+            setting = load_json(SETTING_PATH)
+            led_scheduler.apply(setting, datetime.now())
+            print("[UPLOAD_URL] LED restored after capture")
+        except Exception as e:
+            print(f"[UPLOAD_URL][WARN] LED restore failed: {e}")
+            
 
     # =========================
     # 8) 정상 처리 ACK
