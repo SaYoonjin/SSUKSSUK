@@ -203,6 +203,11 @@ public class PlantStatus {
             return 12 + sizeGrade;  // 12~14: 추운 상태
         }
 
+        // 우선순위 3: 잎 이상
+        if (anomaly != null && anomaly >= ANOMALY_BAD_THRESHOLD) {
+            return 3 + sizeGrade;   // 3~5: 영양 부족 캐릭터
+        }
+
         // 정상
         return sizeGrade;           // 0~2: 정상
     }

@@ -3,11 +3,13 @@ package com.ssukssuk.service.plant;
 import com.ssukssuk.common.exception.CustomException;
 import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.device.Device;
+import com.ssukssuk.domain.plant.PlantStatus;
 import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.dto.plant.CreatePlantResponse;
 import com.ssukssuk.dto.plant.MyPlantResponse;
 import com.ssukssuk.dto.plant.UpdatePlantRequest;
 import com.ssukssuk.repository.device.DeviceRepository;
+import com.ssukssuk.repository.plant.PlantStatusRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import com.ssukssuk.service.s3.UploadUrlPublishService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class UserPlantService {
     private final PlantBindingService plantBindingService;
     private final PlantCreationService plantCreationService;
     private final UploadUrlPublishService uploadUrlPublishService;
+    private final PlantStatusRepository plantStatusRepository;
 
     /**
      * 식물 생성 + 디바이스 바인딩
@@ -187,7 +190,14 @@ public class UserPlantService {
                 userPlantRepository.findAllByUserIdWithJoin(userId);
 
         return userPlants.stream()
-                .map(MyPlantResponse::from)
+                .map(plant -> {
+
+                    PlantStatus status =
+                            plantStatusRepository.findById(plant.getPlantId())
+                                    .orElse(null);
+
+                    return MyPlantResponse.from(plant, status);
+                })
                 .toList();
     }
 
