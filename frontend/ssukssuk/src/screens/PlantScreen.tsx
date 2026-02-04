@@ -23,9 +23,30 @@ const PIXEL = 4;
 const BORDER_COLOR = "#300e08";
 const CARD_BG = "#f6f6f6";
 
+// ✅ [추가] DB의 character_code와 매핑되는 이미지 URL 목록
+const CHARACTER_URLS: { [key: number]: string } = {
+  0: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/normal_spath_lv1.png",
+  1: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/normal_spath_lv2.png",
+  2: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/normal_spath_lv3.png",
+  3: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/sick_spath_lv1.png",
+  4: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/sick_spath_lv2.png",
+  5: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/sick_spath_lv3.png",
+  6: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/fat_spath_lv1.png",
+  7: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/fat_spath_lv2.png",
+  8: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/fat_spath_lv3.png",
+  9: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/hot_spath_lv1.png",
+  10: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/hot_spath_lv2.png",
+  11: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/hot_spath_lv3.png",
+  12: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/cold_spath_lv1.png",
+  13: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/cold_spath_lv2.png",
+  14: "https://plant-images-prod-a103.s3.ap-northeast-2.amazonaws.com/esset/cold_spath_lv3.png",
+};
+
+// ✅ [수정] character_code 추가
 type PlantData = {
   plant_id: number;
   species_id: number;
+  character_code: number;
   name: string;
   device_id: number;
   is_main: boolean;
@@ -37,14 +58,11 @@ export default function PlantScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
-  // 탭 전환(포커스) 시 페이드 인 애니메이션
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // ✅ [수정] 식물 목록 가져오기 (showLoading 파라미터 추가)
-  // showLoading이 false면 로딩 스피너를 띄우지 않고 데이터만 갱신합니다.
   const fetchPlants = async (showLoading = true) => {
     try {
-      if (showLoading) setLoading(true); // 로딩 표시 여부 제어
+      if (showLoading) setLoading(true);
 
       const res = await client.get("/plants");
       if (res.data.success) {
@@ -59,7 +77,6 @@ export default function PlantScreen({ navigation }: any) {
 
   useFocusEffect(
       useCallback(() => {
-        // 화면 진입 시 페이드 인 & 로딩 표시하며 데이터 조회
         fadeAnim.setValue(0);
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -67,15 +84,12 @@ export default function PlantScreen({ navigation }: any) {
           useNativeDriver: true,
         }).start();
 
-        fetchPlants(true); // 처음 들어올 땐 로딩 보여줌
+        fetchPlants(true);
         return () => setActiveMenuId(null);
       }, [fadeAnim])
   );
 
-  // ✅ 메인 식물 전환 핸들러
   const handleSelectMain = async (id: number) => {
-    // 1. UI 선반영 (Optimistic Update)
-    // 화면 깜빡임 없이 즉시 체크 표시가 바뀜
     setPlants((prev) =>
         prev.map((p) => ({
           ...p,
@@ -85,20 +99,14 @@ export default function PlantScreen({ navigation }: any) {
     setActiveMenuId(null);
 
     try {
-      // 2. 서버 요청
       const res = await client.patch(`/plants/${id}/main`, {});
-
       if (res.data.success) {
-        // ✅ [수정] 성공 시 '조용히' 데이터 갱신 (로딩 스피너 X)
-        // 이렇게 하면 화면이 번쩍거리지 않고 데이터만 최신화됩니다.
         fetchPlants(false);
       } else {
         throw new Error(res.data.message || "서버 내부 오류");
       }
-
     } catch (error: any) {
       console.error("메인 전환 에러:", error);
-      // 에러 발생 시 필요하다면 여기서 롤백 처리나 알림 표시
     }
   };
 
@@ -112,7 +120,6 @@ export default function PlantScreen({ navigation }: any) {
         onPress: async () => {
           try {
             await client.delete(`/plants/${id}`);
-            // 삭제 후에도 로딩 없이 목록 갱신
             setPlants((prev) => prev.filter((p) => p.plant_id !== id));
           } catch (error) {
             console.error("삭제 실패:", error);
@@ -128,17 +135,6 @@ export default function PlantScreen({ navigation }: any) {
     navigation.navigate("PlantAddEdit", { mode: "edit", plantData: plant });
   };
 
-  const getSpeciesInfo = (speciesId: number) => {
-    switch (speciesId) {
-      case 1:
-        return { image: TOMATO_IMG, defaultName: "토마토" };
-      case 2:
-        return { image: null, defaultName: "상추" };
-      default:
-        return { image: null, defaultName: "알 수 없는 식물" };
-    }
-  };
-
   return (
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <SafeAreaView style={styles.screen}>
@@ -151,7 +147,6 @@ export default function PlantScreen({ navigation }: any) {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-              {/* 로딩 중일 때만 스피너 표시 */}
               {loading ? (
                   <View style={{ marginTop: 50 }}>
                     <ActivityIndicator size="large" color="#75A743" />
@@ -160,8 +155,12 @@ export default function PlantScreen({ navigation }: any) {
                   <>
                     <View style={styles.gridContainer}>
                       {plants.map((plant) => {
-                        const speciesInfo = getSpeciesInfo(plant.species_id);
-                        const displayName = plant.name ? plant.name : speciesInfo.defaultName;
+                        const displayName = plant.name || "이름 없음";
+
+                        // ✅ [수정] 캐릭터 코드로 이미지 URL 찾기
+                        const serverImgUrl = CHARACTER_URLS[plant.character_code];
+                        // URL이 있으면 사용, 없으면 기본 이미지
+                        const imageSource = serverImgUrl ? { uri: serverImgUrl } : TOMATO_IMG;
 
                         return (
                             <View key={plant.plant_id} style={styles.cardWrapper}>
@@ -171,10 +170,17 @@ export default function PlantScreen({ navigation }: any) {
                                     <View
                                         style={[
                                           styles.statusDot,
-                                          { backgroundColor: plant.is_connected ? "#75A743" : "#CCC" },
+                                          {
+                                            backgroundColor: plant.is_connected
+                                                ? "#75A743"
+                                                : "#CCC",
+                                          },
                                         ]}
                                     />
-                                    <Text style={styles.plantNickname} numberOfLines={1}>
+                                    <Text
+                                        style={styles.plantNickname}
+                                        numberOfLines={1}
+                                    >
                                       {displayName}
                                     </Text>
                                   </View>
@@ -192,15 +198,12 @@ export default function PlantScreen({ navigation }: any) {
                                 </View>
 
                                 <View style={styles.imageContainer}>
-                                  {speciesInfo.image ? (
-                                      <Image
-                                          source={speciesInfo.image}
-                                          style={styles.plantImage}
-                                          resizeMode="contain"
-                                      />
-                                  ) : (
-                                      <Text style={styles.emojiText}>🌱</Text>
-                                  )}
+                                  {/* ✅ [수정] 결정된 이미지 소스로 렌더링 */}
+                                  <Image
+                                      source={imageSource}
+                                      style={styles.plantImage}
+                                      resizeMode="contain"
+                                  />
                                 </View>
 
                                 <PixelButton
@@ -223,7 +226,9 @@ export default function PlantScreen({ navigation }: any) {
                                           onPress={() => handleDelete(plant.plant_id)}
                                           style={styles.menuItem}
                                       >
-                                        <Text style={[styles.menuText, styles.deleteText]}>
+                                        <Text
+                                            style={[styles.menuText, styles.deleteText]}
+                                        >
                                           삭제하기
                                         </Text>
                                       </Pressable>
@@ -237,7 +242,9 @@ export default function PlantScreen({ navigation }: any) {
 
                     <PixelWideButton
                         text="+ 식물 추가"
-                        onPress={() => navigation.navigate("PlantAddEdit", { mode: "add" })}
+                        onPress={() =>
+                            navigation.navigate("PlantAddEdit", { mode: "add" })
+                        }
                         style={{ marginTop: 18 }}
                     />
                     <View style={{ height: 40 }} />
@@ -251,7 +258,7 @@ export default function PlantScreen({ navigation }: any) {
 }
 
 // ---------------------------
-// 픽셀 UI 컴포넌트들 (스타일은 그대로 유지)
+// 픽셀 UI 컴포넌트들 (기존 스타일 유지)
 // ---------------------------
 
 function PixelBox({ children, style }: any) {
