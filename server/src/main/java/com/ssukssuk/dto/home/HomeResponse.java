@@ -1,13 +1,12 @@
 package com.ssukssuk.dto.home;
 
-import com.ssukssuk.domain.plant.CharacterCode;
 import com.ssukssuk.domain.plant.PlantStatus;
 import com.ssukssuk.domain.plant.UserPlant;
 
 public record HomeResponse(
         Long plantId,
         String plantName,
-        CharacterCode characterCode,
+        Integer characterCode,
         String imageUrl,
         Integer healthScore,
         String waterLevelStatus,
@@ -22,7 +21,7 @@ public record HomeResponse(
         return new HomeResponse(
                 userPlant.getPlantId(),
                 userPlant.getPlantName(),
-                status.getCharactercode(),
+                status.getCharactercode() != null ? status.getCharactercode().getCharacterCode() : null,
                 url,
                 status.getHealthScore(),
                 status.getWaterLevelStatus() != null ? status.getWaterLevelStatus().name() : null,

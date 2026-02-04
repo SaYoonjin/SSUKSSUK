@@ -13,6 +13,7 @@ public interface PlantStatusRepository
     @Query("""
         select ps from PlantStatus ps
         join fetch ps.userPlant up
+        join fetch ps.charactercode
         where up.user.id = :userId
           and up.isMain = true
           and up.removedAt is null
@@ -22,6 +23,7 @@ public interface PlantStatusRepository
     @Query("""
         select ps from PlantStatus ps
         join fetch ps.userPlant up
+        join fetch ps.charactercode
         join fetch up.user u
         where ps.plantId = :plantId
           and up.isMain = true
