@@ -43,7 +43,6 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
-  // species_id, species, type 등 다양한 키 대응
   const [type, setType] = useState<string | number>(
     isEdit ? plantData.species_id ?? plantData.species ?? plantData.type : '',
   );
@@ -84,6 +83,29 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
 
     fetchData();
   }, []);
+
+  // ✅ [추가] 닉네임 길이 계산 및 제한 로직
+  // 한글: 1.5 가중치, 그 외: 1 가중치 -> 총합 6 이하 유지
+  const handleNicknameChange = (text: string) => {
+    let totalWeight = 0;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charAt(i);
+      // 한글 범위 체크 (자음, 모음, 완성형 모두 포함)
+      if (/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(char)) {
+        totalWeight += 1.5;
+      } else {
+        totalWeight += 1;
+      }
+    }
+
+    if (totalWeight <= 6) {
+      setNickname(text);
+    } else {
+      // 6을 초과하면 입력 무시 (혹은 경고 토스트 등을 띄울 수 있음)
+      // 여기서는 입력을 막아서 더 이상 타이핑되지 않게 함
+    }
+  };
 
   const dropdownDeviceItems = useMemo(() => {
     const items = deviceList.map(d => {
@@ -141,18 +163,26 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
     setLoading(true);
 
     try {
-      // ✅ 서버 요구사항: species(int), deviceId(int)
-      const requestBody = {
-        name: nickname.trim(),
-        species: Number(type),
-        deviceId: Number(selectedDevice),
-      };
+      let requestBody;
+
+      // 수정(Edit)과 추가(Add)의 데이터 구조 분리
+      if (isEdit) {
+        requestBody = {
+          name: nickname.trim(),
+          deviceId: Number(selectedDevice),
+        };
+      } else {
+        requestBody = {
+          name: nickname.trim(),
+          species: Number(type),
+          deviceId: Number(selectedDevice),
+        };
+      }
 
       console.log(`🚀 [${isEdit ? 'PATCH' : 'POST'}] 요청 시작`);
       console.log('Body:', JSON.stringify(requestBody, null, 2));
 
       if (isEdit) {
-        // [수정 모드]
         const res = await client.patch(
           `/plants/${currentPlantId}`,
           requestBody,
@@ -166,7 +196,6 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
           Alert.alert('실패', res.data.message || '수정에 실패했습니다.');
         }
       } else {
-        // [추가 모드]
         const res = await client.post('/plants', requestBody);
 
         if (res.data.success) {
@@ -181,43 +210,29 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
       console.error('❌ 식물 저장 에러 발생:', error);
 
       const errorResponse = error.response?.data;
-      console.error(
-        'Server Error Data:',
-        JSON.stringify(errorResponse, null, 2),
-      );
-
       let displayMsg = '요청 처리 중 오류가 발생했습니다.';
 
-      // ✅ [수정됨] 에러 메시지 파싱 로직 개선 ([object Object] 해결)
       if (errorResponse) {
-        // 1. { error: { message: "..." } } 형태인 경우
         if (
           errorResponse.error &&
           typeof errorResponse.error === 'object' &&
           errorResponse.error.message
         ) {
           displayMsg = errorResponse.error.message;
-        }
-        // 2. { message: "..." } 형태인 경우
-        else if (errorResponse.message) {
+        } else if (errorResponse.message) {
           displayMsg =
             typeof errorResponse.message === 'string'
               ? errorResponse.message
               : JSON.stringify(errorResponse.message);
-        }
-        // 3. { error: "문자열 에러" } 형태인 경우
-        else if (typeof errorResponse.error === 'string') {
+        } else if (typeof errorResponse.error === 'string') {
           displayMsg = errorResponse.error;
-        }
-        // 4. 그 외의 경우 (통째로 문자열 변환)
-        else {
+        } else {
           displayMsg = JSON.stringify(errorResponse);
         }
       } else if (error.message) {
         displayMsg = error.message;
       }
 
-      // 보기 좋게 특수문자 제거
       displayMsg = displayMsg
         .replace(/[{"}]/g, '')
         .replace(/,/g, '\n')
@@ -288,12 +303,15 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
 
         <View style={{ zIndex: 2000, marginBottom: 20 }}>
           <Text style={styles.label}>식물 닉네임</Text>
+          {/* ✅ [수정] onChangeText에 로직 적용 */}
           <PixelInput
             value={nickname}
-            onChangeText={setNickname}
+            onChangeText={handleNicknameChange}
             placeholder="예: 토토"
-            maxLength={10}
+            maxLength={10} // 넉넉하게 잡고 내부 로직으로 제어
           />
+          {/* ✅ [추가] 안내 멘트 UI */}
+          <Text style={styles.helperText}>* 한글 최대 4자 / 영문 최대 6자</Text>
         </View>
 
         <View style={{ zIndex: 1000, marginBottom: 40 }}>
@@ -619,6 +637,14 @@ const styles = StyleSheet.create({
     fontFamily: 'NeoDunggeunmoPro-Regular',
     marginBottom: 8,
     color: 'rgba(36,46,19,0.9)',
+  },
+  // ✅ [추가] 안내 문구 스타일
+  helperText: {
+    fontSize: 13,
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+    color: '#2E5A35',
+    marginTop: 6,
+    marginLeft: 4,
   },
   inputInner: { width: '100%', height: '100%', justifyContent: 'center' },
   textInput: {
