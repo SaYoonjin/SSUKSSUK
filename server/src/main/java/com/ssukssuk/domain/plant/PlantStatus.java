@@ -90,7 +90,7 @@ public class PlantStatus {
         if (character == null) throw new IllegalArgumentException("character must not be null");
 
         this.userPlant = userPlant;
-        this.charactercode = charactercode;
+        this.charactercode = character;
 
         this.healthScore = 100;
         this.hasUnreadNotification = false;
