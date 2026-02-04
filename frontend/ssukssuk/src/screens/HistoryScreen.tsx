@@ -31,7 +31,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTENT_PAD_H = 22;
 const PIXELBOX_BORDER = 3;
 const PHOTO_WIDTH = PixelRatio.roundToNearestPixel(
-  SCREEN_WIDTH - CONTENT_PAD_H * 2 - PIXELBOX_BORDER * 2,
+    SCREEN_WIDTH - CONTENT_PAD_H * 2 - PIXELBOX_BORDER * 2,
 );
 
 const BG_COLOR = '#EDEDE9';
@@ -56,7 +56,7 @@ type HistoryResponse = {
     growthGraph: {
       unit: string;
       period: { start: string; end: string };
-      data: Array<{ date: string; height: number | null }>;
+      data: Array<{ date: string; height: number | null; width: number | null }>;
     };
     sensorAlertGraph: {
       period: { start: string; end: string };
@@ -121,15 +121,15 @@ export default function HistoryScreen({ navigation }: any) {
           setPeriodLabel(`${start} - ${end}`);
         }
 
-        // (3) 생장 그래프 (키) & 날짜 파싱
+        // (3) 생장 그래프 (키/너비) & 날짜 파싱
         const gData = d.growthGraph?.data || [];
         const parsedDays = gData.map(item => item.date.substring(5).replace('-', '.')); // 01.21 형식
         const parsedHeights = gData.map(item => item.height ?? 0);
+        const parsedWidths = gData.map(item => item.width ?? 0);
 
         setDays(parsedDays);
         setHeightValues(parsedHeights);
-        // 너비 데이터가 없으므로 0으로 채움
-        setWidthValues(new Array(gData.length).fill(0));
+        setWidthValues(parsedWidths);
 
         // (4) 이상치 그래프
         const aData = d.sensorAlertGraph?.data || [];
@@ -151,17 +151,17 @@ export default function HistoryScreen({ navigation }: any) {
   };
 
   useFocusEffect(
-    useCallback(() => {
-      // 화면 진입 시 페이드 인 & 데이터 로드
-      fadeAnim.setValue(0);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
+      useCallback(() => {
+        // 화면 진입 시 페이드 인 & 데이터 로드
+        fadeAnim.setValue(0);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }).start();
 
-      fetchHistoryData();
-    }, [])
+        fetchHistoryData();
+      }, [])
   );
 
   const runSlide = (newIndex: number) => {
@@ -182,165 +182,165 @@ export default function HistoryScreen({ navigation }: any) {
   };
 
   return (
-    <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>식물 히스토리</Text>
-        </View>
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>식물 히스토리</Text>
+          </View>
 
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* 1. 현재 모습 (사진) */}
-          <SectionHeader title="현재 모습" />
-          <PixelBox hasShadow style={{ padding: 0 }}>
-            <View style={styles.photoWrap}>
-              {loading ? (
-                <View style={[styles.photoContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-                  <ActivityIndicator size="large" color={ACCENT} />
-                </View>
-              ) : recentPhotos.length > 0 ? (
-                <>
-                  <Animated.View
-                    style={[
-                      styles.slideContainer,
-                      {
-                        width: PHOTO_WIDTH * recentPhotos.length,
-                        transform: [{ translateX: scrollX }],
-                      },
-                    ]}
-                  >
-                    {recentPhotos.map((url, i) => (
-                      <View key={i} style={styles.photoContainer}>
-                        <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
+          <ScrollView
+              contentContainerStyle={styles.content}
+              showsVerticalScrollIndicator={false}
+          >
+            {/* 1. 현재 모습 (사진) */}
+            <SectionHeader title="현재 모습" />
+            <PixelBox hasShadow style={{ padding: 0 }}>
+              <View style={styles.photoWrap}>
+                {loading ? (
+                    <View style={[styles.photoContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+                      <ActivityIndicator size="large" color={ACCENT} />
+                    </View>
+                ) : recentPhotos.length > 0 ? (
+                    <>
+                      <Animated.View
+                          style={[
+                            styles.slideContainer,
+                            {
+                              width: PHOTO_WIDTH * recentPhotos.length,
+                              transform: [{ translateX: scrollX }],
+                            },
+                          ]}
+                      >
+                        {recentPhotos.map((url, i) => (
+                            <View key={i} style={styles.photoContainer}>
+                              <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
+                            </View>
+                        ))}
+                      </Animated.View>
+
+                      <View style={styles.statusBadge}>
+                        <View style={styles.statusDot} />
+                        <Text style={styles.statusText}>RECENT FEED</Text>
                       </View>
-                    ))}
-                  </Animated.View>
 
-                  <View style={styles.statusBadge}>
-                    <View style={styles.statusDot} />
-                    <Text style={styles.statusText}>RECENT FEED</Text>
-                  </View>
-
-                  {photoIndex > 0 && (
-                    <Pressable onPress={goPrev} style={[styles.photoNavBtn, { left: 10 }]} hitSlop={10}>
-                      <Text style={styles.photoNavText}>◀</Text>
-                    </Pressable>
-                  )}
-                  {photoIndex < recentPhotos.length - 1 && (
-                    <Pressable onPress={goNext} style={[styles.photoNavBtn, { right: 10 }]} hitSlop={10}>
-                      <Text style={styles.photoNavText}>▶</Text>
-                    </Pressable>
-                  )}
-                  <View style={styles.photoIndicatorRow}>
-                    {recentPhotos.map((_, i) => (
-                      <View
-                        key={i}
-                        style={[
-                          styles.photoDot,
-                          i === photoIndex ? { backgroundColor: '#FFD700' } : { backgroundColor: '#FFF' },
-                        ]}
-                      />
-                    ))}
-                  </View>
-                </>
-              ) : (
-                <View style={[styles.photoContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-                  <Text style={{ fontFamily: 'NeoDunggeunmoPro-Regular', color: '#666' }}>
-                    등록된 사진이 없습니다.
-                  </Text>
-                </View>
-              )}
-            </View>
-          </PixelBox>
-
-          {/* 2. 기록 보관소 */}
-          <SectionHeader title="기록 보관소" />
-          <Pressable onPress={() => navigation.navigate('HistoryAlbum', { plantId: 1 })}>
-            <PixelBox hasShadow style={styles.archiveBar}>
-              <View style={styles.folderIcon}>
-                <View style={styles.folderTab} />
-                <View style={styles.folderBody} />
+                      {photoIndex > 0 && (
+                          <Pressable onPress={goPrev} style={[styles.photoNavBtn, { left: 10 }]} hitSlop={10}>
+                            <Text style={styles.photoNavText}>◀</Text>
+                          </Pressable>
+                      )}
+                      {photoIndex < recentPhotos.length - 1 && (
+                          <Pressable onPress={goNext} style={[styles.photoNavBtn, { right: 10 }]} hitSlop={10}>
+                            <Text style={styles.photoNavText}>▶</Text>
+                          </Pressable>
+                      )}
+                      <View style={styles.photoIndicatorRow}>
+                        {recentPhotos.map((_, i) => (
+                            <View
+                                key={i}
+                                style={[
+                                  styles.photoDot,
+                                  i === photoIndex ? { backgroundColor: '#FFD700' } : { backgroundColor: '#FFF' },
+                                ]}
+                            />
+                        ))}
+                      </View>
+                    </>
+                ) : (
+                    <View style={[styles.photoContainer, { justifyContent: 'center', alignItems: 'center' }]}>
+                      <Text style={{ fontFamily: 'NeoDunggeunmoPro-Regular', color: '#666' }}>
+                        등록된 사진이 없습니다.
+                      </Text>
+                    </View>
+                )}
               </View>
-              <View style={styles.archiveTextWrap}>
-                <Text style={styles.archiveTitle}>생장 앨범 열기</Text>
-              </View>
-              <Text style={styles.arrow}>≫</Text>
             </PixelBox>
-          </Pressable>
 
-          {/* 3. 생장 그래프 */}
-          <SectionHeader title="생장 그래프" />
-          <PixelBox hasShadow style={styles.chartBox}>
-            {loading ? (
-              <ActivityIndicator color={ACCENT} style={{margin: 20}} />
-            ) : (
-              <ChartPager
-                width={SCREEN_WIDTH - 80}
-                height={160}
-                pages={[
-                  {
-                    key: 'height',
-                    titleRight: <LegendItem label="Height(cm)" color={HEIGHT_COLOR} />,
-                    headerLeft: <Text style={styles.periodText}>{periodLabel}</Text>,
-                    render: ({ onTouchingChange, chartWidth }) => (
-                      <GrowthLineChartInteractive
-                        days={days}
-                        values={heightValues}
-                        width={chartWidth}
-                        height={160}
-                        onTouchingChange={onTouchingChange}
-                        color={HEIGHT_COLOR}
-                        fillOpacity={0.12}
-                      />
-                    ),
-                  },
-                  {
-                    key: 'width',
-                    titleRight: <LegendItem label="Width(cm)" color={WIDTH_COLOR} />,
-                    headerLeft: <Text style={styles.periodText}>{periodLabel}</Text>,
-                    render: ({ onTouchingChange, chartWidth }) => (
-                      <GrowthLineChartInteractive
-                        days={days}
-                        values={widthValues}
-                        width={chartWidth}
-                        height={160}
-                        onTouchingChange={onTouchingChange}
-                        color={WIDTH_COLOR}
-                        fillOpacity={0.1}
-                      />
-                    ),
-                  },
-                ]}
-              />
-            )}
-          </PixelBox>
+            {/* 2. 기록 보관소 */}
+            <SectionHeader title="기록 보관소" />
+            <Pressable onPress={() => navigation.navigate('HistoryAlbum', { plantId: 1 })}>
+              <PixelBox hasShadow style={styles.archiveBar}>
+                <View style={styles.folderIcon}>
+                  <View style={styles.folderTab} />
+                  <View style={styles.folderBody} />
+                </View>
+                <View style={styles.archiveTextWrap}>
+                  <Text style={styles.archiveTitle}>생장 앨범 열기</Text>
+                </View>
+                <Text style={styles.arrow}>≫</Text>
+              </PixelBox>
+            </Pressable>
 
-          {/* 4. 이상치 알람 그래프 */}
-          <SectionHeader title="이상치 알람 그래프" />
-          <PixelBox hasShadow style={styles.chartBox}>
-            <View style={styles.monitorHeader}>
-              <View style={[styles.monitorLed, { backgroundColor: ACCENT }]} />
-              <Text style={styles.monitorTitle}>ANOMALY MONITOR</Text>
-            </View>
+            {/* 3. 생장 그래프 */}
+            <SectionHeader title="생장 그래프" />
+            <PixelBox hasShadow style={styles.chartBox}>
+              {loading ? (
+                  <ActivityIndicator color={ACCENT} style={{margin: 20}} />
+              ) : (
+                  <ChartPager
+                      width={SCREEN_WIDTH - 80}
+                      height={160}
+                      pages={[
+                        {
+                          key: 'height',
+                          titleRight: <LegendItem label="Height(cm)" color={HEIGHT_COLOR} />,
+                          headerLeft: <Text style={styles.periodText}>{periodLabel}</Text>,
+                          render: ({ onTouchingChange, chartWidth }) => (
+                              <GrowthLineChartInteractive
+                                  days={days}
+                                  values={heightValues}
+                                  width={chartWidth}
+                                  height={160}
+                                  onTouchingChange={onTouchingChange}
+                                  color={HEIGHT_COLOR}
+                                  fillOpacity={0.12}
+                              />
+                          ),
+                        },
+                        {
+                          key: 'width',
+                          titleRight: <LegendItem label="Width(cm)" color={WIDTH_COLOR} />,
+                          headerLeft: <Text style={styles.periodText}>{periodLabel}</Text>,
+                          render: ({ onTouchingChange, chartWidth }) => (
+                              <GrowthLineChartInteractive
+                                  days={days}
+                                  values={widthValues}
+                                  width={chartWidth}
+                                  height={160}
+                                  onTouchingChange={onTouchingChange}
+                                  color={WIDTH_COLOR}
+                                  fillOpacity={0.1}
+                              />
+                          ),
+                        },
+                      ]}
+                  />
+              )}
+            </PixelBox>
 
-            {loading ? (
-              <ActivityIndicator color={ACCENT} style={{margin: 20}} />
-            ) : (
-              <AnomalyButtonPager
-                width={SCREEN_WIDTH - 80}
-                height={180}
-                days={days}
-                series={anomalySeries}
-              />
-            )}
-          </PixelBox>
+            {/* 4. 이상치 알람 그래프 */}
+            <SectionHeader title="이상치 알람 그래프" />
+            <PixelBox hasShadow style={styles.chartBox}>
+              <View style={styles.monitorHeader}>
+                <View style={[styles.monitorLed, { backgroundColor: ACCENT }]} />
+                <Text style={styles.monitorTitle}>ANOMALY MONITOR</Text>
+              </View>
 
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      </SafeAreaView>
-    </Animated.View>
+              {loading ? (
+                  <ActivityIndicator color={ACCENT} style={{margin: 20}} />
+              ) : (
+                  <AnomalyButtonPager
+                      width={SCREEN_WIDTH - 80}
+                      height={180}
+                      days={days}
+                      series={anomalySeries}
+                  />
+              )}
+            </PixelBox>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </SafeAreaView>
+      </Animated.View>
   );
 }
 
@@ -348,28 +348,28 @@ export default function HistoryScreen({ navigation }: any) {
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.headerSquare} />
-      <Text style={styles.sectionTitle}>{title}</Text>
-    </View>
+      <View style={styles.sectionHeader}>
+        <View style={styles.headerSquare} />
+        <Text style={styles.sectionTitle}>{title}</Text>
+      </View>
   );
 }
 
 function PixelBox({ children, style, hasShadow }: any) {
   return (
-    <View style={styles.pixelContainer}>
-      {hasShadow && <View style={styles.pixelShadow} />}
-      <View style={[styles.pixelBox, style]}>{children}</View>
-    </View>
+      <View style={styles.pixelContainer}>
+        {hasShadow && <View style={styles.pixelShadow} />}
+        <View style={[styles.pixelBox, style]}>{children}</View>
+      </View>
   );
 }
 
 function LegendItem({ label, color }: any) {
   return (
-    <View style={styles.legendRow}>
-      <View style={[styles.legendDot, { backgroundColor: color }]} />
-      <Text style={styles.legendText}>{label}</Text>
-    </View>
+      <View style={styles.legendRow}>
+        <View style={[styles.legendDot, { backgroundColor: color }]} />
+        <Text style={styles.legendText}>{label}</Text>
+      </View>
   );
 }
 
@@ -401,22 +401,22 @@ function PixelChevron({ dir }: { dir: 'left' | 'right' }) {
   ];
   const map = dir === 'left' ? LEFT : RIGHT;
   return (
-    <Svg width={w * s} height={h * s}>
-      {map.map((row, y) =>
-        row.map((cell, x) =>
-          cell ? (
-            <Rect
-              key={`${x}-${y}`}
-              x={x * s}
-              y={y * s}
-              width={s}
-              height={s}
-              fill="#B3B3B3"
-            />
-          ) : null,
-        ),
-      )}
-    </Svg>
+      <Svg width={w * s} height={h * s}>
+        {map.map((row, y) =>
+            row.map((cell, x) =>
+                cell ? (
+                    <Rect
+                        key={`${x}-${y}`}
+                        x={x * s}
+                        y={y * s}
+                        width={s}
+                        height={s}
+                        fill="#B3B3B3"
+                    />
+                ) : null,
+            ),
+        )}
+      </Svg>
   );
 }
 
@@ -459,103 +459,116 @@ function ChartPager({
     goTo(page);
   }, []);
   const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_, g) => {
-          if (chartTouching) return false;
-          const dx = Math.abs(g.dx);
-          return dx > 10 && dx > Math.abs(g.dy);
-        },
-        onPanResponderGrant: () => {
-          translateX.stopAnimation((v: number) => {
-            startX.current = v;
-          });
-        },
-        onPanResponderMove: (_, g) => {
-          translateX.setValue(startX.current + g.dx);
-        },
-        onPanResponderRelease: (_, g) => {
-          const threshold = chartW * 0.18;
-          if (g.dx < -threshold) goTo(page + 1);
-          else if (g.dx > threshold) goTo(page - 1);
-          else goTo(page);
-        },
-        onPanResponderTerminate: () => goTo(page),
-      }),
-    [page, chartW, pages.length, chartTouching, translateX],
+      () =>
+          PanResponder.create({
+            onStartShouldSetPanResponder: () => false,
+            onMoveShouldSetPanResponder: (_, g) => {
+              if (chartTouching) return false;
+              const dx = Math.abs(g.dx);
+              return dx > 10 && dx > Math.abs(g.dy);
+            },
+            onPanResponderGrant: () => {
+              translateX.stopAnimation((v: number) => {
+                startX.current = v;
+              });
+            },
+            onPanResponderMove: (_, g) => {
+              translateX.setValue(startX.current + g.dx);
+            },
+            onPanResponderRelease: (_, g) => {
+              const threshold = chartW * 0.18;
+              if (g.dx < -threshold) goTo(page + 1);
+              else if (g.dx > threshold) goTo(page - 1);
+              else goTo(page);
+            },
+            onPanResponderTerminate: () => goTo(page),
+          }),
+      [page, chartW, pages.length, chartTouching, translateX],
   );
   return (
-    <View>
-      <View style={styles.chartHeader}>
-        <View style={{ flex: 1 }}>{pages[page]?.headerLeft}</View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {pages[page]?.titleRight}
+      <View>
+        <View style={styles.chartHeader}>
+          <View style={{ flex: 1 }}>{pages[page]?.headerLeft}</View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {pages[page]?.titleRight}
+          </View>
         </View>
-      </View>
-      <View
-        style={[styles.pagerFrame, { width, height }]}
-        {...panResponder.panHandlers}
-      >
         <View
-          style={{
-            position: 'absolute',
-            left: NAV_GUTTER,
-            right: NAV_GUTTER,
-            top: 0,
-            bottom: 0,
-            overflow: 'hidden',
-          }}
+            style={[styles.pagerFrame, { width, height }]}
+            {...panResponder.panHandlers}
         >
-          <Animated.View
-            style={{
-              flexDirection: 'row',
-              width: chartW * pages.length,
-              transform: [{ translateX }],
-            }}
+          <View
+              style={{
+                position: 'absolute',
+                left: NAV_GUTTER,
+                right: NAV_GUTTER,
+                top: 0,
+                bottom: 0,
+                overflow: 'hidden',
+              }}
           >
-            {pages.map(p => (
-              <View key={p.key} style={{ width: chartW, height }}>
-                {p.render({
-                  onTouchingChange: setChartTouching,
-                  chartWidth: chartW,
-                })}
-              </View>
-            ))}
-          </Animated.View>
+            <Animated.View
+                style={{
+                  flexDirection: 'row',
+                  width: chartW * pages.length,
+                  transform: [{ translateX }],
+                }}
+            >
+              {pages.map(p => (
+                  <View key={p.key} style={{ width: chartW, height }}>
+                    {p.render({
+                      onTouchingChange: setChartTouching,
+                      chartWidth: chartW,
+                    })}
+                  </View>
+              ))}
+            </Animated.View>
+          </View>
+          {page > 0 && (
+              <Pressable
+                  onPress={() => goTo(page - 1)}
+                  hitSlop={14}
+                  style={[styles.pagerIconBtn, { left: 2 }]}
+              >
+                <PixelChevron dir="left" />
+              </Pressable>
+          )}
+          {page < pages.length - 1 && (
+              <Pressable
+                  onPress={() => goTo(page + 1)}
+                  hitSlop={14}
+                  style={[styles.pagerIconBtn, { right: 2 }]}
+              >
+                <PixelChevron dir="right" />
+              </Pressable>
+          )}
         </View>
-        {page > 0 && (
-          <Pressable
-            onPress={() => goTo(page - 1)}
-            hitSlop={14}
-            style={[styles.pagerIconBtn, { left: 2 }]}
-          >
-            <PixelChevron dir="left" />
-          </Pressable>
-        )}
-        {page < pages.length - 1 && (
-          <Pressable
-            onPress={() => goTo(page + 1)}
-            hitSlop={14}
-            style={[styles.pagerIconBtn, { right: 2 }]}
-          >
-            <PixelChevron dir="right" />
-          </Pressable>
-        )}
       </View>
-    </View>
   );
 }
 
 function AnomalyButtonPager({ width, height, days, series }: any) {
   const NAV_GUTTER = 18;
   const chartW = width - NAV_GUTTER * 2;
+
+  const fallbackSeries = useMemo(
+      () => [
+        { key: 'total', label: '전체', color: '#FF3131', values: [] },
+        { key: 'water', label: '수위', color: '#6495ED', values: [] },
+        { key: 'nutrient', label: '농도', color: '#9ACD32', values: [] },
+      ],
+      [],
+  );
+
+  const safeSeries = (Array.isArray(series) && series.length > 0) ? series : fallbackSeries;
+  const safeDays = Array.isArray(days) ? days : [];
+
   const [page, setPage] = useState(0);
   const translateX = useRef(new Animated.Value(0)).current;
-  const tabAnims = useRef(series.map(() => new Animated.Value(0))).current;
+  const tabAnims = useRef(safeSeries.map(() => new Animated.Value(0))).current;
 
   const goTo = (idx: number) => {
-    const next = clamp(idx, 0, series.length - 1);
+    const next = clamp(idx, 0, safeSeries.length - 1);
     setPage(next);
     Animated.spring(translateX, {
       toValue: -next * chartW,
@@ -566,109 +579,109 @@ function AnomalyButtonPager({ width, height, days, series }: any) {
   };
 
   const handlePressIn = (i: number) =>
-    Animated.timing(tabAnims[i], {
-      toValue: 1,
-      duration: 60,
-      useNativeDriver: false,
-    }).start();
+      Animated.timing(tabAnims[i], {
+        toValue: 1,
+        duration: 60,
+        useNativeDriver: false,
+      }).start();
   const handlePressOut = (i: number) =>
-    Animated.timing(tabAnims[i], {
-      toValue: 0,
-      duration: 80,
-      useNativeDriver: false,
-    }).start();
+      Animated.timing(tabAnims[i], {
+        toValue: 0,
+        duration: 80,
+        useNativeDriver: false,
+      }).start();
 
-  const current = series[page];
+  const current = safeSeries[page];
 
   return (
-    <View>
-      <View style={styles.chartHeader}>
-        <View style={{ flex: 1 }} />
-        {current && <LegendItem label={current?.label} color={current?.color} />}
-      </View>
+      <View>
+        <View style={styles.chartHeader}>
+          <View style={{ flex: 1 }} />
+          {current && <LegendItem label={current?.label} color={current?.color} />}
+        </View>
 
-      <View style={[styles.pagerFrame, { width, height }]}>
-        <View
-          style={{
-            position: 'absolute',
-            left: NAV_GUTTER,
-            right: NAV_GUTTER,
-            top: 0,
-            bottom: 0,
-            overflow: 'hidden',
-          }}
-        >
-          <Animated.View
-            style={{
-              flexDirection: 'row',
-              width: chartW * series.length,
-              transform: [{ translateX }],
-            }}
+        <View style={[styles.pagerFrame, { width, height }]}>
+          <View
+              style={{
+                position: 'absolute',
+                left: NAV_GUTTER,
+                right: NAV_GUTTER,
+                top: 0,
+                bottom: 0,
+                overflow: 'hidden',
+              }}
           >
-            {series.map((s: any) => (
-              <View key={s.key} style={{ width: chartW, height }}>
-                <GrowthLineChartInteractive
-                  days={days}
-                  values={s.values}
-                  width={chartW}
-                  height={height}
-                  color={s.color}
-                  fillOpacity={0.1}
-                />
-              </View>
-            ))}
-          </Animated.View>
+            <Animated.View
+                style={{
+                  flexDirection: 'row',
+                  width: chartW * safeSeries.length,
+                  transform: [{ translateX }],
+                }}
+            >
+              {safeSeries.map((s: any) => (
+                  <View key={s.key} style={{ width: chartW, height }}>
+                    <GrowthLineChartInteractive
+                        days={safeDays}
+                        values={Array.isArray(s.values) ? s.values : []}
+                        width={chartW}
+                        height={height}
+                        color={s.color}
+                        fillOpacity={0.1}
+                    />
+                  </View>
+              ))}
+            </Animated.View>
+          </View>
+        </View>
+
+        <View style={styles.anomTabRowFixed}>
+          {safeSeries.map((s: any, i: number) => {
+            const active = i === page;
+            const anim = tabAnims[i] || new Animated.Value(0);
+            return (
+                <View key={s.key} style={styles.tabWrapper}>
+                  <Pressable
+                      onPressIn={() => handlePressIn(i)}
+                      onPressOut={() => handlePressOut(i)}
+                      onPress={() => goTo(i)}
+                      style={{ flex: 1 }}
+                  >
+                    <Animated.View
+                        style={[
+                          styles.pixelTabBtn,
+                          active && { borderColor: s.color, backgroundColor: '#FFF' },
+                          {
+                            borderBottomWidth: anim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [4, 1],
+                            }),
+                            borderRightWidth: anim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [4, 1],
+                            }),
+                            transform: [
+                              {
+                                translateY: anim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [0, 3],
+                                }),
+                              },
+                            ],
+                          },
+                        ]}
+                    >
+                      <Text
+                          style={[styles.anomTabText, active && { color: BORDER }]}
+                      >
+                        {s.label}
+                      </Text>
+                    </Animated.View>
+                  </Pressable>
+                </View>
+            );
+          })}
         </View>
       </View>
-
-      <View style={styles.anomTabRowFixed}>
-        {series.map((s: any, i: number) => {
-          const active = i === page;
-          const anim = tabAnims[i] || new Animated.Value(0);
-          return (
-            <View key={s.key} style={styles.tabWrapper}>
-              <Pressable
-                onPressIn={() => handlePressIn(i)}
-                onPressOut={() => handlePressOut(i)}
-                onPress={() => goTo(i)}
-                style={{ flex: 1 }}
-              >
-                <Animated.View
-                  style={[
-                    styles.pixelTabBtn,
-                    active && { borderColor: s.color, backgroundColor: '#FFF' },
-                    {
-                      borderBottomWidth: anim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [4, 1],
-                      }),
-                      borderRightWidth: anim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [4, 1],
-                      }),
-                      transform: [
-                        {
-                          translateY: anim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, 3],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[styles.anomTabText, active && { color: BORDER }]}
-                  >
-                    {s.label}
-                  </Text>
-                </Animated.View>
-              </Pressable>
-            </View>
-          );
-        })}
-      </View>
-    </View>
   );
 }
 
@@ -699,21 +712,23 @@ function GrowthLineChartInteractive({
   const domain = useMemo(() => {
     const n = values.length;
     const s = zoomRange
-      ? clamp(Math.min(zoomRange.start, zoomRange.end), 0, n - 1)
-      : 0;
+        ? clamp(Math.min(zoomRange.start, zoomRange.end), 0, n - 1)
+        : 0;
     const e = zoomRange
-      ? clamp(Math.max(zoomRange.start, zoomRange.end), 0, n - 1)
-      : n - 1;
+        ? clamp(Math.max(zoomRange.start, zoomRange.end), 0, n - 1)
+        : n - 1;
     return {
       s,
       e,
-      sliceDays: days.slice(s, e + 1),
-      sliceValues: values.slice(s, e + 1),
+      sliceDays: Array.isArray(days) ? days.slice(s, e + 1) : [],
+      sliceValues: Array.isArray(values) ? values.slice(s, e + 1) : [],
     };
   }, [days, values, zoomRange]);
 
+  const hasData = domain.sliceValues.length > 0;
+
   const globalLastVisible =
-    domain.s <= globalLastIdx && globalLastIdx <= domain.e;
+      domain.s <= globalLastIdx && globalLastIdx <= domain.e;
   const globalLastInSlice = globalLastVisible ? globalLastIdx - domain.s : null;
 
   const validValues = domain.sliceValues.filter((v:number) => v !== null && v !== undefined);
@@ -724,212 +739,231 @@ function GrowthLineChartInteractive({
   const max = useMemo(() => (localMax === 0 ? 10 : localMax * 1.1), [localMax]);
 
   const xStep = useMemo(
-    () =>
-      domain.sliceDays.length <= 1
-        ? 0
-        : (width - p * 2) / (domain.sliceDays.length - 1),
-    [width, domain.sliceDays.length],
+      () =>
+          domain.sliceDays.length <= 1
+              ? 0
+              : (width - p * 2) / (domain.sliceDays.length - 1),
+      [width, domain.sliceDays.length],
   );
   const yPos = (v: number) =>
-    p + (height - p * 2) * (1 - (v - min) / (max - min || 1));
-  const points = useMemo(
-    () =>
-      domain.sliceValues
+      p + (height - p * 2) * (1 - (v - min) / (max - min || 1));
+
+  const points = useMemo(() => {
+    if (!hasData || xStep === 0) return '';
+    return domain.sliceValues
         .map((v: any, i: number) => `${p + i * xStep},${yPos(v)}`)
-        .join(' '),
-    [domain.sliceValues, xStep, min, max, height],
-  );
+        .join(' ');
+  }, [hasData, domain.sliceValues, xStep, min, max, height]);
+
   const fillPath = useMemo(() => {
+    if (!hasData || xStep === 0) return '';
     const line = domain.sliceValues
-      .map((v: any, i: number) => `L${p + i * xStep},${yPos(v)}`)
-      .join(' ');
+        .map((v: any, i: number) => `L${p + i * xStep},${yPos(v)}`)
+        .join(' ');
     return `M${p},${height - p} ${line} L${
-      p + (domain.sliceValues.length - 1) * xStep
+        p + (domain.sliceValues.length - 1) * xStep
     },${height - p} Z`;
-  }, [domain.sliceValues, xStep, min, max, height]);
+  }, [hasData, domain.sliceValues, xStep, min, max, height]);
+
   const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: evt => {
-          const now = Date.now();
-          if (now - tapTs.current < 280) {
-            setZoomRange(null);
-            setTouchingSafe(false);
-            setActiveIdx(null);
-            return;
-          }
-          tapTs.current = now;
-          setTouchingSafe(true);
-          dragStartX.current = evt.nativeEvent.locationX;
-          setActiveIdx(
-            domain.s +
-            clamp(
-              Math.round((evt.nativeEvent.locationX - p) / xStep),
-              0,
-              domain.sliceValues.length - 1,
-            ),
-          );
-        },
-        onPanResponderMove: evt => {
-          dragEndX.current = evt.nativeEvent.locationX;
-          setActiveIdx(
-            domain.s +
-            clamp(
-              Math.round((evt.nativeEvent.locationX - p) / xStep),
-              0,
-              domain.sliceValues.length - 1,
-            ),
-          );
-        },
-        onPanResponderRelease: () => {
-          setTouchingSafe(false);
-          setActiveIdx(null);
-          if (
-            dragStartX.current != null &&
-            dragEndX.current != null &&
-            Math.abs(dragEndX.current - dragStartX.current) > 28
-          ) {
-            const sIdx =
-              domain.s +
-              clamp(
-                Math.round(
-                  (Math.min(dragStartX.current, dragEndX.current) - p) / xStep,
-                ),
-                0,
-                domain.sliceValues.length - 1,
+      () =>
+          PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: () => true,
+            onPanResponderGrant: evt => {
+              if (!hasData || xStep === 0) return;
+              const now = Date.now();
+              if (now - tapTs.current < 280) {
+                setZoomRange(null);
+                setTouchingSafe(false);
+                setActiveIdx(null);
+                return;
+              }
+              tapTs.current = now;
+              setTouchingSafe(true);
+              dragStartX.current = evt.nativeEvent.locationX;
+              setActiveIdx(
+                  domain.s +
+                  clamp(
+                      Math.round((evt.nativeEvent.locationX - p) / xStep),
+                      0,
+                      domain.sliceValues.length - 1,
+                  ),
               );
-            const eIdx =
-              domain.s +
-              clamp(
-                Math.round(
-                  (Math.max(dragStartX.current, dragEndX.current) - p) / xStep,
-                ),
-                0,
-                domain.sliceValues.length - 1,
+            },
+            onPanResponderMove: evt => {
+              if (!hasData || xStep === 0) return;
+              dragEndX.current = evt.nativeEvent.locationX;
+              setActiveIdx(
+                  domain.s +
+                  clamp(
+                      Math.round((evt.nativeEvent.locationX - p) / xStep),
+                      0,
+                      domain.sliceValues.length - 1,
+                  ),
               );
-            if (eIdx - sIdx >= 1) setZoomRange({ start: sIdx, end: eIdx });
-          }
-          dragStartX.current = null;
-          dragEndX.current = null;
-        },
-        onPanResponderTerminate: () => {
-          setTouchingSafe(false);
-          setActiveIdx(null);
-        },
-      }),
-    [domain.s, domain.sliceValues.length, xStep],
+            },
+            onPanResponderRelease: () => {
+              if (!hasData || xStep === 0) return;
+              setTouchingSafe(false);
+              setActiveIdx(null);
+              if (
+                  dragStartX.current != null &&
+                  dragEndX.current != null &&
+                  Math.abs(dragEndX.current - dragStartX.current) > 28
+              ) {
+                const sIdx =
+                    domain.s +
+                    clamp(
+                        Math.round(
+                            (Math.min(dragStartX.current, dragEndX.current) - p) / xStep,
+                        ),
+                        0,
+                        domain.sliceValues.length - 1,
+                    );
+                const eIdx =
+                    domain.s +
+                    clamp(
+                        Math.round(
+                            (Math.max(dragStartX.current, dragEndX.current) - p) / xStep,
+                        ),
+                        0,
+                        domain.sliceValues.length - 1,
+                    );
+                if (eIdx - sIdx >= 1) setZoomRange({ start: sIdx, end: eIdx });
+              }
+              dragStartX.current = null;
+              dragEndX.current = null;
+            },
+            onPanResponderTerminate: () => {
+              setTouchingSafe(false);
+              setActiveIdx(null);
+            },
+          }),
+      [domain.s, domain.sliceValues.length, xStep, hasData],
   );
+
   return (
-    <View style={{ width, height }} {...panResponder.panHandlers}>
-      <Svg width={width} height={height}>
-        {[0, 1, 2, 3, 4].map(i => (
-          <Line
-            key={i}
-            x1={p}
-            y1={p + (i * (height - p * 2)) / 4}
-            x2={width - p}
-            y2={p + (i * (height - p * 2)) / 4}
-            stroke="#D9D9D9"
-            strokeWidth={1}
-          />
-        ))}
-        <Path d={fillPath} fill={color} fillOpacity={fillOpacity} />
-        <Polyline
-          points={points}
-          fill="none"
-          stroke={color}
-          strokeWidth={3}
-          strokeLinejoin="round"
-        />
-        {touching &&
-          dragStartX.current != null &&
-          dragEndX.current != null &&
-          Math.abs(dragEndX.current - dragStartX.current) > 28 && (
-            <Rect
-              x={Math.min(dragStartX.current, dragEndX.current)}
-              y={p}
-              width={Math.abs(dragEndX.current - dragStartX.current)}
-              height={height - p * 2}
-              fill={color}
-              fillOpacity={0.08}
-            />
-          )}
-        {domain.sliceValues.map((v: any, i: number) => {
-          const cx = p + i * xStep;
-          const cy = yPos(v);
-          const isActive = (activeIdx ?? -1) - domain.s === i && touching;
-          return (
-            <G key={i}>
-              <Circle
-                cx={cx}
-                cy={cy}
-                r={domain.s + i === globalLastIdx || isActive ? 6 : 4}
-                fill={CARD_BG}
-                stroke={color}
-                strokeWidth={isActive ? 3 : 2}
+      <View style={{ width, height }} {...panResponder.panHandlers}>
+        <Svg width={width} height={height}>
+          {[0, 1, 2, 3, 4].map(i => (
+              <Line
+                  key={i}
+                  x1={p}
+                  y1={p + (i * (height - p * 2)) / 4}
+                  x2={width - p}
+                  y2={p + (i * (height - p * 2)) / 4}
+                  stroke="#D9D9D9"
+                  strokeWidth={1}
               />
-              {(i === 0 || i === domain.sliceValues.length - 1 || isActive) && (
-                <SvgText
-                  x={cx}
-                  y={height - 5}
-                  fontSize="12"
-                  textAnchor="middle"
-                  fill="#999"
-                  fontFamily="NeoDunggeunmoPro-Regular"
-                >
-                  {domain.sliceDays[i]}
-                </SvgText>
-              )}
-              {isActive && i !== domain.sliceValues.length - 1 && (
-                <G>
-                  <Line
-                    x1={cx}
-                    y1={p}
-                    x2={cx}
-                    y2={height - p}
-                    stroke={color}
-                    strokeWidth={1}
-                    strokeDasharray="4 4"
+          ))}
+
+          {hasData && fillPath ? (
+              <Path d={fillPath} fill={color} fillOpacity={fillOpacity} />
+          ) : null}
+
+          {hasData && points ? (
+              <Polyline
+                  points={points}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={3}
+                  strokeLinejoin="round"
+              />
+          ) : null}
+
+          {hasData &&
+              touching &&
+              dragStartX.current != null &&
+              dragEndX.current != null &&
+              Math.abs(dragEndX.current - dragStartX.current) > 28 && (
+                  <Rect
+                      x={Math.min(dragStartX.current, dragEndX.current)}
+                      y={p}
+                      width={Math.abs(dragEndX.current - dragStartX.current)}
+                      height={height - p * 2}
+                      fill={color}
+                      fillOpacity={0.08}
                   />
-                  <SvgText
-                    x={cx}
-                    y={p - 8}
-                    fontSize="14"
-                    textAnchor="middle"
-                    fill={BORDER}
-                    fontFamily="NeoDunggeunmoPro-Regular"
-                  >
-                    {v}
-                  </SvgText>
-                </G>
               )}
-            </G>
-          );
-        })}
-        {globalLastVisible && globalLastInSlice != null && !touching && (
-          <SvgText
-            x={p + globalLastInSlice * xStep}
-            y={p - 8}
-            fontSize="16"
-            textAnchor="middle"
-            fill={BORDER}
-            fontFamily="NeoDunggeunmoPro-Regular"
-          >
-            {domain.sliceValues[globalLastInSlice]}
-          </SvgText>
-        )}
-        <Line
-          x1={p}
-          y1={height - p}
-          x2={width - p}
-          y2={height - p}
-          stroke={BORDER}
-          strokeWidth={2}
-        />
-      </Svg>
-    </View>
+
+          {hasData &&
+              domain.sliceValues.map((v: any, i: number) => {
+                const cx = p + i * xStep;
+                const cy = yPos(v);
+                const isActive = (activeIdx ?? -1) - domain.s === i && touching;
+                return (
+                    <G key={i}>
+                      <Circle
+                          cx={cx}
+                          cy={cy}
+                          r={domain.s + i === globalLastIdx || isActive ? 6 : 4}
+                          fill={CARD_BG}
+                          stroke={color}
+                          strokeWidth={isActive ? 3 : 2}
+                      />
+                      {(i === 0 || i === domain.sliceValues.length - 1 || isActive) && (
+                          <SvgText
+                              x={cx}
+                              y={height - 5}
+                              fontSize="12"
+                              textAnchor="middle"
+                              fill="#999"
+                              fontFamily="NeoDunggeunmoPro-Regular"
+                          >
+                            {domain.sliceDays[i]}
+                          </SvgText>
+                      )}
+                      {isActive && i !== domain.sliceValues.length - 1 && (
+                          <G>
+                            <Line
+                                x1={cx}
+                                y1={p}
+                                x2={cx}
+                                y2={height - p}
+                                stroke={color}
+                                strokeWidth={1}
+                                strokeDasharray="4 4"
+                            />
+                            <SvgText
+                                x={cx}
+                                y={p - 8}
+                                fontSize="14"
+                                textAnchor="middle"
+                                fill={BORDER}
+                                fontFamily="NeoDunggeunmoPro-Regular"
+                            >
+                              {v}
+                            </SvgText>
+                          </G>
+                      )}
+                    </G>
+                );
+              })}
+
+          {hasData && globalLastVisible && globalLastInSlice != null && !touching && (
+              <SvgText
+                  x={p + globalLastInSlice * xStep}
+                  y={p - 8}
+                  fontSize="16"
+                  textAnchor="middle"
+                  fill={BORDER}
+                  fontFamily="NeoDunggeunmoPro-Regular"
+              >
+                {domain.sliceValues[globalLastInSlice]}
+              </SvgText>
+          )}
+
+          <Line
+              x1={p}
+              y1={height - p}
+              x2={width - p}
+              y2={height - p}
+              stroke={BORDER}
+              strokeWidth={2}
+          />
+        </Svg>
+      </View>
   );
 }
 
