@@ -21,6 +21,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,12 +93,18 @@ public class ImageInferenceService {
         }
 
         // 6. measuredAt 보정
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime measuredAt1 = hasTop
-                ? (request.getMeasuredAt1() != null ? request.getMeasuredAt1() : now)
+        OffsetDateTime now = OffsetDateTime.now();
+
+        OffsetDateTime measuredAt1 = hasTop
+                ? (request.getMeasuredAt1() != null
+                ? request.getMeasuredAt1()
+                : now)
                 : null;
-        LocalDateTime measuredAt2 = hasSide
-                ? (request.getMeasuredAt2() != null ? request.getMeasuredAt2() : now)
+
+        OffsetDateTime measuredAt2 = hasSide
+                ? (request.getMeasuredAt2() != null
+                ? request.getMeasuredAt2()
+                : now)
                 : null;
 
         // 7. PlantImage 저장

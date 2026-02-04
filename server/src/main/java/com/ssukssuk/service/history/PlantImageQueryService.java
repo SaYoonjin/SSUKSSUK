@@ -13,11 +13,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -26,7 +25,8 @@ import java.util.List;
 public class PlantImageQueryService {
 
     private static final int FIXED_PERIOD_DAYS = 14;
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
+    private static final ZoneOffset KST_OFFSET = ZoneOffset.ofHours(9);
 
     private final PlantImageRepository plantImageRepository;
     private final S3PresignService s3PresignService;
@@ -34,25 +34,26 @@ public class PlantImageQueryService {
 
     // 특정 식물의 최근 14일간 이미지 조회 (사용자 소유 여부 검증 포함)
     public GetPlantImagesResponse getRecent14DaysImages(Long userId, Long plantId) {
+
         // 사용자-식물 소유 관계 검증
         if (!userPlantRepository.existsByPlantIdAndUserId(plantId, userId)) {
             throw new CustomException(ErrorCode.PLANT_ACCESS_DENIED);
         }
 
-        LocalDate today = LocalDate.now(KST);
+        LocalDate today = LocalDate.now(KST_ZONE);
         LocalDate fromDate = today.minusDays(FIXED_PERIOD_DAYS - 1);
 
-        LocalDateTime from = fromDate.atStartOfDay();
-        LocalDateTime to = today.plusDays(1).atStartOfDay();
+        // [from, to) : fromDate 00:00:00+09:00  ~  (today+1) 00:00:00+09:00
+        OffsetDateTime from = fromDate.atStartOfDay().atOffset(KST_OFFSET);
+        OffsetDateTime to = today.plusDays(1).atStartOfDay().atOffset(KST_OFFSET);
 
         List<PlantImage> rows = plantImageRepository.findRecentImagesByPlantId(plantId, from, to);
 
         List<GetPlantImagesResponse.ImageItem> images = rows.stream()
-                // PlantImage 엔티티 1개를 ImageItem DTO 1개로 매핑
                 .map(pi -> GetPlantImagesResponse.ImageItem.builder()
                         .imageId(pi.getImageId())
-                        .imageUrlTop(s3PresignService.toPublicUrl(pi.getImageUrlTop()))
-                        .imageUrlSide(s3PresignService.toPublicUrl(pi.getImageUrlSide()))
+                        .imageUrlTop(safePublicUrl(pi.getImageUrlTop()))
+                        .imageUrlSide(safePublicUrl(pi.getImageUrlSide()))
                         .capturedAt(pi.getCapturedAt())
                         .build())
                 .toList();
@@ -73,12 +74,11 @@ public class PlantImageQueryService {
         }
 
         PlantImage latest = plantImageRepository
-                .findLatestByPlantId(plantId, (Pageable) PageRequest.of(0, 1))
+                .findLatestByPlantId(plantId, PageRequest.of(0, 1))
                 .stream()
                 .findFirst()
                 .orElse(null);
 
-        // 이미지가 아예 없는 경우
         if (latest == null) {
             return PlantHistoryResponse.CurrentImage.builder()
                     .imageUrl_top(null)

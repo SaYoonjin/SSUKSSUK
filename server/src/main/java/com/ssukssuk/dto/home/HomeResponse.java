@@ -1,12 +1,14 @@
 package com.ssukssuk.dto.home;
 
+import com.ssukssuk.domain.plant.CharacterCode;
 import com.ssukssuk.domain.plant.PlantStatus;
 import com.ssukssuk.domain.plant.UserPlant;
 
 public record HomeResponse(
         Long plantId,
         String plantName,
-        Integer characterCode,
+        CharacterCode characterCode,
+        String imageUrl,
         Integer healthScore,
         String waterLevelStatus,
         String nutrientStatus,
@@ -16,11 +18,12 @@ public record HomeResponse(
         String humidityStatus,
         Boolean hasUnreadNotification
 ) {
-    public static HomeResponse from(UserPlant userPlant, PlantStatus status) {
+    public static HomeResponse from(UserPlant userPlant, PlantStatus status, String url) {
         return new HomeResponse(
                 userPlant.getPlantId(),
                 userPlant.getPlantName(),
-                status.getCharacterCode(),
+                status.getCharactercode(),
+                url,
                 status.getHealthScore(),
                 status.getWaterLevelStatus() != null ? status.getWaterLevelStatus().name() : null,
                 status.getNutrientConcStatus() != null ? status.getNutrientConcStatus().name() : null,

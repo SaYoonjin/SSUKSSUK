@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "plant_image")
@@ -29,7 +30,7 @@ public class PlantImage {
     private UserPlant plant;
 
     @Column(name = "captured_at", nullable = false)
-    private LocalDateTime capturedAt;
+    private OffsetDateTime capturedAt;
 
     @Column(name = "image_url_top", length = 1024)
     private String imageUrlTop;

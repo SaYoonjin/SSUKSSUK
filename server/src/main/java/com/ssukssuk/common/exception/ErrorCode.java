@@ -127,6 +127,12 @@ public enum ErrorCode {
             "SENSOR_LOG_NOT_FOUND",
             "센서 데이터가 존재하지 않습니다."
     ),
+    CHARACTER_CODE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "CHARACTER_CODE_NOT_FOUND",
+            "존재하지 않는 캐릭터 코드입니다"
+    ),
+
 
     // 409
     EMAIL_DUPLICATE(

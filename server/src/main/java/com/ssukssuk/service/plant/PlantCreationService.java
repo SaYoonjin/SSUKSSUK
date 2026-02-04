@@ -3,10 +3,12 @@ package com.ssukssuk.service.plant;
 import com.ssukssuk.common.exception.CustomException;
 import com.ssukssuk.common.exception.ErrorCode;
 import com.ssukssuk.domain.auth.User;
+import com.ssukssuk.domain.plant.CharacterCode;
 import com.ssukssuk.domain.plant.PlantStatus;
 import com.ssukssuk.domain.plant.Species;
 import com.ssukssuk.domain.plant.UserPlant;
 import com.ssukssuk.repository.auth.UserRepository;
+import com.ssukssuk.repository.plant.CharacterCodeRepository;
 import com.ssukssuk.repository.plant.PlantStatusRepository;
 import com.ssukssuk.repository.plant.SpeciesRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
@@ -23,10 +25,13 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PlantCreationService {
 
+    private static final int DEFAULT_CHARACTER_CODE = 0;
+
     private final UserRepository userRepository;
     private final SpeciesRepository speciesRepository;
     private final UserPlantRepository userPlantRepository;
     private final PlantStatusRepository plantStatusRepository;
+    private final CharacterCodeRepository characterCodeRepository;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public UserPlant createPlantOnly(Long userId, Long speciesId, String plantName) {
@@ -47,9 +52,12 @@ public class PlantCreationService {
 
         userPlantRepository.save(userPlant);
 
+        CharacterCode defaultCharacter = characterCodeRepository.findById(DEFAULT_CHARACTER_CODE)
+                .orElseThrow(() -> new CustomException(ErrorCode.CHARACTER_CODE_NOT_FOUND));
+
         PlantStatus plantStatus = PlantStatus.builder()
                 .userPlant(userPlant)
-                .characterCode(0)
+                .character(defaultCharacter)
                 .build();
 
         plantStatusRepository.save(plantStatus);
