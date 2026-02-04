@@ -32,7 +32,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BG_DAY = require('../assets/background1.png');
 const BG_NIGHT = require('../assets/background2.png');
 const ALARM_ICON = require('../assets/alarm_balloon.png');
-const TOMATO_NORMAL = require('../assets/tomato_normal.png');
+const TOMATO_NORMAL = require('../assets/tomato_normal.png'); // 기본 이미지 (fallback용)
 const ALARM_BELL = require('../assets/alarm.png');
 
 const DAY_START_HOUR = 3;
@@ -121,57 +121,59 @@ type SeenState = {
 
 type HomeResponse =
   | {
-      success: true;
-      data: {
-        plantId?: number;
-        header?: {
-          todayNotificationCount?: number;
-          asOf?: string;
-        };
-        user?: {
-          userId: number;
-          nickname: string;
-        };
-        mainPlant?: {
-          plantId: number;
-          name: string;
-          species: string;
-          characterCode: string;
-          ageDays: number;
-        };
-        plantName?: string;
-        characterCode?: number;
-        healthScore?: number;
-        waterLevelStatus?: string;
-        nutrientStatus?: string;
-        temperature?: number;
-        humidity?: number;
-        temperatureStatus?: string;
-        humidityStatus?: string;
-        hasUnreadNotification?: boolean;
-        currentSensor?: {
-          waterLevel?: { value: number; status: string; updatedAt: string };
-          nutrient?: { value: number; status: string; updatedAt: string };
-          temperatureHumidity?: {
-            temperature: number;
-            humidity: number;
-            status: string;
-            updatedAt: string;
-          };
-        };
-        growthStatus?: { label: string; percentage: number };
-        environmentStatus?: { label: string; percentage: number };
-        statusMessage?: { statusMessage: string };
-        device?: { connected: boolean; deviceId?: string };
-      };
-      error?: null;
-    }
-  | {
-      success: false;
-      message?: string;
-      error?: any;
-      data?: any;
+  success: true;
+  data: {
+    plantId?: number;
+    imageUrl?: string; // 서버에서 주는 이미지 URL
+    header?: {
+      todayNotificationCount?: number;
+      asOf?: string;
     };
+    user?: {
+      userId: number;
+      nickname: string;
+    };
+    mainPlant?: {
+      plantId: number;
+      name: string;
+      species: string;
+      characterCode: string;
+      imageUrl?: string;
+      ageDays: number;
+    };
+    plantName?: string;
+    characterCode?: number;
+    healthScore?: number;
+    waterLevelStatus?: string;
+    nutrientStatus?: string;
+    temperature?: number;
+    humidity?: number;
+    temperatureStatus?: string;
+    humidityStatus?: string;
+    hasUnreadNotification?: boolean;
+    currentSensor?: {
+      waterLevel?: { value: number; status: string; updatedAt: string };
+      nutrient?: { value: number; status: string; updatedAt: string };
+      temperatureHumidity?: {
+        temperature: number;
+        humidity: number;
+        status: string;
+        updatedAt: string;
+      };
+    };
+    growthStatus?: { label: string; percentage: number };
+    environmentStatus?: { label: string; percentage: number };
+    statusMessage?: { statusMessage: string };
+    device?: { connected: boolean; deviceId?: string };
+  };
+  error?: null;
+}
+  | {
+  success: false;
+  message?: string;
+  error?: any;
+  data?: any;
+};
 
 function PixelBox({ children, style, innerStyle }: any) {
   return (
@@ -378,6 +380,7 @@ export default function MainScreen() {
   const [latestNotification, setLatestNotification] = useState<any>(null);
 
   const [plantName, setPlantName] = useState<string>('');
+  const [characterUrl, setCharacterUrl] = useState<string | null>(null);
 
   const [plantNameFontSize, setPlantNameFontSize] = useState(45);
 
@@ -437,38 +440,35 @@ export default function MainScreen() {
     return '알림';
   };
 
-  const openModal = useCallback(
-    (
-      title: string,
-      content: string | any[],
-      type: 'list' | 'sign' = 'sign',
-    ) => {
-      setModalTitle(title);
-      setModalType(type);
+  const openModal = useCallback((
+    title: string,
+    content: string | any[],
+    type: 'list' | 'sign' = 'sign',
+  ) => {
+    setModalTitle(title);
+    setModalType(type);
 
-      if (Array.isArray(content)) setModalBodyItems(content);
-      else setModalBodyItems([{ message: content }]);
+    if (Array.isArray(content)) setModalBodyItems(content);
+    else setModalBodyItems([{ message: content }]);
 
-      modalOpacity.setValue(0);
-      modalScale.setValue(0.96);
+    modalOpacity.setValue(0);
+    modalScale.setValue(0.96);
 
-      setIsModalVisible(true);
+    setIsModalVisible(true);
 
-      Animated.parallel([
-        Animated.timing(modalOpacity, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(modalScale, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    },
-    [modalOpacity, modalScale],
-  );
+    Animated.parallel([
+      Animated.timing(modalOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalScale, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [modalOpacity, modalScale]);
 
   const closeModal = useCallback(() => {
     Animated.parallel([
@@ -680,7 +680,6 @@ export default function MainScreen() {
     return s === 'OK' || s === 'NORMAL';
   };
 
-  // ✅ [수정 1] fetchHome: 404 에러를 '식물 없음' 상태로 정상 처리
   const fetchHome = useCallback(async () => {
     if (homeInFlightRef.current) return;
     homeInFlightRef.current = true;
@@ -702,7 +701,6 @@ export default function MainScreen() {
         return;
       }
 
-      // 데이터가 정상적으로 오면 식물 있음 처리
       setHasPlant(true);
 
       const d: any = res.data.data || {};
@@ -727,12 +725,16 @@ export default function MainScreen() {
         } catch {}
       }
 
+      // [수정] 이미지 URL 저장
+      const imgUrl = d?.imageUrl || d?.mainPlant?.imageUrl;
+      setCharacterUrl(imgUrl || null);
+
       const hsRaw =
         typeof d?.healthScore === 'number'
           ? d.healthScore
           : typeof d?.growthStatus?.percentage === 'number'
-          ? d.growthStatus.percentage
-          : 0;
+            ? d.growthStatus.percentage
+            : 0;
 
       const nextHs = clamp(Number(hsRaw) || 0, 0, 100);
       setHealthScore(prev => (prev === nextHs ? prev : nextHs));
@@ -781,14 +783,13 @@ export default function MainScreen() {
         typeof d?.header?.todayNotificationCount === 'number'
           ? d.header.todayNotificationCount
           : typeof d?.todayNotificationCount === 'number'
-          ? d.todayNotificationCount
-          : null;
+            ? d.todayNotificationCount
+            : null;
 
       if (typeof cnt === 'number') {
         setTodayCount(prev => (prev === cnt ? prev : cnt));
       }
     } catch (e: any) {
-      // ✅ 404/PLANT_NOT_FOUND 에러를 "식물 없음" 상태로 처리 (에러 아님)
       const status = e.response?.status;
       const errorCode = e.response?.data?.error?.code;
 
@@ -805,7 +806,6 @@ export default function MainScreen() {
     }
   }, []);
 
-  // ✅ [수정 2] fetchTodayNotifications 정의 위치를 위로 올림 (선언 전 사용 에러 해결)
   const fetchTodayNotifications = useCallback(async () => {
     try {
       const plantId = await getPlantId();
@@ -833,17 +833,17 @@ export default function MainScreen() {
 
       const unreadForBadge = listSeenAt
         ? list.filter(
-            n =>
-              new Date(n.createdAt).getTime() > new Date(listSeenAt).getTime(),
-          )
+          n =>
+            new Date(n.createdAt).getTime() > new Date(listSeenAt).getTime(),
+        )
         : list;
 
       const balloonCandidate = balloonSeenAt
         ? list.find(
-            n =>
-              new Date(n.createdAt).getTime() >
-              new Date(balloonSeenAt).getTime(),
-          ) || null
+        n =>
+          new Date(n.createdAt).getTime() >
+          new Date(balloonSeenAt).getTime(),
+      ) || null
         : list[0] || null;
 
       setTodayNotifications({ ...data, notifications: list });
@@ -852,7 +852,6 @@ export default function MainScreen() {
     } catch {}
   }, [getPlantId]);
 
-  // useFocusEffect에서 함수 사용
   useFocusEffect(
     useCallback(() => {
       fetchHome();
@@ -868,7 +867,7 @@ export default function MainScreen() {
         clearInterval(id);
         clearInterval(notifId);
       };
-    }, [fetchHome, fetchTodayNotifications]),
+    }, [fetchHome, fetchTodayNotifications])
   );
 
   const onRefresh = useCallback(() => {
@@ -942,13 +941,7 @@ export default function MainScreen() {
     } catch (e) {
       console.error(e);
     }
-  }, [
-    getPlantId,
-    latestNotification,
-    todayNotifications,
-    openModal,
-    fetchTodayNotifications,
-  ]);
+  }, [getPlantId, latestNotification, todayNotifications, openModal, fetchTodayNotifications]);
 
   const buildWaterGuide = (current: number, min: number, max: number) => {
     if (current > max)
@@ -1149,15 +1142,11 @@ export default function MainScreen() {
             </Pressable>
           </View>
 
-          {/* 식물 유무에 따른 분기 처리 */}
           {hasPlant ? (
             <>
               <View style={styles.plantNameWrap} pointerEvents="none">
                 <Text
-                  style={[
-                    styles.plantNameText,
-                    { fontSize: plantNameFontSize },
-                  ]}
+                  style={[styles.plantNameText, { fontSize: plantNameFontSize }]}
                   numberOfLines={1}
                   ellipsizeMode="tail"
                   onTextLayout={e => {
@@ -1207,9 +1196,7 @@ export default function MainScreen() {
                 <Text style={styles.signSubText}>{nutrientStatusText}</Text>
               </Pressable>
 
-              <View
-                style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}
-              >
+              <View style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}>
                 <Text style={styles.signTitleText}>온습도</Text>
                 <Text style={styles.signSubText}>{tempHumText}</Text>
               </View>
@@ -1233,15 +1220,25 @@ export default function MainScreen() {
                   </Pressable>
                 )}
                 <Pressable onPress={handleCharacterPress}>
-                  <Image source={TOMATO_NORMAL} style={styles.tomatoImage} />
+                  {/* [수정] 서버 URL 사용, 없으면 기본 이미지 */}
+                  <Image
+                    source={
+                      characterUrl
+                        ? { uri: characterUrl }
+                        : TOMATO_NORMAL
+                    }
+                    style={styles.tomatoImage}
+                    resizeMode="contain"
+                  />
                 </Pressable>
               </Animated.View>
             </>
           ) : (
-            // 식물이 없을 때 안내 화면
             <View style={styles.emptyContainer}>
               <View style={styles.emptyMessageData}>
-                <Text style={styles.emptyTextTitle}>등록된 식물이 없어요!</Text>
+                <Text style={styles.emptyTextTitle}>
+                  등록된 식물이 없어요!
+                </Text>
                 <Text style={styles.emptyTextSub}>
                   오른쪽 아래 메뉴에서{'\n'}새로운 식물을 등록해주세요 🌱
                 </Text>
