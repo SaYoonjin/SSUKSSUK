@@ -17,13 +17,17 @@ import {
   Modal,
   Dimensions,
   ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 
 import client from '../api';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const BG_DAY = require('../assets/background1.png');
 const BG_NIGHT = require('../assets/background2.png');
@@ -119,6 +123,7 @@ type HomeResponse =
   | {
       success: true;
       data: {
+        plantId?: number;
         header?: {
           todayNotificationCount?: number;
           asOf?: string;
@@ -377,7 +382,6 @@ export default function MainScreen() {
   const [plantNameFontSize, setPlantNameFontSize] = useState(45);
 
   useEffect(() => {
-    // ✅ 이름 바뀌면 폰트 다시 원복했다가 줄이게
     setPlantNameFontSize(30);
   }, [plantName]);
 
@@ -389,7 +393,10 @@ export default function MainScreen() {
   const [waterNeedCheck, setWaterNeedCheck] = useState(false);
   const [nutrientNeedCheck, setNutrientNeedCheck] = useState(false);
 
-  // ✅✅✅ (추가) fetchHome 요청 겹침 방지
+  const [hasPlant, setHasPlant] = useState<boolean>(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   const homeInFlightRef = useRef(false);
 
   const translateX = useRef(new Animated.Value(0)).current;
@@ -430,37 +437,40 @@ export default function MainScreen() {
     return '알림';
   };
 
-  const openModal = (
-    title: string,
-    content: string | any[],
-    type: 'list' | 'sign' = 'sign',
-  ) => {
-    setModalTitle(title);
-    setModalType(type);
+  const openModal = useCallback(
+    (
+      title: string,
+      content: string | any[],
+      type: 'list' | 'sign' = 'sign',
+    ) => {
+      setModalTitle(title);
+      setModalType(type);
 
-    if (Array.isArray(content)) setModalBodyItems(content);
-    else setModalBodyItems([{ message: content }]);
+      if (Array.isArray(content)) setModalBodyItems(content);
+      else setModalBodyItems([{ message: content }]);
 
-    modalOpacity.setValue(0);
-    modalScale.setValue(0.96);
+      modalOpacity.setValue(0);
+      modalScale.setValue(0.96);
 
-    setIsModalVisible(true);
+      setIsModalVisible(true);
 
-    Animated.parallel([
-      Animated.timing(modalOpacity, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-      Animated.timing(modalScale, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
+      Animated.parallel([
+        Animated.timing(modalOpacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.timing(modalScale, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    },
+    [modalOpacity, modalScale],
+  );
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     Animated.parallel([
       Animated.timing(modalOpacity, {
         toValue: 0,
@@ -473,7 +483,7 @@ export default function MainScreen() {
         useNativeDriver: true,
       }),
     ]).start(() => setIsModalVisible(false));
-  };
+  }, [modalOpacity, modalScale]);
 
   useEffect(() => {
     const schedule = () => {
@@ -558,7 +568,6 @@ export default function MainScreen() {
     ]).start();
   };
 
-  // ✅✅✅ (추가) handleToggle 실패 로그
   const handleToggle = async (auto: boolean) => {
     if (isModeSaving || isAutoMode === auto) return;
     const prev = isAutoMode;
@@ -575,21 +584,15 @@ export default function MainScreen() {
       const token = await AsyncStorage.getItem('accessToken');
       if (!token) throw new Error('NO_TOKEN');
 
-      const resp = await client.patch(
+      await client.patch(
         '/auth/mode',
         { mode: auto ? 'AUTO' : 'MANUAL' },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      console.log('mode patch ok:', resp?.data);
-
       await AsyncStorage.setItem(MODE_STORAGE_KEY, auto ? 'AUTO' : 'MANUAL');
     } catch (e: any) {
-      console.log(
-        'mode patch failed:',
-        e?.response?.status,
-        e?.response?.data || e?.message || e,
-      );
+      console.log('mode patch failed:', e?.response?.status);
 
       setIsAutoMode(prev);
       Animated.timing(toggleAnim, {
@@ -677,25 +680,35 @@ export default function MainScreen() {
     return s === 'OK' || s === 'NORMAL';
   };
 
-  // ✅✅✅ (추가) inFlight 가드 + (변경시에만 setState)
+  // ✅ [수정 1] fetchHome: 404 에러를 '식물 없음' 상태로 정상 처리
   const fetchHome = useCallback(async () => {
     if (homeInFlightRef.current) return;
     homeInFlightRef.current = true;
 
     try {
       const token = await AsyncStorage.getItem('accessToken');
-      if (!token) return;
+      if (!token) {
+        setIsLoading(false);
+        setRefreshing(false);
+        return;
+      }
 
       const res = await client.get<HomeResponse>('/home', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res?.data || res.data.success !== true) return;
+      if (!res?.data || res.data.success !== true) {
+        setHasPlant(false);
+        return;
+      }
+
+      // 데이터가 정상적으로 오면 식물 있음 처리
+      setHasPlant(true);
 
       const d: any = res.data.data || {};
 
-      if (d?.mainPlant?.plantId) {
-        const serverPlantId = String(d.mainPlant.plantId);
+      if (d?.plantId || d?.mainPlant?.plantId) {
+        const serverPlantId = String(d.plantId || d.mainPlant?.plantId);
         const currentCachedId = await AsyncStorage.getItem('plantId');
 
         if (serverPlantId !== currentCachedId) {
@@ -706,7 +719,7 @@ export default function MainScreen() {
         }
       }
 
-      const pname = d?.mainPlant?.name ?? d?.plantName;
+      const pname = d?.plantName ?? d?.mainPlant?.name;
       if (typeof pname === 'string') {
         setPlantName(prev => (prev === pname ? prev : pname));
         try {
@@ -774,19 +787,25 @@ export default function MainScreen() {
       if (typeof cnt === 'number') {
         setTodayCount(prev => (prev === cnt ? prev : cnt));
       }
-    } catch (e) {
-      console.error('fetchHome error:', e);
+    } catch (e: any) {
+      // ✅ 404/PLANT_NOT_FOUND 에러를 "식물 없음" 상태로 처리 (에러 아님)
+      const status = e.response?.status;
+      const errorCode = e.response?.data?.error?.code;
+
+      if (status === 404 || errorCode === 'PLANT_NOT_FOUND') {
+        console.log('ℹ️ 등록된 식물이 없습니다. (정상 처리)');
+        setHasPlant(false);
+      } else {
+        console.error('fetchHome real error:', e);
+      }
     } finally {
       homeInFlightRef.current = false;
+      setIsLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchHome();
-    const id = setInterval(fetchHome, 10000);
-    return () => clearInterval(id);
-  }, [fetchHome]);
-
+  // ✅ [수정 2] fetchTodayNotifications 정의 위치를 위로 올림 (선언 전 사용 에러 해결)
   const fetchTodayNotifications = useCallback(async () => {
     try {
       const plantId = await getPlantId();
@@ -833,16 +852,38 @@ export default function MainScreen() {
     } catch {}
   }, [getPlantId]);
 
-  useEffect(() => {
-    fetchTodayNotifications();
-    const id = setInterval(fetchTodayNotifications, 30000);
-    return () => clearInterval(id);
-  }, [fetchTodayNotifications]);
+  // useFocusEffect에서 함수 사용
+  useFocusEffect(
+    useCallback(() => {
+      fetchHome();
+      fetchTodayNotifications();
 
-  const onPressBell = async () => {
+      const id = setInterval(() => {
+        fetchHome();
+      }, 10000);
+
+      const notifId = setInterval(fetchTodayNotifications, 30000);
+
+      return () => {
+        clearInterval(id);
+        clearInterval(notifId);
+      };
+    }, [fetchHome, fetchTodayNotifications]),
+  );
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchHome();
+    fetchTodayNotifications();
+  }, [fetchHome, fetchTodayNotifications]);
+
+  const onPressBell = useCallback(async () => {
     try {
       const plantId = await getPlantId();
-      if (!plantId) return;
+      if (!plantId) {
+        Alert.alert('알림', '식물이 없습니다.');
+        return;
+      }
 
       const list = (todayNotifications?.notifications ?? [])
         .slice()
@@ -874,10 +915,12 @@ export default function MainScreen() {
         setTodayCount(0);
         setLatestNotification(null);
       }
-    } catch {}
-  };
+    } catch (e) {
+      console.error(e);
+    }
+  }, [getPlantId, todayNotifications, openModal]);
 
-  const onPressBalloon = async () => {
+  const onPressBalloon = useCallback(async () => {
     try {
       const plantId = await getPlantId();
       if (!plantId) return;
@@ -896,8 +939,16 @@ export default function MainScreen() {
 
       setLatestNotification(null);
       await fetchTodayNotifications();
-    } catch {}
-  };
+    } catch (e) {
+      console.error(e);
+    }
+  }, [
+    getPlantId,
+    latestNotification,
+    todayNotifications,
+    openModal,
+    fetchTodayNotifications,
+  ]);
 
   const buildWaterGuide = (current: number, min: number, max: number) => {
     if (current > max)
@@ -968,7 +1019,7 @@ export default function MainScreen() {
     } catch (e) {
       openModal('수위 정보', '정보를 불러오지 못했습니다.', 'sign');
     }
-  }, [getPlantId]);
+  }, [getPlantId, openModal]);
 
   const onPressNutrientSign = useCallback(async () => {
     openModal('농도 정보', '불러오는 중...', 'sign');
@@ -1023,7 +1074,7 @@ export default function MainScreen() {
     } catch (e) {
       openModal('농도 정보', '정보를 불러오지 못했습니다.', 'sign');
     }
-  }, [getPlantId]);
+  }, [getPlantId, openModal]);
 
   const hpPercent = useMemo(
     () => clamp(Number(healthScore) || 0, 0, 100),
@@ -1032,126 +1083,172 @@ export default function MainScreen() {
 
   return (
     <View style={styles.root}>
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#75A743" />
+        </View>
+      )}
+
       <ImageBackground
         source={backgroundSource}
         style={styles.bg}
         resizeMode="cover"
       >
-        <Pressable style={styles.topBellIconBtn} onPress={onPressBell}>
-          <Image source={ALARM_BELL} style={styles.bellImage} />
-          {todayCount > 0 && (
-            <View style={styles.bellBadge}>
-              <Text style={styles.bellBadgeText}>
-                {todayCount > 99 ? '99+' : todayCount}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-
-        <View style={styles.modeToggleContainer}>
-          <Animated.View
-            style={[
-              styles.toggleSlider,
-              {
-                transform: [{ translateX: toggleTranslateX }],
-                backgroundColor: toggleBgColor,
-              },
-            ]}
-          />
-          <Pressable
-            onPress={() => handleToggle(true)}
-            style={styles.togglePiece}
-          >
-            <Text
-              style={[styles.togglePieceText, isAutoMode && styles.textActive]}
-            >
-              AUTO
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => handleToggle(false)}
-            style={styles.togglePiece}
-          >
-            <Text
-              style={[styles.togglePieceText, !isAutoMode && styles.textActive]}
-            >
-              MANU
-            </Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.plantNameWrap} pointerEvents="none">
-          <Text
-            style={[styles.plantNameText, { fontSize: plantNameFontSize }]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-            onTextLayout={e => {
-              // ✅ Android에서도 길면 자동 축소 (한 번만 줄어들게)
-              if (e.nativeEvent.lines.length > 1 && plantNameFontSize > 28) {
-                setPlantNameFontSize(s => s - 2);
-              }
-            }}
-          >
-            {plantName ? plantName : ''}
-          </Text>
-
-          <View style={styles.hpRow}>
-            <Text style={styles.hpLabel}>현재{'\n'}상태</Text>
-
-            <View style={styles.hpOuter}>
-              <View style={[styles.hpFill, { width: `${hpPercent}%` }]} />
-            </View>
-          </View>
-        </View>
-
-        <Pressable
-          style={[styles.signTouchArea, { left: '3%', top: '24%' }]}
-          onPress={onPressWaterSign}
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         >
-          {waterNeedCheck && (
-            <View style={styles.signAlertBadge}>
-              <Text style={styles.signAlertBadgeText}>!</Text>
-            </View>
-          )}
-          <Text style={styles.signTitleText}>수위</Text>
-          <Text style={styles.signSubText}>{waterStatusText}</Text>
-        </Pressable>
-
-        <Pressable
-          style={[styles.signTouchArea, { left: '36%', top: '24%' }]}
-          onPress={onPressNutrientSign}
-        >
-          {nutrientNeedCheck && (
-            <View style={styles.signAlertBadge}>
-              <Text style={styles.signAlertBadgeText}>!</Text>
-            </View>
-          )}
-          <Text style={styles.signTitleText}>농도</Text>
-          <Text style={styles.signSubText}>{nutrientStatusText}</Text>
-        </Pressable>
-
-        <View style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}>
-          <Text style={styles.signTitleText}>온습도</Text>
-          <Text style={styles.signSubText}>{tempHumText}</Text>
-        </View>
-
-        <Animated.View
-          style={[
-            styles.characterWrapper,
-            { transform: [{ translateX }, { translateY: combinedTranslateY }] },
-          ]}
-        >
-          {latestNotification && (
-            <Pressable style={styles.alarmWrap} onPress={onPressBalloon}>
-              <View style={styles.alarmBox}>
-                <Image source={ALARM_ICON} style={styles.alarmIcon} />
+          <Pressable style={styles.topBellIconBtn} onPress={onPressBell}>
+            <Image source={ALARM_BELL} style={styles.bellImage} />
+            {todayCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {todayCount > 99 ? '99+' : todayCount}
+                </Text>
               </View>
-            </Pressable>
-          )}
-          <Pressable onPress={handleCharacterPress}>
-            <Image source={TOMATO_NORMAL} style={styles.tomatoImage} />
+            )}
           </Pressable>
-        </Animated.View>
+
+          <View style={styles.modeToggleContainer}>
+            <Animated.View
+              style={[
+                styles.toggleSlider,
+                {
+                  transform: [{ translateX: toggleTranslateX }],
+                  backgroundColor: toggleBgColor,
+                },
+              ]}
+            />
+            <Pressable
+              onPress={() => handleToggle(true)}
+              style={styles.togglePiece}
+            >
+              <Text
+                style={[
+                  styles.togglePieceText,
+                  isAutoMode && styles.textActive,
+                ]}
+              >
+                AUTO
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => handleToggle(false)}
+              style={styles.togglePiece}
+            >
+              <Text
+                style={[
+                  styles.togglePieceText,
+                  !isAutoMode && styles.textActive,
+                ]}
+              >
+                MANU
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* 식물 유무에 따른 분기 처리 */}
+          {hasPlant ? (
+            <>
+              <View style={styles.plantNameWrap} pointerEvents="none">
+                <Text
+                  style={[
+                    styles.plantNameText,
+                    { fontSize: plantNameFontSize },
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  onTextLayout={e => {
+                    if (
+                      e.nativeEvent.lines.length > 1 &&
+                      plantNameFontSize > 28
+                    ) {
+                      setPlantNameFontSize(s => s - 2);
+                    }
+                  }}
+                >
+                  {plantName ? plantName : ''}
+                </Text>
+
+                <View style={styles.hpRow}>
+                  <Text style={styles.hpLabel}>현재{'\n'}상태</Text>
+
+                  <View style={styles.hpOuter}>
+                    <View style={[styles.hpFill, { width: `${hpPercent}%` }]} />
+                  </View>
+                </View>
+              </View>
+
+              <Pressable
+                style={[styles.signTouchArea, { left: '3%', top: '24%' }]}
+                onPress={onPressWaterSign}
+              >
+                {waterNeedCheck && (
+                  <View style={styles.signAlertBadge}>
+                    <Text style={styles.signAlertBadgeText}>!</Text>
+                  </View>
+                )}
+                <Text style={styles.signTitleText}>수위</Text>
+                <Text style={styles.signSubText}>{waterStatusText}</Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.signTouchArea, { left: '36%', top: '24%' }]}
+                onPress={onPressNutrientSign}
+              >
+                {nutrientNeedCheck && (
+                  <View style={styles.signAlertBadge}>
+                    <Text style={styles.signAlertBadgeText}>!</Text>
+                  </View>
+                )}
+                <Text style={styles.signTitleText}>농도</Text>
+                <Text style={styles.signSubText}>{nutrientStatusText}</Text>
+              </Pressable>
+
+              <View
+                style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}
+              >
+                <Text style={styles.signTitleText}>온습도</Text>
+                <Text style={styles.signSubText}>{tempHumText}</Text>
+              </View>
+
+              <Animated.View
+                style={[
+                  styles.characterWrapper,
+                  {
+                    transform: [
+                      { translateX },
+                      { translateY: combinedTranslateY },
+                    ],
+                  },
+                ]}
+              >
+                {latestNotification && (
+                  <Pressable style={styles.alarmWrap} onPress={onPressBalloon}>
+                    <View style={styles.alarmBox}>
+                      <Image source={ALARM_ICON} style={styles.alarmIcon} />
+                    </View>
+                  </Pressable>
+                )}
+                <Pressable onPress={handleCharacterPress}>
+                  <Image source={TOMATO_NORMAL} style={styles.tomatoImage} />
+                </Pressable>
+              </Animated.View>
+            </>
+          ) : (
+            // 식물이 없을 때 안내 화면
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyMessageData}>
+                <Text style={styles.emptyTextTitle}>등록된 식물이 없어요!</Text>
+                <Text style={styles.emptyTextSub}>
+                  오른쪽 아래 메뉴에서{'\n'}새로운 식물을 등록해주세요 🌱
+                </Text>
+              </View>
+            </View>
+          )}
+        </ScrollView>
       </ImageBackground>
 
       <Modal
@@ -1240,6 +1337,43 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
   bg: { flex: 1 },
 
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 9999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 100,
+  },
+  emptyMessageData: {
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: BORDER_COLOR,
+  },
+  emptyTextTitle: {
+    fontFamily: FONT,
+    fontSize: 22,
+    color: '#300e08',
+    marginBottom: 10,
+  },
+  emptyTextSub: {
+    fontFamily: FONT,
+    fontSize: 16,
+    color: '#555',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
   topBellIconBtn: { position: 'absolute', top: 36, right: '53%', zIndex: 70 },
   bellImage: { width: 52, height: 52, resizeMode: 'contain' },
   bellBadge: {
@@ -1301,9 +1435,6 @@ const styles = StyleSheet.create({
     paddingLeft: 15,
     paddingTop: 8,
     zIndex: 90,
-    // borderWidth: 2,
-    // borderColor: 'red',
-    // backgroundColor: 'rgba(255,0,0,0.08)',
   },
 
   plantNameText: {
@@ -1311,7 +1442,6 @@ const styles = StyleSheet.create({
     color: SIGN_TEXT_COLOR,
     textAlign: 'left',
     maxWidth: 260,
-    // fontSize는 JSX에서 state로 넣음
   },
 
   hpRow: {
