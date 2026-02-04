@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Getter
 public class DeviceImageInferenceRequest {
@@ -47,7 +48,7 @@ public class DeviceImageInferenceRequest {
     private String publicUrl1;
 
     @JsonProperty("measured_at1")
-    private LocalDateTime measuredAt1;
+    private OffsetDateTime measuredAt1;
 
     // SIDE 이미지
     @JsonProperty("image_kind2")
@@ -57,6 +58,6 @@ public class DeviceImageInferenceRequest {
     private String publicUrl2;
 
     @JsonProperty("measured_at2")
-    private LocalDateTime measuredAt2;
+    private OffsetDateTime measuredAt2;
 }
 

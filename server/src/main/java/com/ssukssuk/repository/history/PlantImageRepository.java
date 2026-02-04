@@ -1,12 +1,12 @@
 package com.ssukssuk.repository.history;
 
 import com.ssukssuk.domain.history.PlantImage;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import org.springframework.data.domain.Pageable;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 public interface PlantImageRepository extends JpaRepository<PlantImage, Long> {
@@ -26,19 +26,21 @@ public interface PlantImageRepository extends JpaRepository<PlantImage, Long> {
     """)
     List<PlantImage> findRecentImagesByPlantId(
             @Param("plantId") Long plantId,
-            @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to
+            @Param("from") OffsetDateTime from,
+            @Param("to") OffsetDateTime to
     );
 
+    /**
+     * 특정 식물의 최신 이미지 1건 조회
+     */
     @Query("""
-    select pi
-    from PlantImage pi
-    where pi.plant.plantId = :plantId
-    order by pi.capturedAt desc
-""")
+        select pi
+        from PlantImage pi
+        where pi.plant.plantId = :plantId
+        order by pi.capturedAt desc
+    """)
     List<PlantImage> findLatestByPlantId(
             @Param("plantId") Long plantId,
-            Pageable pageable // limit 1로 걸기 위해 사용
+            Pageable pageable
     );
-
 }

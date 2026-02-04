@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssukssuk.domain.plant.PlantStatus;
 import com.ssukssuk.dto.home.HomeResponse;
 import com.ssukssuk.event.PlantStatusUpdatedEvent;
+import com.ssukssuk.repository.plant.CharacterCodeRepository;
 import com.ssukssuk.repository.plant.PlantStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -128,7 +129,8 @@ public class SseEmitterService {
         }
 
         try {
-            HomeResponse response = HomeResponse.from(status.getUserPlant(), status);
+            String url = status.getCharactercode().getImageUrl();
+            HomeResponse response = HomeResponse.from(status.getUserPlant(), status, url);
             emitter.send(SseEmitter.event()
                     .name("update")
                     .data(objectMapper.writeValueAsString(response)));

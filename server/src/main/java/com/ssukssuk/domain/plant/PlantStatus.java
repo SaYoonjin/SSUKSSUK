@@ -2,9 +2,9 @@ package com.ssukssuk.domain.plant;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Builder;
 
 import java.time.LocalDateTime;
 
@@ -18,14 +18,15 @@ public class PlantStatus {
     @Column(name = "plant_id")
     private Long plantId;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId
     @JoinColumn(name = "plant_id")
     private UserPlant userPlant;
 
-    // === 캐릭터 & 건강 점수 ===
-    @Column(name = "character_code", nullable = false)
-    private Integer characterCode;
+    // === 캐릭터(코드 테이블 FK) & 건강 점수 ===
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "character_code", nullable = false)
+    private CharacterCode charactercode;
 
     @Column(name = "health_score", nullable = false)
     private Integer healthScore;
@@ -75,17 +76,29 @@ public class PlantStatus {
         OK, UP, DOWN
     }
 
+    // anomaly 기준 상수 (팀에서 바뀔 수 있으니 상수화)
+    private static final int ANOMALY_BAD_THRESHOLD = 3;
+    private static final int HEALTH_PENALTY_PER_ISSUE = 20;
+
+    /**
+     * 생성 시에는 기본 캐릭터(CharacterCode 엔티티)를 서비스에서 주입해줘야 함.
+     * (예: character_code=0 row를 기본 정상 캐릭터로 운영)
+     */
     @Builder
-    private PlantStatus(UserPlant userPlant, Integer characterCode) {
+    private PlantStatus(UserPlant userPlant, CharacterCode character) {
+        if (userPlant == null) throw new IllegalArgumentException("userPlant must not be null");
+        if (character == null) throw new IllegalArgumentException("character must not be null");
+
         this.userPlant = userPlant;
-        this.characterCode = characterCode != null ? characterCode : 0;
+        this.charactercode = charactercode;
+
         this.healthScore = 100;
         this.hasUnreadNotification = false;
-        this.updatedAt = LocalDateTime.now();
+        // updatedAt은 @PrePersist/@PreUpdate에서 자동 갱신
     }
 
     // === 센서 데이터 업데이트 ===
-    public void updateFromSensor(
+    public int updateFromSensor(
             Float temperature,
             Float humidity,
             SensorStatusType temperatureStatus,
@@ -100,57 +113,57 @@ public class PlantStatus {
         this.waterLevelStatus = waterLevelStatus;
         this.nutrientConcStatus = nutrientConcStatus;
 
-        recalculateHealthAndCharacter();
-        this.updatedAt = LocalDateTime.now();
+        return recalculateHealthAndComputeCharacterCode();
     }
 
     // === 이미지 데이터 업데이트 ===
-    public void updateFromImage(Double height, Double width, Integer anomaly) {
+    public int updateFromImage(Double height, Double width, Integer anomaly) {
         this.plantHeight = height;
         this.plantWidth = width;
         this.anomaly = anomaly;
 
-        recalculateHealthAndCharacter();
-        this.updatedAt = LocalDateTime.now();
+        return recalculateHealthAndComputeCharacterCode();
     }
 
     // === 알림 상태 ===
     public void markUnreadNotification() {
         this.hasUnreadNotification = true;
-        this.updatedAt = LocalDateTime.now();
     }
 
     // TODO: 알림 읽기 API 구현 시 호출
     public void clearUnreadNotification() {
         this.hasUnreadNotification = false;
-        this.updatedAt = LocalDateTime.now();
     }
 
-    // === 건강점수 & 캐릭터코드 재계산 ===
-    private void recalculateHealthAndCharacter() {
-        // 1. 건강점수 계산 (100에서 이상 하나당 -20)
+    /**
+     * === 건강점수 & 캐릭터코드(정수) 재계산 ===
+     * - 엔티티 내부에서 Repository 접근 불가하므로 "코드(int)"만 리턴한다.
+     * - 서비스가 리턴값(code)을 받아 CharacterCode 엔티티를 조회한 뒤 applyCharacter() 호출.
+     */
+    private int recalculateHealthAndComputeCharacterCode() {
+        // 1) 건강점수 계산 (100에서 이상 하나당 -20)
         int score = 100;
-        if (temperatureStatus != null && temperatureStatus != SensorStatusType.OK) score -= 20;
-        if (humidityStatus != null && humidityStatus != SensorStatusType.OK) score -= 20;
-        if (waterLevelStatus != null && waterLevelStatus != SensorStatusType.OK) score -= 20;
-        if (nutrientConcStatus != null && nutrientConcStatus != SensorStatusType.OK) score -= 20;
-        if (anomaly != null && anomaly >= 3) score -= 20;  // 이미지 이상 (anomaly >= 3)
+
+        if (temperatureStatus != null && temperatureStatus != SensorStatusType.OK) score -= HEALTH_PENALTY_PER_ISSUE;
+        if (humidityStatus != null && humidityStatus != SensorStatusType.OK) score -= HEALTH_PENALTY_PER_ISSUE;
+        if (waterLevelStatus != null && waterLevelStatus != SensorStatusType.OK) score -= HEALTH_PENALTY_PER_ISSUE;
+        if (nutrientConcStatus != null && nutrientConcStatus != SensorStatusType.OK) score -= HEALTH_PENALTY_PER_ISSUE;
+        if (anomaly != null && anomaly >= ANOMALY_BAD_THRESHOLD) score -= HEALTH_PENALTY_PER_ISSUE;
+
         this.healthScore = Math.max(0, score);
 
-        // 2. 크기 등급 계산 (0~3)
+        // 2) 크기 등급 계산 (0~2)
         int sizeGrade = calculateSizeGrade();
 
-        // 3. 캐릭터 코드 결정 (우선순위: 수위/양분 > 온도 > 정상)
-        this.characterCode = determineCharacterCode(sizeGrade);
+        // 3) 캐릭터 코드 결정
+        return determineCharacterCode(sizeGrade);
     }
 
     private int calculateSizeGrade() {
-        if (plantHeight == null || plantWidth == null) {
-            return 0;  // 기본값
-        }
+        if (plantHeight == null || plantWidth == null) return 0;
+
         double area = plantHeight * plantWidth;
 
-        // 크기 기준 (height * width 기준) - 3단계
         // 0: < 150, 1: 150~450, 2: >= 450
         if (area < 150) return 0;
         if (area < 450) return 1;
@@ -161,27 +174,34 @@ public class PlantStatus {
         // 우선순위 1: 수위/양분 이상
         boolean waterOrNutrientDown =
                 (waterLevelStatus == SensorStatusType.DOWN) ||
-                (nutrientConcStatus == SensorStatusType.DOWN);
+                        (nutrientConcStatus == SensorStatusType.DOWN);
+
         boolean waterOrNutrientUp =
                 (waterLevelStatus == SensorStatusType.UP) ||
-                (nutrientConcStatus == SensorStatusType.UP);
+                        (nutrientConcStatus == SensorStatusType.UP);
 
         if (waterOrNutrientDown) {
-            return 3 + sizeGrade;  // 3~5: 수위/양분 부족
+            return 3 + sizeGrade;   // 3~5: 수위/양분 부족
         }
         if (waterOrNutrientUp) {
-            return 6 + sizeGrade;  // 6~8: 수위/양분 과다
+            return 6 + sizeGrade;   // 6~8: 수위/양분 과다
         }
 
         // 우선순위 2: 온도 이상
         if (temperatureStatus == SensorStatusType.UP) {
-            return 9 + sizeGrade;  // 9~11: 더운 상태
+            return 9 + sizeGrade;   // 9~11: 더운 상태
         }
         if (temperatureStatus == SensorStatusType.DOWN) {
             return 12 + sizeGrade;  // 12~14: 추운 상태
         }
 
         // 정상
-        return sizeGrade;  // 0~2: 정상
+        return sizeGrade;           // 0~2: 정상
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void touch() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

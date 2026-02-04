@@ -20,6 +20,6 @@ public class HomeService {
         PlantStatus status = plantStatusRepository.findMainPlantStatusByUserId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
 
-        return HomeResponse.from(status.getUserPlant(), status);
+        return HomeResponse.from(status.getUserPlant(), status, status.getCharactercode().getImageUrl());
     }
 }

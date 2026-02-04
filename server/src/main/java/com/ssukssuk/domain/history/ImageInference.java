@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "image_inference")
@@ -43,5 +44,5 @@ public class ImageInference {
     private Integer confidence;
 
     @Column(name = "inference_at", nullable = false)
-    private LocalDateTime inferenceAt;
+    private OffsetDateTime inferenceAt;
 }

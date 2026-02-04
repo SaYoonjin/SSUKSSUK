@@ -3,6 +3,7 @@ package com.ssukssuk.dto.history;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Getter
@@ -25,7 +26,7 @@ public class PlantHistoryResponse {
     public static class CurrentImage {
         private String imageUrl_top;
         private String imageUrl_side;
-        private LocalDateTime capturedAt;
+        private OffsetDateTime capturedAt;
     }
 
     @Getter
