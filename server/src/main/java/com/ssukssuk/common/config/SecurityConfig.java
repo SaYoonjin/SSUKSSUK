@@ -59,7 +59,8 @@ public class SecurityConfig {
                                 "/api/test/**",
                                 "/test/**",
                                 "/actuator/**",
-                                "/api/fcm/token"
+                                "/api/fcm/token",
+                                "/api/admin/**"
                         ).permitAll()
                         .requestMatchers("/api/auth/logout").authenticated()
                         .anyRequest().authenticated()

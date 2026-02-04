@@ -2,12 +2,16 @@ package com.ssukssuk.domain.device;
 
 import com.ssukssuk.domain.auth.User;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "device")
 public class Device {
 
@@ -27,6 +31,12 @@ public class Device {
 
     @Column(name = "claimed_at")
     private LocalDateTime claimedAt;
+
+    @Builder
+    public Device(String serial) {
+        this.serial = serial;
+        this.pairing = false;
+    }
 
     /**
      * 디바이스를 사용자에게 등록 (claim)
