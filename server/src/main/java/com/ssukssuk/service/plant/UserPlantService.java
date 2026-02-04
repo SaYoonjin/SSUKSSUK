@@ -87,9 +87,16 @@ public class UserPlantService {
     }
 
     public void updatePlant(Long userId, Long plantId, UpdatePlantRequest request) {
+        log.debug("[updatePlant] START: userId={}, plantId={}, request.deviceId={}", userId, plantId, request.getDeviceId());
 
         UserPlant plant = userPlantRepository.findByPlantIdAndUserId(plantId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+
+        log.debug("[updatePlant] plant 조회 완료: plantId={}, speciesId={}, deviceId={}, isConnected={}",
+                plant.getPlantId(),
+                plant.getSpecies() != null ? plant.getSpecies().getSpeciesId() : null,
+                plant.getDevice() != null ? plant.getDevice().getDeviceId() : null,
+                plant.getIsConnected());
 
         // 1. 이름 변경
         if (request.getName() != null && !request.getName().isBlank()) {
@@ -100,6 +107,8 @@ public class UserPlantService {
         Device currentDevice = plant.getDevice();
         Long newDeviceId = request.getDeviceId();
         boolean isCurrentlyConnected = currentDevice != null && Boolean.TRUE.equals(plant.getIsConnected());
+        log.debug("[updatePlant] 디바이스 처리 시작: currentDeviceId={}, newDeviceId={}, isCurrentlyConnected={}",
+                currentDevice != null ? currentDevice.getDeviceId() : null, newDeviceId, isCurrentlyConnected);
 
         // 2-1. deviceId: null → 연결 해제
         if (newDeviceId == null) {
@@ -135,17 +144,29 @@ public class UserPlantService {
 
         // 기존 디바이스 연결 해제 (MQTT unbind → ACK 성공 시 별도 트랜잭션에서 즉시 커밋)
         if (isCurrentlyConnected) {
+            log.debug("[updatePlant] unbind 호출 전: plantId={}, currentDeviceId={}", plantId, currentDevice.getDeviceId());
             plantBindingService.unbind(plantId);
+            log.debug("[updatePlant] unbind 호출 후 (REQUIRES_NEW 커밋됨)");
             // 현재 트랜잭션의 엔티티도 동기화 (JPA 덮어쓰기 방지)
             plant.unbindDevice();
             currentDevice.unbindPlant();
+            log.debug("[updatePlant] 엔티티 동기화 후: plant.deviceId={}, plant.isConnected={}, currentDevice.pairing={}",
+                    plant.getDevice() != null ? plant.getDevice().getDeviceId() : null,
+                    plant.getIsConnected(),
+                    currentDevice.getPairing());
         }
 
         // 새 디바이스 연결 (MQTT bind → ACK 성공 시 별도 트랜잭션에서 즉시 커밋)
+        log.debug("[updatePlant] bind 호출 전: plantId={}, newDeviceId={}", plantId, newDeviceId);
         plantBindingService.bind(plantId, newDeviceId);
+        log.debug("[updatePlant] bind 호출 후 (REQUIRES_NEW 커밋됨)");
         // 현재 트랜잭션의 엔티티도 동기화 (JPA 덮어쓰기 방지)
         plant.bindDevice(newDevice);
         newDevice.bindPlant();
+        log.debug("[updatePlant] END: plant.deviceId={}, plant.isConnected={}, newDevice.pairing={}",
+                plant.getDevice() != null ? plant.getDevice().getDeviceId() : null,
+                plant.getIsConnected(),
+                newDevice.getPairing());
     }
 
     public List<MyPlantResponse> getMyPlants(Long userId) {

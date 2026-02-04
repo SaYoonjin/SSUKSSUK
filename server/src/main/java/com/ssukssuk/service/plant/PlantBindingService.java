@@ -8,10 +8,12 @@ import com.ssukssuk.repository.device.DeviceRepository;
 import com.ssukssuk.repository.plant.UserPlantRepository;
 import com.ssukssuk.service.device.DeviceControlService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PlantBindingService {
@@ -49,24 +51,54 @@ public class PlantBindingService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void bind(Long plantId, Long deviceId) {
+        log.debug("[bind] START: plantId={}, deviceId={}", plantId, deviceId);
+
+        log.debug("[bind] plant 조회 시작");
         UserPlant plant = userPlantRepository.findById(plantId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PLANT_NOT_FOUND));
+        log.debug("[bind] plant 조회 완료: plantId={}, deviceId={}, isConnected={}",
+                plant.getPlantId(),
+                plant.getDevice() != null ? plant.getDevice().getDeviceId() : null,
+                plant.getIsConnected());
 
+        log.debug("[bind] device 조회 시작");
         Device newDevice = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEVICE_NOT_FOUND));
+        log.debug("[bind] device 조회 완료: deviceId={}, serial={}, pairing={}",
+                newDevice.getDeviceId(), newDevice.getSerial(), newDevice.getPairing());
 
+        log.debug("[bind] species 접근 시작");
+        Long speciesId = plant.getSpecies().getSpeciesId();
+        log.debug("[bind] species 접근 완료: speciesId={}", speciesId);
+
+        log.debug("[bind] MQTT sendBindingBound 호출 시작: serial={}, plantId={}, speciesId={}",
+                newDevice.getSerial(), plant.getPlantId(), speciesId);
         deviceControlService.sendBindingBound(
                 newDevice.getSerial(),
                 plant.getPlantId(),
-                plant.getSpecies().getSpeciesId()
+                speciesId
         );
+        log.debug("[bind] MQTT sendBindingBound 호출 완료");
+
         plant.bindDevice(newDevice);
         newDevice.bindPlant();
+        log.debug("[bind] 엔티티 바인딩 완료: plant.deviceId={}, plant.isConnected={}, device.pairing={}",
+                plant.getDevice() != null ? plant.getDevice().getDeviceId() : null,
+                plant.getIsConnected(),
+                newDevice.getPairing());
 
         // 이 식물을 main으로 설정
-        userPlantRepository.findMainPlantByUserId(plant.getUser().getId())
-                .ifPresent(UserPlant::changeMainFalse);
+        log.debug("[bind] user 접근 시작");
+        Long userId = plant.getUser().getId();
+        log.debug("[bind] user 접근 완료: userId={}", userId);
+
+        userPlantRepository.findMainPlantByUserId(userId)
+                .ifPresent(mainPlant -> {
+                    log.debug("[bind] 기존 main 식물 해제: plantId={}", mainPlant.getPlantId());
+                    mainPlant.changeMainFalse();
+                });
         plant.changeMain(true);
+        log.debug("[bind] END: plant.isMain={}", plant.isMain());
     }
 
     /**
