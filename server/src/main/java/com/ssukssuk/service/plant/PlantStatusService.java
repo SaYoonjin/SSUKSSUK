@@ -1,8 +1,10 @@
 package com.ssukssuk.service.plant;
 
+import com.ssukssuk.domain.plant.CharacterCode;
 import com.ssukssuk.domain.plant.PlantStatus;
 import com.ssukssuk.event.PlantStatusUpdatedEvent;
 import com.ssukssuk.infra.mqtt.dto.SensorUplinkMessage;
+import com.ssukssuk.repository.plant.CharacterCodeRepository;
 import com.ssukssuk.repository.plant.PlantStatusRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PlantStatusService {
 
     private final PlantStatusRepository plantStatusRepository;
+    private final CharacterCodeRepository characterCodeRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -29,7 +32,7 @@ public class PlantStatusService {
             return;
         }
 
-        status.updateFromSensor(
+        int newCharacterCode = status.updateFromSensor(
                 msg.getTemperature(),
                 msg.getHumidity(),
                 convertStatus(msg.getTemperatureStatus()),
@@ -37,6 +40,10 @@ public class PlantStatusService {
                 convertStatus(msg.getWaterLevelStatus()),
                 convertStatus(msg.getNutrientConcStatus())
         );
+
+        // 캐릭터 코드 업데이트
+        characterCodeRepository.findById(newCharacterCode)
+                .ifPresent(status::applyCharacter);
 
         eventPublisher.publishEvent(new PlantStatusUpdatedEvent(plantId));
     }
@@ -52,7 +59,11 @@ public class PlantStatusService {
             return;
         }
 
-        status.updateFromImage(height, width, anomaly);
+        int newCharacterCode = status.updateFromImage(height, width, anomaly);
+
+        // 캐릭터 코드 업데이트
+        characterCodeRepository.findById(newCharacterCode)
+                .ifPresent(status::applyCharacter);
 
         eventPublisher.publishEvent(new PlantStatusUpdatedEvent(plantId));
     }

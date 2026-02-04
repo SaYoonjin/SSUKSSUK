@@ -136,6 +136,14 @@ public class PlantStatus {
     }
 
     /**
+     * 계산된 캐릭터 코드에 해당하는 CharacterCode 엔티티 적용
+     */
+    public void applyCharacter(CharacterCode character) {
+        if (character == null) return;
+        this.charactercode = character;
+    }
+
+    /**
      * === 건강점수 & 캐릭터코드(정수) 재계산 ===
      * - 엔티티 내부에서 Repository 접근 불가하므로 "코드(int)"만 리턴한다.
      * - 서비스가 리턴값(code)을 받아 CharacterCode 엔티티를 조회한 뒤 applyCharacter() 호출.
