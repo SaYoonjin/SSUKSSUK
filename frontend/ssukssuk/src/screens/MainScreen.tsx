@@ -35,7 +35,7 @@ const ALARM_ICON = require('../assets/alarm_balloon.png');
 const TOMATO_NORMAL = require('../assets/tomato_normal.png'); // 기본 이미지 (fallback용)
 const ALARM_BELL = require('../assets/alarm.png');
 
-const DAY_START_HOUR = 3;
+const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 18;
 
 const FONT = 'NeoDunggeunmoPro-Regular';
