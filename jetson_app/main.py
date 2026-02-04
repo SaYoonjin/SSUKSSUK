@@ -68,6 +68,14 @@ def main():
     # MQTT 연결 플래그
     mqtt_connected = False
 
+    # 열려있는 anomaly 추적 (센서별 1:1 대응)
+    # ANOMALY_DETECTED 전송 후 RECOVERY_DONE까지 열린 상태 유지
+    open_anomalies = set()  # {"WATER_LEVEL", "NUTRIENT_CONC"}
+
+    # AUTO 모드에서 CMD_AUTO_RECOVERY 전송한 센서 추적
+    # 같은 센서에 대해 중복 전송 방지 (RECOVERY_DONE까지)
+    auto_recovery_sent_for = set()  # {"WATER_LEVEL", "NUTRIENT_CONC"}
+
     # ==========================================================
     # 1. 설정 로드
     # ==========================================================
@@ -162,8 +170,10 @@ def main():
     
                 if setting["claim"]["claim_state"] == "UNCLAIMED":
                     print("[CLAIM] UNCLAIMED → LED OFF, PUMP STOP")
-    
+
                     boot_sensor_sent = False
+                    open_anomalies.clear()
+                    auto_recovery_sent_for.clear()
                     uart.send_cmd(CMD_LED_OFF)
                     uart.send_cmd(CMD_PUMP_WATER_STOP)
                     uart.send_cmd(CMD_PUMP_NUTRI_STOP)
@@ -180,17 +190,21 @@ def main():
                 if setting["binding"]["binding_state"] == "BOUND":
                     print("[BINDING] BOUND → LED schedule apply")
                     boot_sensor_sent = False
+                    open_anomalies.clear()
+                    auto_recovery_sent_for.clear()
                     last_led_min = None
-                    led_scheduler.reset() 
+                    led_scheduler.reset()
                     led_scheduler.apply(setting, datetime.now())
-    
+
                 else:  # UNBOUND
                     print("[BINDING] UNBOUND → LED OFF, PUMP STOP")
                     boot_sensor_sent = False
+                    open_anomalies.clear()
+                    auto_recovery_sent_for.clear()
                     last_led_min = None
                     led_scheduler.reset()
-                    
-                    uart.send_cmd(CMD_LED_OFF) 
+
+                    uart.send_cmd(CMD_LED_OFF)
                     uart.send_cmd(CMD_PUMP_WATER_STOP)
                     uart.send_cmd(CMD_PUMP_NUTRI_STOP)
     
@@ -363,6 +377,11 @@ def main():
                         if pkt_sub == EVENT_WATER_RECOVERY_DONE
                         else "NUTRIENT_CONC"
                     )
+
+                    # 열린 anomaly 해제
+                    open_anomalies.discard(trigger)
+                    auto_recovery_sent_for.discard(trigger)
+
                     temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
                     uplink = build_sensor_uplink(
                         serial_num=serial,
@@ -377,7 +396,7 @@ def main():
                         event_kind="RECOVERY_DONE",
                         trigger_sensor_type=trigger,
                     )
-                
+
                     client.publish(
                         f"{telemetry_base}/sensors",
                         json.dumps(uplink),
@@ -424,22 +443,30 @@ def main():
                 
                 # ---- WATER / EC LOW or HIGH ----
                 if pkt_sub not in (
-                    EVENT_WATER_LOW, 
-                    EVENT_WATER_HIGH, 
-                    EVENT_EC_LOW, 
+                    EVENT_WATER_LOW,
+                    EVENT_WATER_HIGH,
+                    EVENT_EC_LOW,
                     EVENT_EC_HIGH,
                 ):
                     continue
-                
-                bump_seq(setting, "SENSOR_UPLINK")
-                
+
                 if pkt_sub in (EVENT_WATER_LOW, EVENT_WATER_HIGH):
                     trigger = "WATER_LEVEL"
                 else:
                     trigger = "NUTRIENT_CONC"
 
+                # 이미 열린 anomaly가 있으면 중복 전송하지 않음
+                if trigger in open_anomalies:
+                    print(f"[EVENT] ANOMALY already open, skipped: {trigger}")
+                    continue
+
+                # 새로운 anomaly 등록
+                open_anomalies.add(trigger)
+
+                bump_seq(setting, "SENSOR_UPLINK")
+
                 temp_x10, humi_x10, ec, water = struct.unpack("<HHHH", raw)
-                
+
                 uplink = build_sensor_uplink(
                     serial_num=serial,
                     plant_id=setting["binding"]["plant_id"],
@@ -459,11 +486,13 @@ def main():
                     qos=1,
                 )
                 print("[EVENT] ANOMALY_DETECTED sent:", trigger)
-                    
-                # AUTO면 센서 이벤트마다 허가(STM이 내부에서 개별 처리/무시/큐잉)
+
+                # AUTO + LOW 이벤트일 때만 자동 조치 요청
+                # 각 센서별로 CMD_AUTO_RECOVERY 전송 (STM g_active_anomaly_mask 타이밍 이슈 대응)
                 is_low_event = pkt_sub in (EVENT_WATER_LOW, EVENT_EC_LOW)
 
-                if mode == "AUTO" and is_low_event:
+                if mode == "AUTO" and is_low_event and trigger not in auto_recovery_sent_for:
+                    auto_recovery_sent_for.add(trigger)
                     uart.send_cmd(CMD_AUTO_RECOVERY)
                     print("[AUTO] CMD_AUTO_RECOVERY sent for", trigger)
 

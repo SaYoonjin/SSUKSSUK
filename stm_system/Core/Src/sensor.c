@@ -29,6 +29,14 @@ Threshold_t g_threshold = {
     .ec_max    = 2000.0f
 };
 
+static bool sensor_force_initial_check = false;
+
+// 외부 요청용
+void sensor_force_initial_check_request(void)
+{
+    sensor_force_initial_check = true;
+}
+
 // ⭐ 현재 "열려 있는 anomaly" 마스크 (AUTO_RECOVERY 기준)
 uint8_t g_active_anomaly_mask = 0;
 
@@ -55,6 +63,12 @@ static bool water_ma_init = false;
 // EC EMA
 static float ec_ema = 0.0f;
 static bool ec_ema_init = false;
+
+// =======================
+// 초기 anomaly 제어
+// =======================
+static uint8_t sensor_warmup_cnt = 0;
+static bool init_anomaly_checked = false;
 
 // =======================
 // 내부 유틸
@@ -156,101 +170,83 @@ void sensor_read_all(void)
     }
 
     g_sensor.ec = ec_ema;
-}
-// =======================
-// INIT 전용: 상태 선언 1회
-//  - CMD_REQ_SENSOR 첫 응답 직후 1번만 호출
-// =======================
 
-void sensor_check_threshold_force_once(void)
-{
-    if (sensor_check_suspended) return;
-
-    uint16_t temp_x10 = (uint16_t)(g_sensor.temperature * 10.0f);
-    uint16_t humi_x10 = (uint16_t)(g_sensor.humidity * 10.0f);
-    uint16_t ec       = (uint16_t)(g_sensor.ec);
-    uint16_t water    = (uint16_t)(g_sensor.water_level);
-
-    // ---- WATER ----
-    if (g_sensor.water_level < g_threshold.water_min) {
-        water_state = SENSOR_LOW;
-        g_active_anomaly_mask |= RECOV_WATER;
-        proto_send_event_sensor(EVENT_WATER_LOW, temp_x10, humi_x10, ec, water);
-    } else if (g_sensor.water_level > g_threshold.water_max) {
-        water_state = SENSOR_HIGH;
-        g_active_anomaly_mask |= RECOV_WATER;
-        proto_send_event_sensor(EVENT_WATER_HIGH, temp_x10, humi_x10, ec, water);
-    } else {
-        water_state = SENSOR_NORMAL;
-    }
-
-    // ---- EC ----
-    if (g_sensor.ec < g_threshold.ec_min) {
-        ec_state = SENSOR_LOW;
-        g_active_anomaly_mask |= RECOV_EC;
-        proto_send_event_sensor(EVENT_EC_LOW, temp_x10, humi_x10, ec, water);
-    } else if (g_sensor.ec > g_threshold.ec_max) {
-        ec_state = SENSOR_HIGH;
-        g_active_anomaly_mask |= RECOV_EC;
-        proto_send_event_sensor(EVENT_EC_HIGH, temp_x10, humi_x10, ec, water);
-    } else {
-        ec_state = SENSOR_NORMAL;
+    if (sensor_warmup_cnt < 255) {
+        sensor_warmup_cnt++;
     }
 }
 
 // =======================
-// 일반 임계치 체크 (상태 머신)
+// 임계치 체크 FSM
 // =======================
-
 void sensor_check_threshold(void)
 {
-    if (sensor_check_suspended) return;
+    uint16_t t = (uint16_t)(g_sensor.temperature * 10);
+    uint16_t h = (uint16_t)(g_sensor.humidity * 10);
+    uint16_t ec = (uint16_t)(g_sensor.ec);
+    uint16_t water = (uint16_t)(g_sensor.water_level);
+
+    // ==================================================
+    // ⭐ 1. 초기 강제 anomaly 검사 (1회)
+    // ==================================================
+    if (sensor_force_initial_check) {
+
+        // WATER
+        if (g_sensor.water_level < g_threshold.water_min) {
+            water_state = SENSOR_LOW;
+            g_active_anomaly_mask |= RECOV_WATER;
+            proto_send_event_sensor(EVENT_WATER_LOW, t, h, ec, water);
+        }
+
+        // EC
+        if (g_sensor.ec < g_threshold.ec_min) {
+            ec_state = SENSOR_LOW;
+            g_active_anomaly_mask |= RECOV_EC;
+            proto_send_event_sensor(EVENT_EC_LOW, t, h, ec, water);
+        }
+
+        sensor_force_initial_check = false;
+        return;
+    }
+
+    // ==================================================
+    // AUTO RECOVERY 중이면 anomaly 판단 중단
+    // ==================================================
     if (auto_recovery_is_active()) return;
 
-    uint16_t temp_x10 = (uint16_t)(g_sensor.temperature * 10.0f);
-    uint16_t humi_x10 = (uint16_t)(g_sensor.humidity * 10.0f);
-    uint16_t ec       = (uint16_t)(g_sensor.ec);
-    uint16_t water    = (uint16_t)(g_sensor.water_level);
-
-    // ---- WATER ----
+    // ==================================================
+    // WATER
+    // ==================================================
     if (water_state == SENSOR_NORMAL) {
         if (g_sensor.water_level < g_threshold.water_min) {
             water_state = SENSOR_LOW;
             g_active_anomaly_mask |= RECOV_WATER;
-            proto_send_event_sensor(EVENT_WATER_LOW, temp_x10, humi_x10, ec, water);
-        } else if (g_sensor.water_level > g_threshold.water_max) {
-            water_state = SENSOR_HIGH;
-            g_active_anomaly_mask |= RECOV_WATER;
-            proto_send_event_sensor(EVENT_WATER_HIGH, temp_x10, humi_x10, ec, water);
+            proto_send_event_sensor(EVENT_WATER_LOW, t, h, ec, water);
         }
     } else {
         if (g_sensor.water_level >= g_threshold.water_min &&
             g_sensor.water_level <= g_threshold.water_max) {
-
             water_state = SENSOR_NORMAL;
             g_active_anomaly_mask &= ~RECOV_WATER;
-            proto_send_event_sensor(EVENT_WATER_RECOVERY_DONE, temp_x10, humi_x10, ec, water);
+            proto_send_event_sensor(EVENT_WATER_RECOVERY_DONE, t, h, ec, water);
         }
     }
 
-    // ---- EC ----
+    // ==================================================
+    // EC
+    // ==================================================
     if (ec_state == SENSOR_NORMAL) {
         if (g_sensor.ec < g_threshold.ec_min) {
             ec_state = SENSOR_LOW;
             g_active_anomaly_mask |= RECOV_EC;
-            proto_send_event_sensor(EVENT_EC_LOW, temp_x10, humi_x10, ec, water);
-        } else if (g_sensor.ec > g_threshold.ec_max) {
-            ec_state = SENSOR_HIGH;
-            g_active_anomaly_mask |= RECOV_EC;
-            proto_send_event_sensor(EVENT_EC_HIGH, temp_x10, humi_x10, ec, water);
+            proto_send_event_sensor(EVENT_EC_LOW, t, h, ec, water);
         }
     } else {
         if (g_sensor.ec >= g_threshold.ec_min &&
             g_sensor.ec <= g_threshold.ec_max) {
-
             ec_state = SENSOR_NORMAL;
             g_active_anomaly_mask &= ~RECOV_EC;
-            proto_send_event_sensor(EVENT_NUTRI_RECOVERY_DONE, temp_x10, humi_x10, ec, water);
+            proto_send_event_sensor(EVENT_NUTRI_RECOVERY_DONE, t, h, ec, water);
         }
     }
 }

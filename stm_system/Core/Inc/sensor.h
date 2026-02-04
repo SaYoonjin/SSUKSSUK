@@ -1,7 +1,7 @@
-// sensor.h
 #pragma once
 #ifndef SENSOR_H
 #define SENSOR_H
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -26,6 +26,6 @@ extern uint8_t g_active_anomaly_mask;
 void sensor_read_all(void);
 void sensor_check_threshold(void);
 void sensor_suspend_check(bool suspend);
-void sensor_check_threshold_force_once(void);
+void sensor_force_initial_check_request(void);
 
 #endif
