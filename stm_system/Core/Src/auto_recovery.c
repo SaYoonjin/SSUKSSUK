@@ -54,18 +54,15 @@ bool auto_recovery_is_active(void)
 
 void auto_recovery_request(uint8_t sensor_mask)
 {
-    // 이미 pending이면 무시 (중복 enqueue 방지)
-    if (pending_recovery_mask & sensor_mask) {
-        return;
-    }
+    uint8_t new_mask = sensor_mask & ~pending_recovery_mask;
+    if (new_mask == 0) return;
 
-    pending_recovery_mask |= sensor_mask;
+    pending_recovery_mask |= new_mask;
 
     if (!ar_active && ar_state == AR_IDLE) {
         auto_recovery_start_if_needed();
     }
 }
-
 
 void auto_recovery_start_if_needed(void)
 {
@@ -82,6 +79,7 @@ void auto_recovery_start_if_needed(void)
         ar_state = AR_WATER_PUMP_ON;
         ar_tick = HAL_GetTick();
         return;
+
     }
 
     if ((pending_recovery_mask & RECOV_EC) &&
@@ -89,7 +87,7 @@ void auto_recovery_start_if_needed(void)
 
         pending_recovery_mask &= ~RECOV_EC;
         ar_active = true;
-        sensor_suspend_check(true);
+        // sensor_suspend_check(true);
 
         ar_ec_retry = 0;
         pump_nutri_on();
@@ -135,7 +133,7 @@ void auto_recovery_fsm(void)
         // WATER
         // =======================
         case AR_WATER_PUMP_ON:
-            if (now - ar_tick >= 10000) {
+            if (now - ar_tick >= 4000) {
                 HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_SET);
                 ar_state = AR_WATER_WAIT_SETTLE;
                 ar_tick = now;
