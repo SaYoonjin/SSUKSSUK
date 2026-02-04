@@ -98,19 +98,17 @@ public class UserPlantService {
                 plant.getDevice() != null ? plant.getDevice().getDeviceId() : null,
                 plant.getIsConnected());
 
-        // 1. 이름 변경
-        if (request.getName() != null && !request.getName().isBlank()) {
-            plant.changeName(request.getName());
-        }
+        // 이름 변경은 REQUIRES_NEW 트랜잭션 이후에 적용 (Lock 충돌 방지)
+        String newName = request.getName();
 
-        // 2. 디바이스 처리
+        // 1. 디바이스 처리
         Device currentDevice = plant.getDevice();
         Long newDeviceId = request.getDeviceId();
         boolean isCurrentlyConnected = currentDevice != null && Boolean.TRUE.equals(plant.getIsConnected());
         log.debug("[updatePlant] 디바이스 처리 시작: currentDeviceId={}, newDeviceId={}, isCurrentlyConnected={}",
                 currentDevice != null ? currentDevice.getDeviceId() : null, newDeviceId, isCurrentlyConnected);
 
-        // 2-1. deviceId: null → 연결 해제
+        // 1-1. deviceId: null → 연결 해제
         if (newDeviceId == null) {
             if (isCurrentlyConnected) {
                 // MQTT unbind → ACK 성공 시 별도 트랜잭션에서 즉시 커밋
@@ -119,11 +117,18 @@ public class UserPlantService {
                 plant.unbindDevice();
                 currentDevice.unbindPlant();
             }
+            // 이름 변경 적용 후 종료
+            if (newName != null && !newName.isBlank()) {
+                plant.changeName(newName);
+            }
             return;
         }
 
-        // 2-2. 같은 디바이스면 무시
+        // 1-2. 같은 디바이스면 이름만 변경
         if (currentDevice != null && currentDevice.getDeviceId().equals(newDeviceId)) {
+            if (newName != null && !newName.isBlank()) {
+                plant.changeName(newName);
+            }
             return;
         }
 
@@ -163,6 +168,12 @@ public class UserPlantService {
         // 현재 트랜잭션의 엔티티도 동기화 (JPA 덮어쓰기 방지)
         plant.bindDevice(newDevice);
         newDevice.bindPlant();
+
+        // 2. 이름 변경 (REQUIRES_NEW 트랜잭션 이후에 적용)
+        if (newName != null && !newName.isBlank()) {
+            plant.changeName(newName);
+        }
+
         log.debug("[updatePlant] END: plant.deviceId={}, plant.isConnected={}, newDevice.pairing={}",
                 plant.getDevice() != null ? plant.getDevice().getDeviceId() : null,
                 plant.getIsConnected(),
