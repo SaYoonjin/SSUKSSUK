@@ -2,13 +2,12 @@ import React, { useEffect, useRef } from 'react';
 import {
   View,
   Pressable,
-  Image,
-  StyleSheet,
   ImageBackground,
   Animated,
-  Easing,
+  StyleSheet,
 } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ASSETS = {
   Home: {
@@ -30,9 +29,12 @@ const ASSETS = {
 } as const;
 
 type RouteName = keyof typeof ASSETS;
-const BOTTOM_BG = require('../assets/bottom.png');
 
-// ✅ [신규] 애니메이션을 담당할 개별 탭 컴포넌트
+const BOTTOM_BG = require('../assets/bottom.png');
+const BASE_H = 90;
+
+// ---------------- TabItem ----------------
+
 function TabItem({
                    name,
                    isFocused,
@@ -42,111 +44,105 @@ function TabItem({
   isFocused: boolean;
   onPress: () => void;
 }) {
-  // 애니메이션 값 (크기 조절용)
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (isFocused) {
-      // 선택되었을 때: 0.8배로 작아졌다가 -> 1배로 튀어오르는 효과 (Bounce)
       scaleAnim.setValue(0.8);
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 3, // 튕기는 정도 (낮을수록 많이 튕김)
+        friction: 3,
         tension: 40,
         useNativeDriver: true,
       }).start();
     } else {
-      // 선택 해제됐을 때: 크기 원상복구
       scaleAnim.setValue(1);
     }
-  }, [isFocused, scaleAnim]);
+  }, [isFocused]);
 
   return (
       <Pressable onPress={onPress} style={styles.item}>
         <Animated.Image
             source={isFocused ? ASSETS[name].on : ASSETS[name].off}
-            style={[
-              styles.icon,
-              {
-                transform: [{ scale: scaleAnim }], // 애니메이션 적용
-              },
-            ]}
+            style={[styles.icon, { transform: [{ scale: scaleAnim }] }]}
             resizeMode="contain"
         />
       </Pressable>
   );
 }
 
+// ---------------- BottomBar ----------------
+
 export default function BottomBar({ state, navigation }: BottomTabBarProps) {
   return (
-      <View style={styles.container}>
-        <ImageBackground
-            source={BOTTOM_BG}
-            resizeMode="stretch"
-            style={StyleSheet.absoluteFill}
-        />
+      // ✅ SafeAreaView가 시스템 버튼 영역 자동 보호
+      <SafeAreaView edges={['bottom']} style={styles.safe}>
+        <View style={styles.container}>
+          <ImageBackground
+              source={BOTTOM_BG}
+              resizeMode="stretch"
+              style={StyleSheet.absoluteFill}
+          />
 
-        <View style={styles.row}>
-          {state.routes.map((route, index) => {
-            const name = route.name as RouteName;
-            const isFocused = state.index === index;
+          <View style={styles.row}>
+            {state.routes.map((route, index) => {
+              const name = route.name as RouteName;
+              const isFocused = state.index === index;
 
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
+              const onPress = () => {
+                const event = navigation.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
 
-              if (isFocused) {
-                if (name === 'History') {
-                  navigation.navigate('History', { screen: 'HistoryHome' });
+                if (!isFocused && !event.defaultPrevented) {
+                  navigation.navigate(route.name);
                 }
-              } else if (!event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            };
+              };
 
-            return (
-                <TabItem
-                    key={route.key}
-                    name={name}
-                    isFocused={isFocused}
-                    onPress={onPress}
-                />
-            );
-          })}
+              return (
+                  <TabItem
+                      key={route.key}
+                      name={name}
+                      isFocused={isFocused}
+                      onPress={onPress}
+                  />
+              );
+            })}
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
   );
 }
 
+// ---------------- Styles ----------------
+
 const styles = StyleSheet.create({
-  container: {
-    height: 90,
-    borderTopWidth: 0,
-    // position: 'absolute',
-    // bottom: 0,
-    // left: 0,
-    // right: 0,
-    // backgroundColor: 'transparent',
-    // elevation: 0,
+  safe: {
+    backgroundColor: 'transparent',
   },
+
+  container: {
+    height: BASE_H,
+  },
+
   row: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 10,
     paddingHorizontal: 10,
   },
+
   item: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   icon: {
     width: 55,
     height: 55,
-    marginTop: 14,
+    marginTop: 5,
   },
 });
