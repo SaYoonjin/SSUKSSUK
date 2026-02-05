@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
   Animated,
   ScrollView,
-  Linking, // ✅ 설정 이동용
+  Linking,
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceInfo from 'react-native-device-info';
-import messaging from '@react-native-firebase/messaging'; // ✅ FCM 추가
+import messaging from '@react-native-firebase/messaging';
 import client from '../api';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -97,17 +97,14 @@ export default function ProfileScreen({ navigation }: any) {
     }, []),
   );
 
-  // ✅ [핵심 로직] 권한 체크 및 토큰 재발급 후 설정 변경
   const togglePush = async () => {
-    const next = !pushEnabled; // 목표 상태 (true: 켜기, false: 끄기)
+    const next = !pushEnabled;
 
-    // 🔴 1. 끄는 경우 (Off) -> 그냥 끄면 됨
     if (!next) {
       updatePushStatus(false);
       return;
     }
 
-    // 🟢 2. 켜는 경우 (On) -> 권한 확인 및 토큰 등록 필요
     try {
       const authStatus = await messaging().hasPermission();
       const enabled =
@@ -115,7 +112,6 @@ export default function ProfileScreen({ navigation }: any) {
         authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
       if (!enabled) {
-        // 권한이 없거나 거부된 상태 -> 설정으로 유도
         Alert.alert(
           '알림 권한 필요',
           '알림을 받으려면 설정에서 권한을 허용해야 합니다.',
@@ -124,24 +120,18 @@ export default function ProfileScreen({ navigation }: any) {
             { text: '설정으로 이동', onPress: () => Linking.openSettings() },
           ],
         );
-        return; // UI 변경 없이 종료
+        return;
       }
 
-      // 권한은 있는데 토큰이 서버에 없을 수 있으므로(처음에 거절했었으니까)
-      // 토큰을 다시 받아서 서버에 등록해준다.
       const token = await messaging().getToken();
       const deviceId = await DeviceInfo.getUniqueId();
 
-      console.log('🔄 토큰 재등록 시도:', token);
-
-      // (1) 토큰 등록 API 호출
       await client.post('/fcm/token', {
         token: token,
         platform: 'ANDROID',
         mobileDeviceId: deviceId,
       });
 
-      // (2) 이제 UI 및 설정 변경
       updatePushStatus(true);
     } catch (error) {
       console.error('권한 확인 또는 토큰 등록 실패:', error);
@@ -149,9 +139,7 @@ export default function ProfileScreen({ navigation }: any) {
     }
   };
 
-  // 실제 UI 업데이트 및 PATCH 요청 함수
   const updatePushStatus = async (nextState: boolean) => {
-    // UI 반영 (Optimistic)
     setPushEnabled(nextState);
     Animated.spring(anim, {
       toValue: nextState ? 1 : 0,
@@ -164,7 +152,6 @@ export default function ProfileScreen({ navigation }: any) {
       await AsyncStorage.setItem('pushEnabled', JSON.stringify(nextState));
       const deviceId = await DeviceInfo.getUniqueId();
 
-      // 설정 변경 PATCH
       const res = await client.patch('/fcm/setting', {
         notiSetting: nextState,
         mobileDeviceId: deviceId,
@@ -176,7 +163,6 @@ export default function ProfileScreen({ navigation }: any) {
       console.log(`알림 설정 ${nextState ? 'ON' : 'OFF'} 완료`);
     } catch (error) {
       console.error('설정 변경 API 실패:', error);
-      // 실패 시 롤백
       setPushEnabled(!nextState);
       Animated.spring(anim, {
         toValue: !nextState ? 1 : 0,
@@ -196,6 +182,7 @@ export default function ProfileScreen({ navigation }: any) {
     outputRange: [2, 26],
   });
 
+  // ✅ [수정됨] 로그아웃 시 mobileDeviceId 전달
   const onLogout = () => {
     Alert.alert('로그아웃', '로그아웃 하겠습니까?', [
       { text: '아니오', style: 'cancel' },
@@ -205,10 +192,18 @@ export default function ProfileScreen({ navigation }: any) {
         onPress: async () => {
           setLoading(true);
           try {
-            const res = await client.post<CommonResponse>('/auth/logout');
+            const deviceId = await DeviceInfo.getUniqueId();
+
+            // Logout API 호출 시 deviceId 포함
+            const res = await client.post<CommonResponse>('/auth/logout', {
+              mobileDeviceId: deviceId,
+            });
+
             if (res.data.success) {
               await AsyncStorage.removeItem('accessToken');
               await AsyncStorage.removeItem('refreshToken');
+              await AsyncStorage.removeItem('pushEnabled'); // 설정 초기화
+
               navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
             }
           } catch (err) {
@@ -234,6 +229,8 @@ export default function ProfileScreen({ navigation }: any) {
             if (res.data.success) {
               await AsyncStorage.removeItem('accessToken');
               await AsyncStorage.removeItem('refreshToken');
+              await AsyncStorage.removeItem('pushEnabled');
+
               navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
             }
           } catch (err) {
@@ -319,6 +316,7 @@ export default function ProfileScreen({ navigation }: any) {
   );
 }
 
+// ... (하단 컴포넌트 및 스타일은 기존과 동일)
 function Line() {
   return <View style={styles.line} />;
 }

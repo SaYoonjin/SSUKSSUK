@@ -12,13 +12,12 @@ import {
   ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// ✅ [추가] 디바이스 정보 가져오기
+import DeviceInfo from 'react-native-device-info';
 
 import client from '../api';
-
-// FCM 초기화 함수 임포트
 import { initFCM } from '../utils/fcm';
 
-// 1. 서버 응답 타입 정의 (isInitialized 추가)
 type LoginResponse = {
   success: boolean;
   data: {
@@ -75,10 +74,14 @@ export default function LoginScreen({ navigation }: any) {
     setErrorMsg('');
 
     try {
-      // 로그인 요청
+      // ✅ [수정] 디바이스 ID 가져오기
+      const mobileDeviceId = await DeviceInfo.getUniqueId();
+
+      // ✅ [수정] 로그인 요청에 mobileDeviceId 포함
       const res = await client.post<LoginResponse>('/auth/login', {
         email: e,
         password: password,
+        mobileDeviceId: mobileDeviceId,
       });
 
       const json = res.data;
@@ -87,7 +90,6 @@ export default function LoginScreen({ navigation }: any) {
         console.log('로그인 성공! 유저 ID:', json.data.userId);
 
         try {
-          // 토큰 저장
           await AsyncStorage.setItem('accessToken', json.data.accessToken);
 
           if (json.data.refreshToken) {
@@ -100,12 +102,10 @@ export default function LoginScreen({ navigation }: any) {
             await AsyncStorage.removeItem('savedEmail');
           }
 
-          // FCM 초기화 (권한 요청 및 토큰 전송)
+          // FCM 초기화 (권한 요청 및 토큰 상태 확인용 - 유지)
           await initFCM();
           console.log('🔔 FCM 초기화 완료');
 
-          // 👇 [화면 분기 로직]
-          // 초기 설정(isInitialized)이 true면 메인으로, false면 초기 설정 화면으로
           if (json.data.isInitialized) {
             navigation.replace('Main');
           } else {
@@ -113,13 +113,11 @@ export default function LoginScreen({ navigation }: any) {
           }
 
         } catch (storageError) {
-          console.error('토큰 저장 또는 FCM 등록 실패:', storageError);
-          // 에러가 나도 로그인이 성공했다면 일단 메인으로 보내거나 처리가 필요함
+          console.error('토큰 저장 실패:', storageError);
           navigation.replace('Main');
         }
 
       } else {
-        // 서버 응답은 왔지만 success가 false인 경우
         setErrorMsg(json.error?.message || COMMON_ERROR_TEXT);
       }
     } catch (err: any) {
@@ -136,138 +134,138 @@ export default function LoginScreen({ navigation }: any) {
     }
   };
 
+  // ... (UI 렌더링 코드는 기존과 동일하므로 생략하지 않고 전체 유지)
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+          style={styles.screen}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.header}>
-          <Image
-            source={require('../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
+        <ScrollView
+            contentContainerStyle={styles.container}
+            keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <Image
+                source={require('../assets/logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+            />
+            <Text style={styles.brand}>쑥쑥</Text>
+          </View>
+
+          <View style={styles.alertSlot}>
+            {errorMsg ? <PixelAlert text={errorMsg} /> : null}
+          </View>
+
+          <Text style={styles.label}>이메일</Text>
+          <PixelInput
+              value={email}
+              onChangeText={onChangeEmail}
+              placeholder="email@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
           />
-          <Text style={styles.brand}>쑥쑥</Text>
-        </View>
 
-        <View style={styles.alertSlot}>
-          {errorMsg ? <PixelAlert text={errorMsg} /> : null}
-        </View>
+          <Text style={[styles.label, { marginTop: 18 }]}>비밀번호</Text>
+          <PixelInput
+              value={password}
+              onChangeText={onChangePassword}
+              placeholder="비밀번호"
+              secureTextEntry
+          />
 
-        <Text style={styles.label}>이메일</Text>
-        <PixelInput
-          value={email}
-          onChangeText={onChangeEmail}
-          placeholder="email@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+          <View style={styles.row}>
+            <Pressable
+                style={styles.checkRow}
+                onPress={() => setRememberMe(v => !v)}
+            >
+              <View style={[styles.checkbox, rememberMe && styles.checkboxOn]}>
+                {rememberMe ? <View style={styles.checkboxDot} /> : null}
+              </View>
+              <Text style={styles.smallText}>아이디 저장</Text>
+            </Pressable>
+            <Pressable onPress={() => navigation.navigate('FindPassword')}>
+              <Text style={styles.smallLink}>비밀번호 찾기</Text>
+            </Pressable>
+          </View>
 
-        <Text style={[styles.label, { marginTop: 18 }]}>비밀번호</Text>
-        <PixelInput
-          value={password}
-          onChangeText={onChangePassword}
-          placeholder="비밀번호"
-          secureTextEntry
-        />
-
-        <View style={styles.row}>
           <Pressable
-            style={styles.checkRow}
-            onPress={() => setRememberMe(v => !v)}
+              onPress={handleLogin}
+              disabled={!canSubmit}
+              style={[styles.loginBtn, !canSubmit && styles.btnDisabled]}
           >
-            <View style={[styles.checkbox, rememberMe && styles.checkboxOn]}>
-              {rememberMe ? <View style={styles.checkboxDot} /> : null}
-            </View>
-            <Text style={styles.smallText}>아이디 저장</Text>
+            {loading ? (
+                <ActivityIndicator color="#FFF" />
+            ) : (
+                <Text style={styles.loginBtnText}>로그인</Text>
+            )}
           </Pressable>
-          <Pressable onPress={() => navigation.navigate('FindPassword')}>
-            <Text style={styles.smallLink}>비밀번호 찾기</Text>
+
+          <View style={styles.divider} />
+          <Text style={styles.helper}>아직 쑥쑥에{'\n'}가입하지 않으셨나요?</Text>
+          <Pressable
+              onPress={() => navigation.navigate('Signup')}
+              style={styles.signupBtn}
+          >
+            <Text style={styles.signupBtnText}>회원가입</Text>
           </Pressable>
-        </View>
-
-        <Pressable
-          onPress={handleLogin}
-          disabled={!canSubmit}
-          style={[styles.loginBtn, !canSubmit && styles.btnDisabled]}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.loginBtnText}>로그인</Text>
-          )}
-        </Pressable>
-
-        <View style={styles.divider} />
-        <Text style={styles.helper}>아직 쑥쑥에{'\n'}가입하지 않으셨나요?</Text>
-        <Pressable
-          onPress={() => navigation.navigate('Signup')}
-          style={styles.signupBtn}
-        >
-          <Text style={styles.signupBtnText}>회원가입</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
   );
 }
 
-// --- 하단 디자인 컴포넌트 (기존과 동일) ---
 function PixelAlert({ text }: { text: string }) {
   return (
-    <View style={styles.pixelAlertContainer}>
-      <View style={styles.alertBgUnderlay} />
-      <View style={styles.alertPixelTop} />
-      <View style={styles.alertPixelBottom} />
-      <View style={styles.alertPixelLeft} />
-      <View style={styles.alertPixelRight} />
-      <View style={styles.alertCornerTL1} />
-      <View style={styles.alertCornerTL2} />
-      <View style={styles.alertCornerTL3} />
-      <View style={styles.alertCornerTR1} />
-      <View style={styles.alertCornerTR2} />
-      <View style={styles.alertCornerTR3} />
-      <View style={styles.alertCornerBL1} />
-      <View style={styles.alertCornerBL2} />
-      <View style={styles.alertCornerBL3} />
-      <View style={styles.alertCornerBR1} />
-      <View style={styles.alertCornerBR2} />
-      <View style={styles.alertCornerBR3} />
-      <Text style={styles.alertText} numberOfLines={1}>
-        {text}
-      </Text>
-    </View>
+      <View style={styles.pixelAlertContainer}>
+        <View style={styles.alertBgUnderlay} />
+        <View style={styles.alertPixelTop} />
+        <View style={styles.alertPixelBottom} />
+        <View style={styles.alertPixelLeft} />
+        <View style={styles.alertPixelRight} />
+        <View style={styles.alertCornerTL1} />
+        <View style={styles.alertCornerTL2} />
+        <View style={styles.alertCornerTL3} />
+        <View style={styles.alertCornerTR1} />
+        <View style={styles.alertCornerTR2} />
+        <View style={styles.alertCornerTR3} />
+        <View style={styles.alertCornerBL1} />
+        <View style={styles.alertCornerBL2} />
+        <View style={styles.alertCornerBL3} />
+        <View style={styles.alertCornerBR1} />
+        <View style={styles.alertCornerBR2} />
+        <View style={styles.alertCornerBR3} />
+        <Text style={styles.alertText} numberOfLines={1}>
+          {text}
+        </Text>
+      </View>
   );
 }
 
 function PixelInput(props: any) {
   return (
-    <View style={styles.pixelInputContainer}>
-      <View style={styles.pixelTop} />
-      <View style={styles.pixelBottom} />
-      <View style={styles.pixelLeft} />
-      <View style={styles.pixelRight} />
-      <View style={styles.pixelCornerTL1} />
-      <View style={styles.pixelCornerTL2} />
-      <View style={styles.pixelCornerTL3} />
-      <View style={styles.pixelCornerTR1} />
-      <View style={styles.pixelCornerTR2} />
-      <View style={styles.pixelCornerTR3} />
-      <View style={styles.pixelCornerBL1} />
-      <View style={styles.pixelCornerBL2} />
-      <View style={styles.pixelCornerBL3} />
-      <View style={styles.pixelCornerBR1} />
-      <View style={styles.pixelCornerBR2} />
-      <View style={styles.pixelCornerBR3} />
-      <TextInput
-        {...props}
-        style={styles.input}
-        placeholderTextColor="#A6B79D"
-      />
-    </View>
+      <View style={styles.pixelInputContainer}>
+        <View style={styles.pixelTop} />
+        <View style={styles.pixelBottom} />
+        <View style={styles.pixelLeft} />
+        <View style={styles.pixelRight} />
+        <View style={styles.pixelCornerTL1} />
+        <View style={styles.pixelCornerTL2} />
+        <View style={styles.pixelCornerTL3} />
+        <View style={styles.pixelCornerTR1} />
+        <View style={styles.pixelCornerTR2} />
+        <View style={styles.pixelCornerTR3} />
+        <View style={styles.pixelCornerBL1} />
+        <View style={styles.pixelCornerBL2} />
+        <View style={styles.pixelCornerBL3} />
+        <View style={styles.pixelCornerBR1} />
+        <View style={styles.pixelCornerBR2} />
+        <View style={styles.pixelCornerBR3} />
+        <TextInput
+            {...props}
+            style={styles.input}
+            placeholderTextColor="#A6B79D"
+        />
+      </View>
   );
 }
 
