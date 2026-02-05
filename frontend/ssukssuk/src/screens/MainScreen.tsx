@@ -20,10 +20,12 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import client from '../api';
 
@@ -63,37 +65,43 @@ const LIST_MODAL_MAX_HEIGHT =
 type TodayNotificationsResponse = {
   success: boolean;
   message: string;
-  data: {
+  data:
+      | {
     date: string;
     notifications: Array<{
       notificationId: number;
       message: string;
       createdAt: string;
     }>;
-  } | null;
+  }
+      | null;
 };
 
 type WaterSensorCardResponse = {
   success: boolean;
   message?: string;
-  data: {
+  data:
+      | {
     plantId: number;
     measuredAt: string;
     current_water: number;
     ideal_min: number;
     ideal_max: number;
-  } | null;
+  }
+      | null;
 };
 
 type NutrientSensorCardResponse = {
   success: boolean;
-  data: {
+  data:
+      | {
     plantId: number;
     measuredAt: string;
     current_nutrient: number;
     ideal_min: number;
     ideal_max: number;
-  } | null;
+  }
+      | null;
   error: any;
 };
 
@@ -268,11 +276,7 @@ function renderHighlightedGuide(message: string, keywords: string[]) {
 
   const ks = Array.from(new Set(keywords.filter(Boolean))).sort((a, b) => b.length - a.length);
   if (ks.length === 0) {
-    return (
-        <Text style={[styles.notifMessage, { textAlign: 'center' }]}>
-          {message}
-        </Text>
-    );
+    return <Text style={[styles.notifMessage, { textAlign: 'center' }]}>{message}</Text>;
   }
 
   const escaped = ks.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -351,6 +355,11 @@ function SensorBar({ data }: { data: SensorBarData }) {
 }
 
 export default function MainScreen() {
+  const insets = useSafeAreaInsets();
+
+  // ✅ 에뮬에서 insets.top=0로 잡혀도 StatusBar 높이만큼은 확보
+  const topPad = Math.max(insets.top, StatusBar.currentHeight ?? 0);
+
   const [useDayBg, setUseDayBg] = useState(() => isDayTime(new Date()));
   const [isAutoMode, setIsAutoMode] = useState(true);
 
@@ -398,6 +407,7 @@ export default function MainScreen() {
   const combinedTranslateY = Animated.add(translateY_walk, translateY_jump);
 
   const backgroundSource = useMemo(() => (useDayBg ? BG_DAY : BG_NIGHT), [useDayBg]);
+
   const toggleTranslateX = toggleAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 50],
@@ -407,7 +417,6 @@ export default function MainScreen() {
     outputRange: ['#75A743', '#a1a1a1'],
   });
 
-  // ✅ plantId 종속 제거: 유저-오늘 기준으로 통일
   const getNotifListSeenKey = () => `${NOTIF_SEEN_STATE_KEY}:list`;
   const getNotifBalloonSeenKey = () => `${NOTIF_SEEN_STATE_KEY}:balloon`;
 
@@ -711,7 +720,6 @@ export default function MainScreen() {
         setCharacterCode(prev => (prev === nextCode ? prev : nextCode));
       }
 
-      // [수정] 이미지 URL 저장
       const imgUrl = d?.imageUrl || d?.mainPlant?.imageUrl;
       setCharacterUrl(imgUrl || null);
 
@@ -745,12 +753,15 @@ export default function MainScreen() {
               ? d.temperature
               : d?.currentSensor?.temperatureHumidity?.temperature;
       const hum =
-          typeof d?.humidity === 'number' ? d.humidity : d?.currentSensor?.temperatureHumidity?.humidity;
+          typeof d?.humidity === 'number'
+              ? d.humidity
+              : d?.currentSensor?.temperatureHumidity?.humidity;
 
       const tNum = typeof temp === 'number' ? temp : null;
       const hNum = typeof hum === 'number' ? hum : null;
 
-      const nextTempHum = tNum == null || hNum == null ? '-' : `   ${tNum.toFixed(1)}°C / \n ${hNum.toFixed(0)}%`;
+      const nextTempHum =
+          tNum == null || hNum == null ? '-' : `   ${tNum.toFixed(1)}°C / \n ${hNum.toFixed(0)}%`;
 
       setTempHumText(prev => (prev === nextTempHum ? prev : nextTempHum));
 
@@ -805,7 +816,8 @@ export default function MainScreen() {
           : list;
 
       const balloonCandidate = balloonSeenAt
-          ? list.find(n => new Date(n.createdAt).getTime() > new Date(balloonSeenAt).getTime()) || null
+          ? list.find(n => new Date(n.createdAt).getTime() > new Date(balloonSeenAt).getTime()) ||
+          null
           : list[0] || null;
 
       setTodayNotifications({ ...data, notifications: list });
@@ -877,18 +889,43 @@ export default function MainScreen() {
 
       if (!latestNotification) return;
 
+      // 최신 알림 모달 열기
       openModal('최신 알림', [latestNotification], 'list');
 
       if (todayNotifications?.date && latestNotification?.createdAt) {
-        await writeSeenAt(getNotifBalloonSeenKey(), todayNotifications.date, latestNotification.createdAt);
+        const latestAt = latestNotification.createdAt;
+
+        // ✅ 풍선 읽음 처리
+        await writeSeenAt(
+            getNotifBalloonSeenKey(),
+            todayNotifications.date,
+            latestAt,
+        );
+
+        // ✅ 리스트도 같이 읽음 처리 → 종 배지 같이 사라지게
+        await writeSeenAt(
+            getNotifListSeenKey(),
+            todayNotifications.date,
+            latestAt,
+        );
       }
 
+      // ✅ 즉시 UI 반영
       setLatestNotification(null);
+      setTodayCount(0);
+
+      // 서버 기준 최신 상태 재동기화
       await fetchTodayNotifications();
     } catch (e) {
       console.error(e);
     }
-  }, [getPlantId, latestNotification, todayNotifications, openModal, fetchTodayNotifications]);
+  }, [
+    getPlantId,
+    latestNotification,
+    todayNotifications,
+    openModal,
+    fetchTodayNotifications,
+  ]);
 
   const buildWaterGuide = (current: number, min: number, max: number) => {
     if (current > max)
@@ -995,212 +1032,213 @@ export default function MainScreen() {
   }, [getPlantId, openModal]);
 
   const hpPercent = useMemo(() => clamp(Number(healthScore) || 0, 0, 100), [healthScore]);
-
   const level = useMemo(() => getLevelFromCode(characterCode), [characterCode, getLevelFromCode]);
 
   return (
-      <View style={styles.root}>
-        {isLoading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#75A743" />
-            </View>
-        )}
+      // ✅ SafeAreaView는 edges를 비우고, top padding은 topPad로 "한 번만" 적용
+      <SafeAreaView style={styles.safeRoot} edges={[]}>
+        <StatusBar translucent backgroundColor="transparent" />
 
-        <ImageBackground source={backgroundSource} style={styles.bg} resizeMode="cover">
-          <ScrollView
-              contentContainerStyle={{ flexGrow: 1 }}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          >
-            <Pressable style={styles.topBellIconBtn} onPress={onPressBell}>
-              <Image source={ALARM_BELL} style={styles.bellImage} />
-              {todayCount > 0 && (
-                  <View style={styles.bellBadge}>
-                    <Text style={styles.bellBadgeText}>{todayCount > 99 ? '99+' : todayCount}</Text>
-                  </View>
-              )}
-            </Pressable>
+        {/* ✅ 에뮬(insets.top=0) 대비: paddingTop = max(insets.top, StatusBar.currentHeight) */}
+        <View style={[styles.root, { paddingTop: topPad }]}>
+          {isLoading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#75A743" />
+              </View>
+          )}
 
-            <View style={styles.modeToggleContainer}>
-              <Animated.View
-                  style={[
-                    styles.toggleSlider,
-                    {
-                      transform: [{ translateX: toggleTranslateX }],
-                      backgroundColor: toggleBgColor,
-                    },
-                  ]}
-              />
-              <Pressable onPress={() => handleToggle(true)} style={styles.togglePiece}>
-                <Text style={[styles.togglePieceText, isAutoMode && styles.textActive]}>AUTO</Text>
+          <ImageBackground source={backgroundSource} style={styles.bg} resizeMode="cover">
+            <ScrollView
+                contentContainerStyle={{ flexGrow: 1 }}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+              {/*  종(벨): topPad 적용된 좌표계라 top은 "작게" 잡는 게 맞음 */}
+              <Pressable style={[styles.topBellIconBtn, { top: 1 }]} onPress={onPressBell}>
+                <Image source={ALARM_BELL} style={styles.bellImage} />
+                {todayCount > 0 && (
+                    <View style={styles.bellBadge}>
+                      <Text style={styles.bellBadgeText}>{todayCount > 99 ? '99+' : todayCount}</Text>
+                    </View>
+                )}
               </Pressable>
-              <Pressable onPress={() => handleToggle(false)} style={styles.togglePiece}>
-                <Text style={[styles.togglePieceText, !isAutoMode && styles.textActive]}>MANU</Text>
-              </Pressable>
-            </View>
 
-            {hasPlant ? (
-                <>
-                  <View style={styles.plantNameWrap} pointerEvents="none">
-                    <Text
-                        style={[styles.plantNameText, { fontSize: plantNameFontSize }]}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                        onTextLayout={e => {
-                          if (e.nativeEvent.lines.length > 1 && plantNameFontSize > 28) {
-                            setPlantNameFontSize(s => s - 2);
-                          }
-                        }}
-                    >
-                      {plantName ? plantName : ''}
-                    </Text>
+              <View style={[styles.modeToggleContainer, { top: 112 }]}>
+                <Animated.View
+                    style={[
+                      styles.toggleSlider,
+                      {
+                        transform: [{ translateX: toggleTranslateX }],
+                        backgroundColor: toggleBgColor,
+                      },
+                    ]}
+                />
+                <Pressable onPress={() => handleToggle(true)} style={styles.togglePiece}>
+                  <Text style={[styles.togglePieceText, isAutoMode && styles.textActive]}>AUTO</Text>
+                </Pressable>
+                <Pressable onPress={() => handleToggle(false)} style={styles.togglePiece}>
+                  <Text style={[styles.togglePieceText, !isAutoMode && styles.textActive]}>MANU</Text>
+                </Pressable>
+              </View>
 
-                    <View style={styles.hpRow}>
-                      <Text style={styles.hpLabel}>
-                        현재{'\n'}상태
+              {hasPlant ? (
+                  <>
+                    <View style={[styles.plantNameWrap, { top: 14 }]} pointerEvents="none">
+                      <Text
+                          style={[styles.plantNameText, { fontSize: plantNameFontSize }]}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                          onTextLayout={e => {
+                            if (e.nativeEvent.lines.length > 1 && plantNameFontSize > 28) {
+                              setPlantNameFontSize(s => s - 2);
+                            }
+                          }}
+                      >
+                        {plantName ? plantName : ''}
                       </Text>
 
-                      <View style={styles.hpArea}>
-                        <Text style={styles.levelText}>Lv {level}</Text>
+                      <View style={styles.hpRow}>
+                        <Text style={styles.hpLabel}>
+                          현재{'\n'}상태
+                        </Text>
 
-                        <View style={styles.hpOuter}>
-                          <View style={[styles.hpFill, { width: `${hpPercent}%` }]} />
+                        <View style={styles.hpArea}>
+                          <Text style={styles.levelText}>Lv {level}</Text>
+
+                          <View style={styles.hpOuter}>
+                            <View style={[styles.hpFill, { width: `${hpPercent}%` }]} />
+                          </View>
                         </View>
                       </View>
                     </View>
-                  </View>
 
-                  <Pressable style={[styles.signTouchArea, { left: '3%', top: '24%' }]} onPress={onPressWaterSign}>
-                    {waterNeedCheck && (
-                        <View style={styles.signAlertBadge}>
-                          <Text style={styles.signAlertBadgeText}>!</Text>
-                        </View>
-                    )}
-                    <Text style={styles.signTitleText}>수위</Text>
-                    <Text style={styles.signSubText}>{waterStatusText}</Text>
-                  </Pressable>
-
-                  <Pressable style={[styles.signTouchArea, { left: '36%', top: '24%' }]} onPress={onPressNutrientSign}>
-                    {nutrientNeedCheck && (
-                        <View style={styles.signAlertBadge}>
-                          <Text style={styles.signAlertBadgeText}>!</Text>
-                        </View>
-                    )}
-                    <Text style={styles.signTitleText}>농도</Text>
-                    <Text style={styles.signSubText}>{nutrientStatusText}</Text>
-                  </Pressable>
-
-                  <View style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}>
-                    <Text style={styles.signTitleText}>온습도</Text>
-                    <Text style={styles.signSubText}>{tempHumText}</Text>
-                  </View>
-
-                  <Animated.View
-                      style={[
-                        styles.characterWrapper,
-                        {
-                          transform: [{ translateX }, { translateY: combinedTranslateY }],
-                        },
-                      ]}
-                  >
-                    {latestNotification && (
-                        <Pressable style={styles.alarmWrap} onPress={onPressBalloon}>
-                          <View style={styles.alarmBox}>
-                            <Image source={ALARM_ICON} style={styles.alarmIcon} />
+                    <Pressable style={[styles.signTouchArea, { left: '3%', top: '24%' }]} onPress={onPressWaterSign}>
+                      {waterNeedCheck && (
+                          <View style={styles.signAlertBadge}>
+                            <Text style={styles.signAlertBadgeText}>!</Text>
                           </View>
-                        </Pressable>
-                    )}
-                    <Pressable onPress={handleCharacterPress}>
-                      {/* [수정] 서버 URL 사용, 없으면 기본 이미지 */}
-                      <Image
-                          source={characterUrl ? { uri: characterUrl } : TOMATO_NORMAL}
-                          style={styles.tomatoImage}
-                          resizeMode="contain"
-                      />
+                      )}
+                      <Text style={styles.signTitleText}>수위</Text>
+                      <View style={styles.signSubWrap}>
+                        <Text style={styles.signSubText}>{waterStatusText}</Text>
+                      </View>
                     </Pressable>
-                  </Animated.View>
-                </>
-            ) : (
-                <View style={styles.emptyContainer}>
-                  <View style={styles.emptyMessageData}>
-                    <Text style={styles.emptyTextTitle}>등록된 식물이 없어요!</Text>
-                    <Text style={styles.emptyTextSub}>
-                      오른쪽 아래 메뉴에서{'\n'}새로운 식물을 등록해주세요 🌱
-                    </Text>
-                  </View>
-                </View>
-            )}
-          </ScrollView>
-        </ImageBackground>
 
-        <Modal
-            transparent
-            visible={isModalVisible}
-            animationType="none"
-            onRequestClose={closeModal}
-            statusBarTranslucent
-        >
-          <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
-            <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
-            <Animated.View onStartShouldSetResponder={() => true} style={{ transform: [{ scale: modalScale }] }}>
-              <PixelBox style={styles.modalContent} innerStyle={styles.modalInner}>
-                <View style={styles.modalHeaderCustom}>
-                  <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
-                  <Pressable style={styles.closeBtn} onPress={closeModal}>
-                    <Text style={styles.closeBtnText}>X</Text>
-                  </Pressable>
-                </View>
-
-                <ScrollView
-                    style={[
-                      styles.modalScroll,
-                      modalTitle === '오늘의 알림' && styles.modalScrollLimit4,
-                    ]}
-                    contentContainerStyle={styles.modalScrollContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                  {modalBodyItems.length > 0 ? (
-                      modalBodyItems.map((item, idx) => (
-                          <View key={idx} style={styles.notifCard}>
-                            <View style={styles.notifRow}>
-                              {modalType === 'list' && (
-                                  <Text style={styles.tagBadgeText}>[{getTagFromMessage(item.message)}]</Text>
-                              )}
-
-                              {modalType === 'sign' && item.sensor ? (
-                                  renderHighlightedGuide(
-                                      item.message,
-                                      getGuideKeywords(
-                                          item.sensor.kind,
-                                          item.sensor.current,
-                                          item.sensor.ideal_min,
-                                          item.sensor.ideal_max,
-                                      ),
-                                  )
-                              ) : (
-                                  <Text style={styles.notifMessage}>{item.message}</Text>
-                              )}
-                            </View>
-
-                            {modalType === 'sign' && item.sensor && <SensorBar data={item.sensor} />}
-
-                            {item.createdAt && (
-                                <Text style={styles.notifTime}>{formatTimeHHmm(item.createdAt)}</Text>
-                            )}
+                    <Pressable style={[styles.signTouchArea, { left: '36%', top: '24%' }]} onPress={onPressNutrientSign}>
+                      {nutrientNeedCheck && (
+                          <View style={styles.signAlertBadge}>
+                            <Text style={styles.signAlertBadgeText}>!</Text>
                           </View>
-                      ))
-                  ) : (
-                      <Text style={styles.emptyText}>데이터가 없습니다.</Text>
-                  )}
-                </ScrollView>
-              </PixelBox>
+                      )}
+                      <Text style={styles.signTitleText}>농도</Text>
+                      <View style={styles.signSubWrap}>
+                        <Text style={styles.signSubText}>{nutrientStatusText}</Text>
+                      </View>
+                    </Pressable>
+
+                    <View style={[styles.signTouchArea, { left: '68.5%', top: '24%' }]}>
+                      <Text style={styles.signTitleText}>온습도</Text>
+                      <View style={styles.signSubWrap}>
+                        <Text style={styles.signSubText}>{tempHumText}</Text>
+                      </View>
+                    </View>
+
+                    <Animated.View
+                        style={[
+                          styles.characterWrapper,
+                          {
+                            transform: [{ translateX }, { translateY: combinedTranslateY }],
+                          },
+                        ]}
+                    >
+                      {latestNotification && (
+                          <Pressable style={styles.alarmWrap} onPress={onPressBalloon}>
+                            <View style={styles.alarmBox}>
+                              <Image source={ALARM_ICON} style={styles.alarmIcon} />
+                            </View>
+                          </Pressable>
+                      )}
+                      <Pressable onPress={handleCharacterPress}>
+                        <Image
+                            source={characterUrl ? { uri: characterUrl } : TOMATO_NORMAL}
+                            style={styles.tomatoImage}
+                            resizeMode="contain"
+                        />
+                      </Pressable>
+                    </Animated.View>
+                  </>
+              ) : (
+                  <View style={styles.emptyContainer}>
+                    <View style={styles.emptyMessageData}>
+                      <Text style={styles.emptyTextTitle}>등록된 식물이 없어요!</Text>
+                      <Text style={styles.emptyTextSub}>오른쪽 아래 메뉴에서{'\n'}새로운 식물을 등록해주세요 🌱</Text>
+                    </View>
+                  </View>
+              )}
+            </ScrollView>
+          </ImageBackground>
+
+          <Modal
+              transparent
+              visible={isModalVisible}
+              animationType="none"
+              onRequestClose={closeModal}
+              statusBarTranslucent
+          >
+            <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
+              <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
+              <Animated.View onStartShouldSetResponder={() => true} style={{ transform: [{ scale: modalScale }] }}>
+                <PixelBox style={styles.modalContent} innerStyle={styles.modalInner}>
+                  <View style={styles.modalHeaderCustom}>
+                    <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
+                    <Pressable style={styles.closeBtn} onPress={closeModal}>
+                      <Text style={styles.closeBtnText}>X</Text>
+                    </Pressable>
+                  </View>
+
+                  <ScrollView
+                      style={[styles.modalScroll, modalTitle === '오늘의 알림' && styles.modalScrollLimit4]}
+                      contentContainerStyle={styles.modalScrollContent}
+                      showsVerticalScrollIndicator={false}
+                  >
+                    {modalBodyItems.length > 0 ? (
+                        modalBodyItems.map((item, idx) => (
+                            <View key={idx} style={styles.notifCard}>
+                              <View style={styles.notifRow}>
+                                {modalType === 'list' && (
+                                    <Text style={styles.tagBadgeText}>[{getTagFromMessage(item.message)}]</Text>
+                                )}
+
+                                {modalType === 'sign' && item.sensor ? (
+                                    renderHighlightedGuide(
+                                        item.message,
+                                        getGuideKeywords(item.sensor.kind, item.sensor.current, item.sensor.ideal_min, item.sensor.ideal_max),
+                                    )
+                                ) : (
+                                    <Text style={styles.notifMessage}>{item.message}</Text>
+                                )}
+                              </View>
+
+                              {modalType === 'sign' && item.sensor && <SensorBar data={item.sensor} />}
+
+                              {item.createdAt && <Text style={styles.notifTime}>{formatTimeHHmm(item.createdAt)}</Text>}
+                            </View>
+                        ))
+                    ) : (
+                        <Text style={styles.emptyText}>데이터가 없습니다.</Text>
+                    )}
+                  </ScrollView>
+                </PixelBox>
+              </Animated.View>
             </Animated.View>
-          </Animated.View>
-        </Modal>
-      </View>
+          </Modal>
+        </View>
+      </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeRoot: { flex: 1, backgroundColor: '#000' },
+
   root: { flex: 1, backgroundColor: '#000' },
   bg: { flex: 1 },
 
@@ -1232,6 +1270,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#300e08',
     marginBottom: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyTextSub: {
     fontFamily: FONT,
@@ -1239,9 +1279,11 @@ const styles = StyleSheet.create({
     color: '#555',
     textAlign: 'center',
     lineHeight: 22,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
-  topBellIconBtn: { position: 'absolute', top: 36, right: '53%', zIndex: 70 },
+  topBellIconBtn: { position: 'absolute', right: '53%', zIndex: 70 },
   bellImage: { width: 52, height: 52, resizeMode: 'contain' },
   bellBadge: {
     position: 'absolute',
@@ -1256,11 +1298,16 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFF',
   },
-  bellBadgeText: { fontFamily: FONT, fontSize: 11, color: '#FFF' },
+  bellBadgeText: {
+    fontFamily: FONT,
+    fontSize: 11,
+    color: '#FFF',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
 
   modeToggleContainer: {
     position: 'absolute',
-    top: 140,
     left: 20,
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.6)',
@@ -1288,19 +1335,20 @@ const styles = StyleSheet.create({
     color: BORDER_COLOR,
     opacity: 0.4,
     zIndex: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   textActive: { color: '#FFF', opacity: 1 },
 
   plantNameWrap: {
     position: 'absolute',
-    top: 42,
     left: 8,
     width: 143,
     height: 100,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
     paddingLeft: 15,
-    paddingTop: 8,
+    paddingTop: 1,
     zIndex: 90,
   },
 
@@ -1308,11 +1356,15 @@ const styles = StyleSheet.create({
     fontFamily: FONT,
     color: SIGN_TEXT_COLOR,
     textAlign: 'left',
+    fontSize: 30,
+    lineHeight: 34,
     maxWidth: 260,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   hpRow: {
-    marginTop: 5,
+    marginTop: 2,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -1325,6 +1377,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
     textAlign: 'center',
     marginTop: 15,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   hpBarWrap: {
@@ -1343,7 +1397,10 @@ const styles = StyleSheet.create({
     right: 0,
     fontFamily: FONT,
     fontSize: 20,
+    lineHeight: 22,
     color: SIGN_TEXT_COLOR,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   hpOuter: {
@@ -1366,20 +1423,37 @@ const styles = StyleSheet.create({
     width: '28%',
     height: '11%',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 28,
   },
+
   signTitleText: {
     fontFamily: FONT,
-    fontSize: 16,
+    fontSize: 18,
+    lineHeight: 22,
     color: SIGN_TEXT_COLOR,
     textAlign: 'center',
-    marginTop: 40,
-  },
-  signSubText: {
     marginTop: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  signSubWrap: {
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+
+  signSubText: {
+    marginTop: 0,
     fontFamily: FONT,
-    fontSize: 20,
+    fontSize: 23,
+    lineHeight: 28,
     color: SIGN_TEXT_COLOR,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   characterWrapper: {
@@ -1425,9 +1499,17 @@ const styles = StyleSheet.create({
     fontFamily: FONT,
     fontSize: 20,
     color: BORDER_COLOR,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   closeBtn: { padding: 4 },
-  closeBtnText: { fontFamily: FONT, fontSize: 18, color: '#999' },
+  closeBtnText: {
+    fontFamily: FONT,
+    fontSize: 18,
+    color: '#999',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
 
   modalScroll: { width: '100%' },
   modalScrollLimit4: { maxHeight: LIST_MODAL_MAX_HEIGHT },
@@ -1449,6 +1531,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#75A743',
     marginRight: 6,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   notifMessage: {
     flex: 1,
@@ -1456,6 +1540,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     lineHeight: 18,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   notifTime: {
     alignSelf: 'flex-end',
@@ -1463,6 +1549,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#bbb',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyText: {
     fontFamily: FONT,
@@ -1470,6 +1558,8 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginTop: 40,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   guideKeyword: { fontFamily: FONT, fontSize: 18, color: BORDER_COLOR },
@@ -1481,6 +1571,8 @@ const styles = StyleSheet.create({
     color: '#4A2A1E',
     marginBottom: 8,
     textAlign: 'left',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   sensorBarWrap: { width: '100%' },
 
@@ -1519,7 +1611,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 6,
   },
-  sensorLabelText: { fontFamily: FONT, fontSize: 11, color: '#333' },
+  sensorLabelText: {
+    fontFamily: FONT,
+    fontSize: 11,
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
 
   sensorMetaRow: {
     width: '100%',
@@ -1527,7 +1625,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 8,
   },
-  sensorMetaText: { fontFamily: FONT, fontSize: 11, color: '#666' },
+  sensorMetaText: {
+    fontFamily: FONT,
+    fontSize: 11,
+    color: '#666',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
 
   pixelBoxContainer: { position: 'relative', marginHorizontal: PIXEL * 2 },
   pixelBgUnderlay: {
@@ -1712,5 +1816,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFF',
     lineHeight: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });
