@@ -1,0 +1,109 @@
+{
+  "schema_version": "1.0",
+
+  "device": {
+    "serial_num": "1420524217380"
+  },
+
+  "mqtt": {
+    "broker": {
+      "host": "i14a103.p.ssafy.io",
+      "port": 443,
+      "username": null,
+      "password": null,
+      "keepalive_sec": 60,
+      "client_id": null
+    },
+    
+    "transport": "websockets",
+    "ws_path": "/mqtt",
+    "tls": {
+      "enabled": true,
+      "ca_cert": null
+    },
+    
+    "qos": {
+      "telemetry": 1,
+      "control": 1
+    },
+
+    "retain": {
+      "telemetry": false,
+      "control_claim": false,
+      "control_binding": false,
+      "control_mode": false,
+      "control_upload_url": false,
+      "control_ack": false,
+      "control_action": false
+    },
+
+    "topic": {
+      "base": "devices/{serial_num}",
+
+      "telemetry": {
+        "base": "telemetry",
+        "channels": [
+          "sensors",
+          "action-result",
+          "upload-url-request",
+          "image-uploaded",
+          "image-inference",
+          "ack"
+        ]
+      },
+
+      "control": {
+        "base": "control",
+        "channels": [
+          "claim",
+          "binding",
+          "mode",
+          "upload-url",
+          "ack"
+        ]
+      }
+    }
+  },
+
+  "uart": {
+    "port": "/dev/ttyTHS1",
+    "baudrate": 115200,
+    "request_timeout_ms": 10000
+  },
+
+  "time": {
+    "timezone": "Asia/Seoul",
+    "use_ntp_if_available": true
+  },
+
+  "scheduler": {
+    "sensor_periodic_interval_sec": 7200,
+    "sensor_test_interval_sec": 120
+  },
+
+  "storage": {
+    "data_dir": "/home/orin/jetson_app/data",
+    "logs_dir": "/home/orin/jetson_app/logs"
+  },
+
+  "camera": {
+    "top": {
+      "device_id": 0,
+      "width": 1920,
+      "height": 1080
+    },
+    "side": {
+      "device_id": 2,
+      "width": 1920,
+      "height": 1080
+    },
+    "capture_timeout_sec": 5
+  },
+
+  "upload": {
+    "timeout_sec": 30,
+    "retry_count": 3,
+    "retry_delay_sec": 1
+  }
+}
+

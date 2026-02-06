@@ -44,3 +44,37 @@ temp/
 
 #claude
 .claude
+
+# Jetson 관련 제외
+__pycache__/
+*.pyc
+build/
+devel/
+venv/
+.venv/
+
+# Jetson 관련 제외
+__pycache__/
+*.pyc
+build/
+devel/
+venv/
+.venv/
+
+# STM
+# Build artifacts (컴파일 결과물)
+Debug/
+Release/
+
+# IDE settings (개인 설정 파일)
+.settings/
+*.launch
+
+# Toolchain generated (자동 생성 파일)
+*.o
+*.d
+*.elf
+*.map
+*.list
+*.hex
+*.bin
