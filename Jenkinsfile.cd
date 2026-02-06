@@ -1,0 +1,243 @@
+// =====================================================
+// Jenkinsfile.cd
+// 목적: master 브랜치에 push(= merge 포함)되면 배포 수행
+// 전제: Jenkins는 Docker socket 방식으로 호스트 도커를 제어
+//       /home/ubuntu/S14P11A103 경로가 Jenkins 컨테이너에서 접근 가능해야 함
+// =====================================================
+
+pipeline {
+    agent any
+
+    environment {
+        // 호스트(EC2) 쪽 실제 배포 작업 디렉터리
+        PROJECT_ROOT = '/home/ubuntu/S14P11A103'
+        COMPOSE_FILE = "${PROJECT_ROOT}/docker-compose.yml"
+
+        // GitLab repo
+        REPO_URL = 'https://lab.ssafy.com/s14-webmobile3-sub1/S14P11A103.git'
+        // Jenkins Credentials ID (Username/Password 형태 권장: username=oauth2, password=personal access token)
+        GIT_CRED = 'gitlab-token'
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '30'))
+        timestamps()
+    }
+
+    parameters {
+        string(name: 'REF', defaultValue: 'refs/heads/master', description: 'Git ref (webhook 또는 수동 입력)')
+        string(name: 'BEFORE_SHA', defaultValue: '', description: 'Commit SHA before push (optional)')
+        string(name: 'AFTER_SHA', defaultValue: '', description: 'Commit SHA after push (optional)')
+        booleanParam(name: 'FORCE_DEPLOY', defaultValue: false, description: '변경사항 없어도 강제 배포')
+    }
+
+    stages {
+        stage('Show Webhook Variables') {
+            steps {
+                script {
+                    // webhook에서 오는 환경변수 또는 파라미터 사용
+                    env.EFFECTIVE_REF = env.REF?.trim() ?: params.REF
+                    env.EFFECTIVE_BEFORE_SHA = env.BEFORE_SHA?.trim() ?: params.BEFORE_SHA
+                    env.EFFECTIVE_AFTER_SHA = env.AFTER_SHA?.trim() ?: params.AFTER_SHA
+
+                    echo "REF        = ${env.EFFECTIVE_REF}"
+                    echo "BEFORE_SHA = ${env.EFFECTIVE_BEFORE_SHA}"
+                    echo "AFTER_SHA  = ${env.EFFECTIVE_AFTER_SHA}"
+                    echo "FORCE_DEPLOY = ${params.FORCE_DEPLOY}"
+                }
+            }
+        }
+
+        stage('Guard (master push only)') {
+            steps {
+                script {
+                    if (!env.EFFECTIVE_REF?.trim()) {
+                        error('REF is empty. Generic Webhook Trigger에서 $.ref 변수를 추출했는지 확인하거나, 파라미터로 입력하세요.')
+                    }
+                    if (env.EFFECTIVE_REF != 'refs/heads/master') {
+                        error("This CD job runs only on master push. Current REF=${env.EFFECTIVE_REF}")
+                    }
+                }
+            }
+        }
+
+        stage('Update host working copy (no prompt)') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: env.GIT_CRED, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                    sh '''
+                        set -euxo pipefail
+
+                        # Jenkins 컨테이너(root)에서 ubuntu 소유 디렉토리 접근 허용
+                        git config --global --add safe.directory "${PROJECT_ROOT}"
+
+                        cd "${PROJECT_ROOT}"
+
+                        # 혹시 remote가 SSH로 잡혀있어서 인증 요구할 수 있으니, 여기서 https+토큰으로 강제
+                        # GitLab 토큰을 password에 넣고, username은 oauth2 또는 본인 username을 사용 가능
+                        git remote set-url origin "https://${GIT_USER}:${GIT_PASS}@lab.ssafy.com/s14-webmobile3-sub1/S14P11A103.git"
+
+                        git fetch origin master
+                        git checkout master
+                        git reset --hard origin/master
+
+                        echo "[INFO] Current HEAD:"
+                        git log -1 --pretty=format:"%h - %s (%ci)" || true
+
+                        # root로 git 작업 후 ubuntu 소유권 복구 (UID 1000)
+                        chown -R 1000:1000 "${PROJECT_ROOT}/.git"
+                    '''
+                }
+            }
+        }
+
+        stage('Detect server changes') {
+            steps {
+                script {
+                    // BEFORE_SHA, AFTER_SHA가 있으면 diff로 server/ 변경 여부 판단
+                    def beforeSha = env.EFFECTIVE_BEFORE_SHA ?: ""
+                    def afterSha  = env.EFFECTIVE_AFTER_SHA  ?: ""
+                    env.SHOULD_DEPLOY = "true"
+
+                    if (beforeSha && afterSha && !beforeSha.startsWith("0000000")) {
+                        sh """
+                            set -euxo pipefail
+                            cd "${PROJECT_ROOT}"
+                            echo "[INFO] Changed files between ${beforeSha}..${afterSha}:"
+                            git diff --name-only ${beforeSha} ${afterSha} | tee /tmp/changed_files.txt
+                        """
+                        def changed = sh(script: 'grep -E "^server/" /tmp/changed_files.txt >/dev/null 2>&1; echo $?', returnStdout: true).trim()
+                        if (changed != "0") {
+                            env.SHOULD_DEPLOY = "false"
+                        }
+                    }
+                    // BEFORE_SHA/AFTER_SHA 없으면 (수동 빌드) 무조건 배포
+
+                    echo "SHOULD_DEPLOY = ${env.SHOULD_DEPLOY}"
+                }
+            }
+        }
+
+        stage('Deploy backend') {
+            when {
+                expression { return env.SHOULD_DEPLOY == "true" }
+            }
+            steps {
+                sh '''
+                    set -euxo pipefail
+
+                    echo "=========================================="
+                    echo "Starting Production Deployment (backend)"
+                    echo "=========================================="
+
+                    IMAGE_NAME="s14p11a103-backend"
+
+                    # 1. 기존 이미지 백업 (롤백용)
+                    echo "[Step 1] Backing up current image..."
+                    docker tag ${IMAGE_NAME}:latest ${IMAGE_NAME}:previous || echo "No existing image to backup"
+
+                    # 2. 새 이미지 빌드 (컨테이너 중지 전에 빌드)
+                    echo "[Step 2] Building new image..."
+                    if ! docker-compose -f "${COMPOSE_FILE}" build --no-cache backend; then
+                        echo "Build failed! Service remains running with old version."
+                        exit 1
+                    fi
+
+                    # 3. 기존 컨테이너 중지 & 새 컨테이너 시작
+                    echo "[Step 3] Stopping old container and starting new one..."
+                    docker-compose -f "${COMPOSE_FILE}" stop backend || true
+                    docker-compose -f "${COMPOSE_FILE}" up -d backend
+
+                    echo "Waiting for backend to be healthy..."
+                    sleep 30
+
+                    # 4. Health check
+                    echo "[Step 4] Running health checks..."
+                    DEPLOY_SUCCESS=false
+                    for i in $(seq 1 6); do
+                        HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "unknown")
+                        echo "Health check attempt $i/6... Status: ${HEALTH_STATUS}"
+
+                        if [ "${HEALTH_STATUS}" = "healthy" ]; then
+                            echo "Backend is healthy!"
+                            DEPLOY_SUCCESS=true
+                            break
+                        fi
+
+                        # 컨테이너가 죽었으면 바로 롤백
+                        CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' backend 2>/dev/null || echo "unknown")
+                        if [ "${CONTAINER_STATUS}" != "running" ]; then
+                            echo "Container is not running! Status: ${CONTAINER_STATUS}"
+                            docker-compose -f "${COMPOSE_FILE}" logs --tail 100 backend || true
+                            break
+                        fi
+
+                        sleep 10
+                    done
+
+                    # 5. 실패 시 롤백
+                    if [ "${DEPLOY_SUCCESS}" = "false" ]; then
+                        echo "=========================================="
+                        echo "[ROLLBACK] Deployment failed! Rolling back..."
+                        echo "=========================================="
+
+                        # 이전 이미지가 있는지 확인
+                        if docker image inspect ${IMAGE_NAME}:previous >/dev/null 2>&1; then
+                            docker-compose -f "${COMPOSE_FILE}" stop backend || true
+                            docker tag ${IMAGE_NAME}:previous ${IMAGE_NAME}:latest
+                            docker-compose -f "${COMPOSE_FILE}" up -d backend
+                            echo "[ROLLBACK] Rolled back to previous version"
+
+                            # 롤백 후 health check
+                            sleep 20
+                            ROLLBACK_STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "unknown")
+                            echo "[ROLLBACK] Health status after rollback: ${ROLLBACK_STATUS}"
+                        else
+                            echo "[ROLLBACK] No previous image available for rollback!"
+                        fi
+
+                        exit 1
+                    fi
+
+                    # 6. 성공 시 이미지 정리
+                    echo "[Step 6] Cleaning up old images..."
+
+                    # 이전 백업 이미지 삭제
+                    docker rmi ${IMAGE_NAME}:previous || true
+
+                    # dangling 이미지 삭제 (태그 없는 <none> 이미지들)
+                    docker image prune -f || true
+
+                    # 사용하지 않는 빌드 캐시 정리
+                    docker builder prune -f --filter "until=24h" || true
+
+                    echo "=========================================="
+                    echo "Deployment completed successfully!"
+                    echo "=========================================="
+                '''
+            }
+        }
+
+        stage('Skip deploy (no server changes)') {
+            when {
+                expression { return env.SHOULD_DEPLOY == "false" }
+            }
+            steps {
+                echo "No changes under server/. Skipping backend deploy."
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ CD pipeline SUCCESS'
+        }
+        failure {
+            echo '❌ CD pipeline FAILURE - check Console Output'
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

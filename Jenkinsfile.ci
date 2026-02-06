@@ -1,0 +1,187 @@
+pipeline {
+  agent any
+
+  options {
+    timeout(time: 30, unit: 'MINUTES')
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+  }
+
+  environment {
+    REPO_URL = 'https://lab.ssafy.com/s14-webmobile3-sub1/S14P11A103.git'
+    GIT_CRED = 'gitlab-token'
+    DEFAULT_TARGET = 'master'
+  }
+
+  stages {
+
+    stage('Validate Webhook Variables') {
+      steps {
+        script {
+          def src = (env.SOURCE_BRANCH ?: '').trim()
+          def tgt = (env.TARGET_BRANCH ?: env.DEFAULT_TARGET).trim()
+          def act = (env.MR_ACTION ?: '').trim()
+
+          echo "SOURCE_BRANCH=${src}"
+          echo "TARGET_BRANCH=${tgt}"
+          echo "MR_ACTION=${act}"
+
+          if (!src) { error("Missing SOURCE_BRANCH from webhook") }
+          if (!tgt) { error("Missing TARGET_BRANCH from webhook") }
+          if (!act) { error("Missing MR_ACTION from webhook") }
+
+          def okTarget = (tgt == 'master')
+          def okSource = (src == 'BE' || src == 'FE')
+          def okAction = (act == 'open' || act == 'update' || act == 'reopen')
+
+          if (!(okTarget && okSource && okAction)) {
+            echo "Skip CI by policy (target/source/action not matched)."
+            currentBuild.description = "Skipped: ${src} -> ${tgt} (${act})"
+            env.SKIP_ALL = 'true'
+          } else {
+            env.SKIP_ALL = 'false'
+          }
+        }
+      }
+    }
+
+    stage('Checkout SOURCE branch') {
+      when { expression { env.SKIP_ALL != 'true' } }
+      steps {
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: "*/${env.SOURCE_BRANCH}"]],
+          userRemoteConfigs: [[
+            url: env.REPO_URL,
+            credentialsId: env.GIT_CRED
+          ]],
+          extensions: [
+            [$class: 'WipeWorkspace'],
+            [$class: 'PruneStaleBranch'],
+            [$class: 'CloneOption', shallow: true, noTags: false, depth: 50, timeout: 20]
+          ]
+        ])
+
+        sh 'echo "== Current branch ==" && git rev-parse --abbrev-ref HEAD'
+        sh 'echo "== Last commit ==" && git log -1 --pretty=format:"%h - %s (%ci)" || true'
+      }
+    }
+
+    stage('Detect Changes vs TARGET') {
+      when { expression { env.SKIP_ALL != 'true' } }
+      steps {
+        script {
+          def target = (env.TARGET_BRANCH ?: env.DEFAULT_TARGET).trim()
+
+          withCredentials([usernamePassword(
+            credentialsId: env.GIT_CRED,
+            usernameVariable: 'GIT_USER',
+            passwordVariable: 'GIT_PASS'
+          )]) {
+            sh """
+              git config credential.helper '!f() { echo "username=\$GIT_USER"; echo "password=\$GIT_PASS"; }; f'
+              git fetch origin ${target} --prune
+            """
+          }
+
+          def diff = sh(
+            script: "git diff --name-only origin/${target}...HEAD",
+            returnStdout: true
+          ).trim()
+
+          echo "== Changed files (origin/${target}...HEAD) =="
+          echo (diff ? diff : "(none)")
+
+          def changed = diff ? diff.split("\\r?\\n") : []
+          def runBackend = changed.any { it.startsWith("server/") }
+          def runFrontend = changed.any { it.startsWith("frontend/") }
+
+          env.RUN_BACKEND = runBackend ? 'true' : 'false'
+          env.RUN_FRONTEND = runFrontend ? 'true' : 'false'
+          env.CHANGED_FILES = diff
+
+          echo "RUN_BACKEND=${env.RUN_BACKEND}"
+          echo "RUN_FRONTEND=${env.RUN_FRONTEND}"
+
+          if (!runBackend && !runFrontend) {
+            currentBuild.description = "No server/frontend changes"
+            env.SKIP_ALL = 'true'
+          }
+        }
+      }
+    }
+
+    stage('Backend Build & Static Analysis') {
+      when { expression { env.SKIP_ALL != 'true' && env.RUN_BACKEND == 'true' } }
+      agent {
+        docker {
+          image 'gradle:8-jdk17'
+          reuseNode true
+        }
+      }
+      steps {
+        dir('server') {
+          sh '''
+            set -e
+            echo "==== Backend CI START ===="
+
+            chmod +x ./gradlew
+
+            echo "[1/2] Gradle build"
+            ./gradlew clean build --no-daemon
+
+            # echo "[2/2] Checkstyle (TODO: 설정 후 활성화)"
+            # ./gradlew checkstyleMain --no-daemon
+
+            echo "==== Backend CI END ===="
+          '''
+        }
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'server/build/reports/**/*', allowEmptyArchive: true
+          archiveArtifacts artifacts: 'server/build/test-results/**/*', allowEmptyArchive: true
+        }
+      }
+    }
+
+    stage('Frontend Lint & Test') {
+      when { expression { env.SKIP_ALL != 'true' && env.RUN_FRONTEND == 'true' } }
+      agent {
+        docker {
+          image 'node:20-alpine'
+          reuseNode true
+        }
+      }
+      steps {
+        dir('frontend/ssukssuk') {
+          sh '''
+            set -e
+            echo "==== Frontend CI START ===="
+
+            echo "[1/3] Install dependencies"
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install
+            fi
+
+            echo "[2/3] Lint"
+            npm run lint
+
+            echo "[3/3] Test"
+            npm test -- --watchAll=false
+
+            echo "==== Frontend CI END ===="
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    success { echo "CI pipeline completed successfully." }
+    failure { echo "CI pipeline failed." }
+    always  { cleanWs() }
+  }
+}
