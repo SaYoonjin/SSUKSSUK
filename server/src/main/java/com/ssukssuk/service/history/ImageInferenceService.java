@@ -43,6 +43,10 @@ public class ImageInferenceService {
     private static final int FIXED_PERIOD_DAYS = 14;
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
+    // 디바이스 AI 추론 픽셀 값 → 실제 cm 변환 스케일 (기준: 865px=15cm, 344px=10cm)
+    private static final double HEIGHT_SCALE = 15.0 / 865.0;
+    private static final double WIDTH_SCALE = 10.0 / 344.0;
+
     @Transactional
     public void handle(DeviceImageInferenceRequest request) {
 
@@ -117,12 +121,20 @@ public class ImageInferenceService {
 
         plantImageRepository.save(image);
 
-        // 8. ImageInference 저장
+        // 8. 높이/넓이 픽셀→cm 보정
+        Double correctedHeight = request.getHeight() != null
+                ? Math.round(request.getHeight() * HEIGHT_SCALE * 10.0) / 10.0
+                : null;
+        Double correctedWidth = request.getWidth() != null
+                ? Math.round(request.getWidth() * WIDTH_SCALE * 10.0) / 10.0
+                : null;
+
+        // 9. ImageInference 저장
         ImageInference inference = ImageInference.builder()
                 .plant(plant)
                 .image(image)
-                .height(request.getHeight())
-                .width(request.getWidth())
+                .height(correctedHeight)
+                .width(correctedWidth)
                 .anomaly(request.getAnomaly())
                 .confidence(request.getConfidence())
                 .symptomEnum(request.getSymptomEnum())
@@ -131,16 +143,16 @@ public class ImageInferenceService {
 
         imageInferenceRepository.save(inference);
 
-        // 9. PlantStatus 업데이트 (이미지 데이터 반영)
+        // 10. PlantStatus 업데이트 (이미지 데이터 반영)
         Integer anomalyValue = request.getAnomaly();
         plantStatusService.updateFromImage(
                 request.getPlantId(),
-                request.getHeight(),
-                request.getWidth(),
+                correctedHeight,
+                correctedWidth,
                 anomalyValue
         );
 
-        // 10. 이상 감지 시 알람: confidence >= 70 && anomaly >= 3
+        // 11. 이상 감지 시 알람: confidence >= 70 && anomaly >= 3
         if (request.getConfidence() >= 70
                 && request.getAnomaly() != null
                 && request.getAnomaly() >= 5) {

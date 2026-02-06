@@ -172,9 +172,9 @@ public class PlantStatus {
 
         double area = plantHeight * plantWidth;
 
-        // 0: < 150, 1: 150~450, 2: >= 450
-        if (area < 150) return 0;
-        if (area < 450) return 1;
+        // 0: < 75, 1: 75~225, 2: >= 225 (기준: 15cm*10cm=150이 중간)
+        if (area < 75) return 0;
+        if (area < 225) return 1;
         return 2;
     }
 
