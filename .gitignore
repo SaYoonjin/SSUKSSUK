@@ -14,6 +14,8 @@ infra/certbot/logs/
 
 # IDE
 .idea/
+**/.idea/
+*.iml
 .vscode/
 *.swp
 *.swo
