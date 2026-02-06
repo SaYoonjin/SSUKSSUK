@@ -12,7 +12,6 @@ import {
     PixelRatio,
     PanResponder,
     ActivityIndicator,
-    Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Svg, {
@@ -41,6 +40,9 @@ const ACCENT = '#2E5A35';
 
 const HEIGHT_COLOR = '#2E5A35';
 const WIDTH_COLOR = '#2F6FED';
+
+// ✅ 고정 헤더 높이
+const STICKY_HEADER_H = 100;
 
 // API 응답 타입 정의
 type HistoryResponse = {
@@ -73,6 +75,7 @@ export default function HistoryScreen({ navigation }: any) {
     // 사진
     const [photoIndex, setPhotoIndex] = useState(0);
     const [recentPhotos, setRecentPhotos] = useState<string[]>([]);
+    const [recentCapturedAt, setRecentCapturedAt] = useState<string>(''); // ✅ RECENT FEED 시간
 
     // 그래프 데이터
     const [days, setDays] = useState<string[]>([]);
@@ -85,6 +88,17 @@ export default function HistoryScreen({ navigation }: any) {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scrollX = useRef(new Animated.Value(0)).current;
 
+    const formatRecentTime = useCallback((iso: string) => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mi = String(d.getMinutes()).padStart(2, '0');
+        return `${yyyy}.${mm}.${dd} ${hh}:${mi}`;
+    }, []);
+
     // 데이터 로드 함수
     const fetchHistoryData = async () => {
         setLoading(true);
@@ -95,13 +109,11 @@ export default function HistoryScreen({ navigation }: any) {
             const mainPlant = plants.find((p: any) => p.is_main);
 
             if (!mainPlant) {
-                // 메인 식물이 없는 경우
                 setLoading(false);
                 return;
             }
 
             // 2. 메인 식물 ID로 히스토리 조회
-            // [반영] period Query Parameter (14일 고정이지만 문서상 필수 O)
             const res = await client.get<HistoryResponse>(
                 `/history/plants/${mainPlant.plant_id}`,
                 { params: { period: 14 } },
@@ -110,11 +122,17 @@ export default function HistoryScreen({ navigation }: any) {
             if (res.data.success && res.data.data) {
                 const d = res.data.data;
 
-                // (1) 사진 처리
-                const photos = [];
+                // (1) 사진 처리 + ✅ RECENT FEED 시간
+                const photos: string[] = [];
                 if (d.currentImage) {
                     if (d.currentImage.imageUrl_top) photos.push(d.currentImage.imageUrl_top);
                     if (d.currentImage.imageUrl_side) photos.push(d.currentImage.imageUrl_side);
+
+                    // capturedAt 표시용
+                    if (d.currentImage.capturedAt) setRecentCapturedAt(d.currentImage.capturedAt);
+                    else setRecentCapturedAt('');
+                } else {
+                    setRecentCapturedAt('');
                 }
                 setRecentPhotos(photos);
 
@@ -127,7 +145,7 @@ export default function HistoryScreen({ navigation }: any) {
 
                 // (3) 생장 그래프 (키/너비) & 날짜 파싱
                 const gData = d.growthGraph?.data || [];
-                const parsedDays = gData.map(item => item.date.substring(5).replace('-', '.')); // 01.21 형식
+                const parsedDays = gData.map(item => item.date.substring(5).replace('-', '.')); // 01.21
                 const parsedHeights = gData.map(item => item.height ?? 0);
                 const parsedWidths = gData.map(item => item.width ?? 0);
 
@@ -188,7 +206,8 @@ export default function HistoryScreen({ navigation }: any) {
     return (
         <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
             <SafeAreaView style={styles.screen}>
-                <View style={styles.header}>
+                {/* ✅ 스크롤해도 남는 헤더 + 그림자 */}
+                <View style={styles.stickyHeader}>
                     <Text style={styles.headerTitle}>식물 히스토리</Text>
                 </View>
 
@@ -196,8 +215,8 @@ export default function HistoryScreen({ navigation }: any) {
                     contentContainerStyle={styles.content}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* 1. 현재 모습 (사진) */}
-                    <SectionHeader title="현재 모습" />
+                    {/* 1. 최근 모습 (사진) */}
+                    <SectionHeader title="최근 모습" />
                     <PixelBox hasShadow style={{ padding: 0 }}>
                         <View style={styles.photoWrap}>
                             {loading ? (
@@ -222,18 +241,21 @@ export default function HistoryScreen({ navigation }: any) {
                                     >
                                         {recentPhotos.map((url, i) => (
                                             <View key={i} style={styles.photoContainer}>
-                                                <Image
-                                                    source={{ uri: url }}
-                                                    style={styles.photo}
-                                                    resizeMode="cover"
-                                                />
+                                                <Image source={{ uri: url }} style={styles.photo} resizeMode="cover" />
                                             </View>
                                         ))}
                                     </Animated.View>
 
+                                    {/* ✅ RECENT FEED 뱃지: 점은 위에 고정 + 날짜/시간은 너비에 맞게 아래 */}
                                     <View style={styles.statusBadge}>
-                                        <View style={styles.statusDot} />
-                                        <Text style={styles.statusText}>RECENT FEED</Text>
+                                        <View style={styles.statusTopRow}>
+                                            <View style={styles.statusDot} />
+                                            <Text style={styles.statusText}>RECENT FEED</Text>
+                                        </View>
+
+                                        {!!recentCapturedAt && (
+                                            <Text style={styles.statusTimeText}>{formatRecentTime(recentCapturedAt)}</Text>
+                                        )}
                                     </View>
 
                                     {photoIndex > 0 && (
@@ -260,9 +282,7 @@ export default function HistoryScreen({ navigation }: any) {
                                                 key={i}
                                                 style={[
                                                     styles.photoDot,
-                                                    i === photoIndex
-                                                        ? { backgroundColor: '#FFD700' }
-                                                        : { backgroundColor: '#FFF' },
+                                                    i === photoIndex ? { backgroundColor: '#FFD700' } : { backgroundColor: '#FFF' },
                                                 ]}
                                             />
                                         ))}
@@ -478,6 +498,7 @@ function ChartPager({
     const [chartTouching, setChartTouching] = useState(false);
     const translateX = useRef(new Animated.Value(0)).current;
     const startX = useRef(0);
+
     const goTo = (idx: number) => {
         const next = clamp(idx, 0, pages.length - 1);
         setPage(next);
@@ -488,9 +509,11 @@ function ChartPager({
             tension: 60,
         }).start();
     };
+
     useEffect(() => {
         goTo(page);
     }, []);
+
     const panResponder = useMemo(
         () =>
             PanResponder.create({
@@ -518,6 +541,7 @@ function ChartPager({
             }),
         [page, chartW, pages.length, chartTouching, translateX],
     );
+
     return (
         <View>
             <View style={styles.chartHeader}>
@@ -526,6 +550,7 @@ function ChartPager({
                     {pages[page]?.titleRight}
                 </View>
             </View>
+
             <View style={[styles.pagerFrame, { width, height }]} {...panResponder.panHandlers}>
                 <View
                     style={{
@@ -554,6 +579,7 @@ function ChartPager({
                         ))}
                     </Animated.View>
                 </View>
+
                 {page > 0 && (
                     <Pressable onPress={() => goTo(page - 1)} hitSlop={14} style={[styles.pagerIconBtn, { left: 2 }]}>
                         <PixelChevron dir="left" />
@@ -568,6 +594,9 @@ function ChartPager({
         </View>
     );
 }
+
+// 이하 AnomalyButtonPager / GrowthLineChartInteractive 동일 (형님 원본 그대로)
+// ---- (형님 코드 그대로 유지) ----
 
 function AnomalyButtonPager({ width, height, days, series }: any) {
     const NAV_GUTTER = 18;
@@ -662,7 +691,12 @@ function AnomalyButtonPager({ width, height, days, series }: any) {
                     const anim = tabAnims[i] || new Animated.Value(0);
                     return (
                         <View key={s.key} style={styles.tabWrapper}>
-                            <Pressable onPressIn={() => handlePressIn(i)} onPressOut={() => handlePressOut(i)} onPress={() => goTo(i)} style={{ flex: 1 }}>
+                            <Pressable
+                                onPressIn={() => handlePressIn(i)}
+                                onPressOut={() => handlePressOut(i)}
+                                onPress={() => goTo(i)}
+                                style={{ flex: 1 }}
+                            >
                                 <Animated.View
                                     style={[
                                         styles.pixelTabBtn,
@@ -954,13 +988,36 @@ function GrowthLineChartInteractive({
 
 const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: BG_COLOR },
-    content: { paddingHorizontal: 22, paddingBottom: 40, paddingTop: 0 },
-    header: { marginTop: 60, marginBottom: 20, alignItems: 'center' },
+
+    // ✅ 헤더 고정 + 그림자
+    stickyHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: STICKY_HEADER_H,
+        backgroundColor: BG_COLOR,
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        paddingBottom: 14,
+        zIndex: 999,
+
+        shadowColor: '#000',
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 5 },
+        elevation: 8,
+    },
+
+    // ✅ 헤더가 가리니까 paddingTop 올려줌
+    content: { paddingHorizontal: 22, paddingBottom: 40, paddingTop: STICKY_HEADER_H + 10 },
+
     headerTitle: {
         fontSize: 30,
         fontFamily: 'NeoDunggeunmoPro-Regular',
         color: 'rgba(36,46,19,0.9)',
     },
+
     sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -978,6 +1035,7 @@ const styles = StyleSheet.create({
         fontFamily: 'NeoDunggeunmoPro-Regular',
         color: 'rgba(36,46,19,0.9)',
     },
+
     pixelContainer: { marginBottom: 8, position: 'relative' },
     pixelShadow: {
         position: 'absolute',
@@ -993,6 +1051,7 @@ const styles = StyleSheet.create({
         borderColor: BORDER,
         padding: 12,
     },
+
     photoWrap: {
         width: PHOTO_WIDTH,
         height: 220,
@@ -1012,27 +1071,41 @@ const styles = StyleSheet.create({
         width: undefined,
         height: undefined,
     },
+
+    // ✅ RECENT FEED 뱃지 개선 (점 위치 깔끔 + 시간 표시)
     statusBadge: {
         position: 'absolute',
         top: 10,
         left: 10,
         backgroundColor: '#1A1A1A',
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+        zIndex: 10,
+        minWidth: 100,
+    },
+    statusTopRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 4,
-        zIndex: 10,
+        gap: 6,
     },
     statusDot: {
         width: 6,
         height: 6,
         backgroundColor: '#FF0000',
-        marginRight: 5,
     },
     statusText: {
         color: '#FFF',
         fontSize: 16,
         fontFamily: 'NeoDunggeunmoPro-Regular',
     },
+    statusTimeText: {
+        marginTop: 2,
+        color: '#FFF',
+        fontSize: 13,
+        fontFamily: 'NeoDunggeunmoPro-Regular',
+        opacity: 0.9,
+    },
+
     photoNavBtn: {
         position: 'absolute',
         top: '45%',
@@ -1042,6 +1115,7 @@ const styles = StyleSheet.create({
         zIndex: 20,
     },
     photoNavText: { color: '#FFF', fontSize: 16 },
+
     photoIndicatorRow: {
         position: 'absolute',
         bottom: 10,
@@ -1051,6 +1125,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     photoDot: { width: 6, height: 6, borderWidth: 1, borderColor: BORDER },
+
     archiveBar: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1076,8 +1151,8 @@ const styles = StyleSheet.create({
         fontFamily: 'NeoDunggeunmoPro-Regular',
         color: 'rgba(36,46,19,0.9)',
     },
-
     arrow: { fontSize: 12, color: BORDER, fontWeight: 'bold' },
+
     chartBox: { padding: 12 },
     chartHeader: {
         flexDirection: 'row',
@@ -1103,6 +1178,7 @@ const styles = StyleSheet.create({
         fontFamily: 'NeoDunggeunmoPro-Regular',
         color: BORDER,
     },
+
     monitorHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1117,6 +1193,7 @@ const styles = StyleSheet.create({
         fontFamily: 'NeoDunggeunmoPro-Regular',
         color: BORDER,
     },
+
     pagerFrame: { position: 'relative' },
     pagerIconBtn: {
         position: 'absolute',

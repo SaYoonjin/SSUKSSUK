@@ -37,22 +37,22 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
   const isEdit = mode === 'edit';
 
   const currentPlantId = isEdit
-    ? plantData?.plant_id || plantData?.plantId
-    : null;
+      ? plantData?.plant_id || plantData?.plantId
+      : null;
 
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
   const [type, setType] = useState<string | number>(
-    isEdit ? plantData.species_id ?? plantData.species ?? plantData.type : '',
+      isEdit ? plantData.species_id ?? plantData.species ?? plantData.type : '',
   );
 
   const [nickname, setNickname] = useState(
-    isEdit ? plantData.name || plantData.nickname : '',
+      isEdit ? plantData.name || plantData.nickname : '',
   );
 
   const [selectedDevice, setSelectedDevice] = useState<string | null>(
-    isEdit ? String(plantData.device_id ?? plantData.deviceId ?? '') : null,
+      isEdit ? String(plantData.device_id ?? plantData.deviceId ?? '') : null,
   );
 
   const [speciesList, setSpeciesList] = useState<PlantSpecies[]>([]);
@@ -138,6 +138,7 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
     return items;
   }, [deviceList, isEdit, currentPlantId]);
 
+  // ✅✅✅ [핵심 수정] Edit에서는 디바이스 없어도 닉네임 수정 가능하게
   const handleSave = async () => {
     if (!type) {
       Alert.alert('알림', '식물 종류를 선택해주세요.');
@@ -147,10 +148,12 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
       Alert.alert('알림', '식물 닉네임을 입력해주세요.');
       return;
     }
-    if (!selectedDevice || selectedDevice === 'none') {
+
+    // ✅ Add(추가)일 때만 디바이스 필수
+    if (!isEdit && (!selectedDevice || selectedDevice === 'none')) {
       Alert.alert(
-        '알림',
-        '연결할 디바이스를 선택해주세요.\n(식물 등록 시 필수입니다)',
+          '알림',
+          '연결할 디바이스를 선택해주세요.\n(식물 등록 시 필수입니다)',
       );
       return;
     }
@@ -163,14 +166,19 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
     setLoading(true);
 
     try {
-      let requestBody;
+      let requestBody: any;
 
       // 수정(Edit)과 추가(Add)의 데이터 구조 분리
       if (isEdit) {
+        // ✅ 닉네임은 항상 포함
         requestBody = {
           name: nickname.trim(),
-          deviceId: Number(selectedDevice),
         };
+
+        // ✅ 디바이스는 "선택한 경우에만" 포함 (없으면 닉네임만 수정)
+        if (selectedDevice && selectedDevice !== 'none') {
+          requestBody.deviceId = Number(selectedDevice);
+        }
       } else {
         requestBody = {
           name: nickname.trim(),
@@ -184,8 +192,8 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
 
       if (isEdit) {
         const res = await client.patch(
-          `/plants/${currentPlantId}`,
-          requestBody,
+            `/plants/${currentPlantId}`,
+            requestBody,
         );
 
         if (res.data.success) {
@@ -214,16 +222,16 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
 
       if (errorResponse) {
         if (
-          errorResponse.error &&
-          typeof errorResponse.error === 'object' &&
-          errorResponse.error.message
+            errorResponse.error &&
+            typeof errorResponse.error === 'object' &&
+            errorResponse.error.message
         ) {
           displayMsg = errorResponse.error.message;
         } else if (errorResponse.message) {
           displayMsg =
-            typeof errorResponse.message === 'string'
-              ? errorResponse.message
-              : JSON.stringify(errorResponse.message);
+              typeof errorResponse.message === 'string'
+                  ? errorResponse.message
+                  : JSON.stringify(errorResponse.message);
         } else if (typeof errorResponse.error === 'string') {
           displayMsg = errorResponse.error;
         } else {
@@ -234,9 +242,9 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
       }
 
       displayMsg = displayMsg
-        .replace(/[{"}]/g, '')
-        .replace(/,/g, '\n')
-        .replace(/"/g, '');
+          .replace(/[{"}]/g, '')
+          .replace(/,/g, '\n')
+          .replace(/"/g, '');
 
       Alert.alert('등록 실패', `이유: ${displayMsg}`);
     } finally {
@@ -246,99 +254,99 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
 
   if (initializing) {
     return (
-      <View
-        style={[
-          styles.screen,
-          { justifyContent: 'center', alignItems: 'center' },
-        ]}
-      >
-        <ActivityIndicator size="large" color={GREEN_BTN} />
-      </View>
+        <View
+            style={[
+              styles.screen,
+              { justifyContent: 'center', alignItems: 'center' },
+            ]}
+        >
+          <ActivityIndicator size="large" color={GREEN_BTN} />
+        </View>
     );
   }
 
   return (
-    <View style={styles.screen}>
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={GREEN_BTN} />
-        </View>
-      )}
+      <View style={styles.screen}>
+        {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color={GREEN_BTN} />
+            </View>
+        )}
 
-      <View style={styles.fixedHeader}>
-        <Text style={styles.headerTitle}>
-          {isEdit ? '식물 수정하기' : '식물 추가하기'}
-        </Text>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ zIndex: 3000, marginBottom: 20 }}>
-          <Text style={styles.label}>식물 종류</Text>
-          {isEdit ? (
-            <PixelBox style={{ backgroundColor: '#fafaf6', opacity: 0.8 }}>
-              <View style={styles.inputInner}>
-                <Text style={[styles.inputText, { color: '#666' }]}>
-                  {speciesList.find(s => s.speciesId === Number(type))?.name ||
-                    '로딩 중...'}
-                </Text>
-              </View>
-            </PixelBox>
-          ) : (
-            <PixelDropdown
-              placeholder="식물 종류 선택"
-              items={speciesList.map(t => ({
-                label: t.name,
-                value: t.speciesId,
-                active: true,
-              }))}
-              selectedValue={type}
-              onSelect={(val: any) => setType(val)}
-            />
-          )}
+        <View style={styles.fixedHeader}>
+          <Text style={styles.headerTitle}>
+            {isEdit ? '식물 수정하기' : '식물 추가하기'}
+          </Text>
         </View>
 
-        <View style={{ zIndex: 2000, marginBottom: 20 }}>
-          <Text style={styles.label}>식물 닉네임</Text>
-          {/* ✅ [수정] onChangeText에 로직 적용 */}
-          <PixelInput
-            value={nickname}
-            onChangeText={handleNicknameChange}
-            placeholder="예: 토토"
-            maxLength={10} // 넉넉하게 잡고 내부 로직으로 제어
-          />
-          {/* ✅ [추가] 안내 멘트 UI */}
-          <Text style={styles.helperText}>* 한글 최대 4자 / 영문 최대 6자</Text>
-        </View>
-
-        <View style={{ zIndex: 1000, marginBottom: 40 }}>
-          <Text style={styles.label}>디바이스 선택</Text>
-          <PixelDropdown
-            placeholder="디바이스를 선택하세요"
-            selectedValue={selectedDevice}
-            onSelect={(val: string) => setSelectedDevice(val)}
-            items={dropdownDeviceItems}
-            hasSeparateItem={false}
-          />
-        </View>
-
-        <PixelButton
-          text={isEdit ? '수정하기' : '추가하기'}
-          onPress={handleSave}
-        />
-
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={{ marginTop: 25, alignItems: 'center' }}
+        <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.cancelText}>취소</Text>
-        </Pressable>
-        <View style={{ height: 100 }} />
-      </ScrollView>
-    </View>
+          <View style={{ zIndex: 3000, marginBottom: 20 }}>
+            <Text style={styles.label}>식물 종류</Text>
+            {isEdit ? (
+                <PixelBox style={{ backgroundColor: '#fafaf6', opacity: 0.8 }}>
+                  <View style={styles.inputInner}>
+                    <Text style={[styles.inputText, { color: '#666' }]}>
+                      {speciesList.find(s => s.speciesId === Number(type))?.name ||
+                          '로딩 중...'}
+                    </Text>
+                  </View>
+                </PixelBox>
+            ) : (
+                <PixelDropdown
+                    placeholder="식물 종류 선택"
+                    items={speciesList.map(t => ({
+                      label: t.name,
+                      value: t.speciesId,
+                      active: true,
+                    }))}
+                    selectedValue={type}
+                    onSelect={(val: any) => setType(val)}
+                />
+            )}
+          </View>
+
+          <View style={{ zIndex: 2000, marginBottom: 20 }}>
+            <Text style={styles.label}>식물 닉네임</Text>
+            {/* ✅ [수정] onChangeText에 로직 적용 */}
+            <PixelInput
+                value={nickname}
+                onChangeText={handleNicknameChange}
+                placeholder="예: 토토"
+                maxLength={10} // 넉넉하게 잡고 내부 로직으로 제어
+            />
+            {/* ✅ [추가] 안내 멘트 UI */}
+            <Text style={styles.helperText}>* 한글 최대 4자 / 영문 최대 6자</Text>
+          </View>
+
+          <View style={{ zIndex: 1000, marginBottom: 40 }}>
+            <Text style={styles.label}>디바이스 선택</Text>
+            <PixelDropdown
+                placeholder="디바이스를 선택하세요"
+                selectedValue={selectedDevice}
+                onSelect={(val: string) => setSelectedDevice(val)}
+                items={dropdownDeviceItems}
+                hasSeparateItem={false}
+            />
+          </View>
+
+          <PixelButton
+              text={isEdit ? '수정하기' : '추가하기'}
+              onPress={handleSave}
+          />
+
+          <Pressable
+              onPress={() => navigation.goBack()}
+              style={{ marginTop: 25, alignItems: 'center' }}
+          >
+            <Text style={styles.cancelText}>취소</Text>
+          </Pressable>
+          <View style={{ height: 100 }} />
+        </ScrollView>
+      </View>
   );
 }
 
@@ -346,269 +354,269 @@ export default function PlantAddEditScreen({ route, navigation }: any) {
 
 function PixelBox({ children, style, isDropdownList }: any) {
   return (
-    <View style={[styles.pixelBoxContainer, style]}>
-      <View style={styles.pixelBgUnderlay} />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.shadeLeft,
-          { left: -PIXEL, opacity: 0.05, width: PIXEL + 1 },
-        ]}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.shadeLeft,
-          { left: -PIXEL, opacity: 0.03, width: PIXEL * 2 },
-        ]}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.shadeLeft,
-          {
-            left: -PIXEL,
-            top: PIXEL,
-            bottom: PIXEL,
-            opacity: 0.02,
-            width: PIXEL * 4 - 1,
-          },
-        ]}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.shadeRight,
-          { right: -PIXEL, opacity: 0.05, width: PIXEL + 1 },
-        ]}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.shadeRight,
-          { right: -PIXEL, opacity: 0.03, width: PIXEL * 2 },
-        ]}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          styles.shadeRight,
-          {
-            right: -PIXEL,
-            top: PIXEL,
-            bottom: PIXEL,
-            opacity: 0.02,
-            width: PIXEL * 4 - 1,
-          },
-        ]}
-      />
+      <View style={[styles.pixelBoxContainer, style]}>
+        <View style={styles.pixelBgUnderlay} />
+        <View
+            pointerEvents="none"
+            style={[
+              styles.shadeLeft,
+              { left: -PIXEL, opacity: 0.05, width: PIXEL + 1 },
+            ]}
+        />
+        <View
+            pointerEvents="none"
+            style={[
+              styles.shadeLeft,
+              { left: -PIXEL, opacity: 0.03, width: PIXEL * 2 },
+            ]}
+        />
+        <View
+            pointerEvents="none"
+            style={[
+              styles.shadeLeft,
+              {
+                left: -PIXEL,
+                top: PIXEL,
+                bottom: PIXEL,
+                opacity: 0.02,
+                width: PIXEL * 4 - 1,
+              },
+            ]}
+        />
+        <View
+            pointerEvents="none"
+            style={[
+              styles.shadeRight,
+              { right: -PIXEL, opacity: 0.05, width: PIXEL + 1 },
+            ]}
+        />
+        <View
+            pointerEvents="none"
+            style={[
+              styles.shadeRight,
+              { right: -PIXEL, opacity: 0.03, width: PIXEL * 2 },
+            ]}
+        />
+        <View
+            pointerEvents="none"
+            style={[
+              styles.shadeRight,
+              {
+                right: -PIXEL,
+                top: PIXEL,
+                bottom: PIXEL,
+                opacity: 0.02,
+                width: PIXEL * 4 - 1,
+              },
+            ]}
+        />
 
-      <View style={styles.pixelTop} />
-      <View style={styles.pixelBottom} />
-      <View style={styles.pixelLeft} />
-      <View style={styles.pixelRight} />
-      <View style={styles.pixelCornerTL1} />
-      <View style={styles.pixelCornerTL2} />
-      <View style={styles.pixelCornerTR1} />
-      <View style={styles.pixelCornerTR2} />
-      <View style={styles.pixelCornerTR3} />
-      <View style={styles.pixelCornerBL1} />
-      <View style={styles.pixelCornerBL2} />
-      <View style={styles.pixelCornerBL3} />
-      <View style={styles.pixelCornerBR1} />
-      <View style={styles.pixelCornerBR2} />
-      <View style={styles.pixelCornerBR3} />
+        <View style={styles.pixelTop} />
+        <View style={styles.pixelBottom} />
+        <View style={styles.pixelLeft} />
+        <View style={styles.pixelRight} />
+        <View style={styles.pixelCornerTL1} />
+        <View style={styles.pixelCornerTL2} />
+        <View style={styles.pixelCornerTR1} />
+        <View style={styles.pixelCornerTR2} />
+        <View style={styles.pixelCornerTR3} />
+        <View style={styles.pixelCornerBL1} />
+        <View style={styles.pixelCornerBL2} />
+        <View style={styles.pixelCornerBL3} />
+        <View style={styles.pixelCornerBR1} />
+        <View style={styles.pixelCornerBR2} />
+        <View style={styles.pixelCornerBR3} />
 
-      <View
-        style={[
-          styles.cardInner,
-          isDropdownList && {
-            paddingHorizontal: 0,
-            paddingVertical: 0,
-            height: undefined,
-          },
-        ]}
-      >
-        {children}
+        <View
+            style={[
+              styles.cardInner,
+              isDropdownList && {
+                paddingHorizontal: 0,
+                paddingVertical: 0,
+                height: undefined,
+              },
+            ]}
+        >
+          {children}
+        </View>
       </View>
-    </View>
   );
 }
 
 function PixelDropdown({
-  items,
-  selectedValue,
-  onSelect,
-  placeholder,
-  hasSeparateItem,
-}: any) {
+                         items,
+                         selectedValue,
+                         onSelect,
+                         placeholder,
+                         hasSeparateItem,
+                       }: any) {
   const [isOpen, setIsOpen] = useState(false);
   const selectedLabel =
-    items.find((i: any) => i.value === selectedValue)?.label || placeholder;
+      items.find((i: any) => i.value === selectedValue)?.label || placeholder;
 
   return (
-    <View style={{ position: 'relative', zIndex: isOpen ? 9999 : 1 }}>
-      <Pressable onPress={() => setIsOpen(!isOpen)}>
-        <PixelBox>
-          <View style={styles.dropdownInner}>
-            <Text
-              style={[
-                styles.inputText,
-                !selectedValue || selectedValue === 'none'
-                  ? { color: '#555' }
-                  : { color: '#000' },
-              ]}
-            >
-              {selectedValue === 'none' &&
-              !items.find((i: any) => i.value === selectedValue)
-                ? placeholder
-                : selectedLabel}
-            </Text>
-            <Text style={styles.arrow}>{isOpen ? '▲' : '▼'}</Text>
-          </View>
-        </PixelBox>
-      </Pressable>
-
-      {isOpen && (
-        <View style={styles.dropdownListAbsolute}>
-          <PixelBox isDropdownList style={{ backgroundColor: CARD_BG }}>
-            <View style={{ maxHeight: 240 }}>
-              <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
-                <View style={styles.listContent}>
-                  {items.map((item: any, index: number) => {
-                    const isDisconnectItem = item.value === 'none';
-                    return (
-                      <View key={item.value}>
-                        {isDisconnectItem && hasSeparateItem && (
-                          <View style={styles.thickDivider} />
-                        )}
-                        <Pressable
-                          style={[
-                            styles.listItem,
-                            !item.active && styles.listItemDisabled,
-                          ]}
-                          onPress={() => {
-                            if (item.active) {
-                              onSelect(item.value);
-                              setIsOpen(false);
-                            }
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.itemLabel,
-                              isDisconnectItem && { color: '#E04B4B' },
-                              item.statusText === '현재 연결됨' && {
-                                color: '#2E5A35',
-                              },
-                            ]}
-                          >
-                            {item.label}
-                          </Text>
-
-                          {item.statusText ? (
-                            <Text
-                              style={[
-                                styles.itemStatus,
-                                {
-                                  color: item.color
-                                    ? item.color
-                                    : item.active
-                                    ? '#75A743'
-                                    : '#E04B4B',
-                                },
-                              ]}
-                            >
-                              {item.statusText}
-                            </Text>
-                          ) : null}
-                        </Pressable>
-                        {!isDisconnectItem &&
-                          index < items.length - 1 &&
-                          items[index + 1].value !== 'none' && (
-                            <View style={styles.divider} />
-                          )}
-                      </View>
-                    );
-                  })}
-                </View>
-              </ScrollView>
+      <View style={{ position: 'relative', zIndex: isOpen ? 9999 : 1 }}>
+        <Pressable onPress={() => setIsOpen(!isOpen)}>
+          <PixelBox>
+            <View style={styles.dropdownInner}>
+              <Text
+                  style={[
+                    styles.inputText,
+                    !selectedValue || selectedValue === 'none'
+                        ? { color: '#555' }
+                        : { color: '#000' },
+                  ]}
+              >
+                {selectedValue === 'none' &&
+                !items.find((i: any) => i.value === selectedValue)
+                    ? placeholder
+                    : selectedLabel}
+              </Text>
+              <Text style={styles.arrow}>{isOpen ? '▲' : '▼'}</Text>
             </View>
           </PixelBox>
-        </View>
-      )}
-    </View>
+        </Pressable>
+
+        {isOpen && (
+            <View style={styles.dropdownListAbsolute}>
+              <PixelBox isDropdownList style={{ backgroundColor: CARD_BG }}>
+                <View style={{ maxHeight: 240 }}>
+                  <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+                    <View style={styles.listContent}>
+                      {items.map((item: any, index: number) => {
+                        const isDisconnectItem = item.value === 'none';
+                        return (
+                            <View key={item.value}>
+                              {isDisconnectItem && hasSeparateItem && (
+                                  <View style={styles.thickDivider} />
+                              )}
+                              <Pressable
+                                  style={[
+                                    styles.listItem,
+                                    !item.active && styles.listItemDisabled,
+                                  ]}
+                                  onPress={() => {
+                                    if (item.active) {
+                                      onSelect(item.value);
+                                      setIsOpen(false);
+                                    }
+                                  }}
+                              >
+                                <Text
+                                    style={[
+                                      styles.itemLabel,
+                                      isDisconnectItem && { color: '#E04B4B' },
+                                      item.statusText === '현재 연결됨' && {
+                                        color: '#2E5A35',
+                                      },
+                                    ]}
+                                >
+                                  {item.label}
+                                </Text>
+
+                                {item.statusText ? (
+                                    <Text
+                                        style={[
+                                          styles.itemStatus,
+                                          {
+                                            color: item.color
+                                                ? item.color
+                                                : item.active
+                                                    ? '#75A743'
+                                                    : '#E04B4B',
+                                          },
+                                        ]}
+                                    >
+                                      {item.statusText}
+                                    </Text>
+                                ) : null}
+                              </Pressable>
+                              {!isDisconnectItem &&
+                                  index < items.length - 1 &&
+                                  items[index + 1].value !== 'none' && (
+                                      <View style={styles.divider} />
+                                  )}
+                            </View>
+                        );
+                      })}
+                    </View>
+                  </ScrollView>
+                </View>
+              </PixelBox>
+            </View>
+        )}
+      </View>
   );
 }
 
 function PixelInput({
-  value,
-  onChangeText,
-  placeholder,
-  maxLength,
-  editable = true,
-}: any) {
+                      value,
+                      onChangeText,
+                      placeholder,
+                      maxLength,
+                      editable = true,
+                    }: any) {
   return (
-    <PixelBox>
-      <TextInput
-        style={styles.textInput}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        editable={editable}
-        placeholderTextColor="#999"
-        autoCorrect={false}
-        maxLength={maxLength}
-        spellCheck={false}
-        autoCapitalize="none"
-      />
-    </PixelBox>
+      <PixelBox>
+        <TextInput
+            style={styles.textInput}
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            editable={editable}
+            placeholderTextColor="#999"
+            autoCorrect={false}
+            maxLength={maxLength}
+            spellCheck={false}
+            autoCapitalize="none"
+        />
+      </PixelBox>
   );
 }
 
 function PixelButton({ text, onPress }: any) {
   const v = useRef(new Animated.Value(0)).current;
   const pressIn = () =>
-    Animated.timing(v, {
-      toValue: 1,
-      duration: 60,
-      useNativeDriver: false,
-    }).start();
+      Animated.timing(v, {
+        toValue: 1,
+        duration: 60,
+        useNativeDriver: false,
+      }).start();
   const pressOut = () =>
-    Animated.timing(v, {
-      toValue: 0,
-      duration: 80,
-      useNativeDriver: false,
-    }).start();
+      Animated.timing(v, {
+        toValue: 0,
+        duration: 80,
+        useNativeDriver: false,
+      }).start();
 
   return (
-    <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
-      <Animated.View
-        style={[
-          styles.saveBtn,
-          {
-            borderBottomWidth: v.interpolate({
-              inputRange: [0, 1],
-              outputRange: [4, 2],
-            }) as any,
-            borderRightWidth: v.interpolate({
-              inputRange: [0, 1],
-              outputRange: [4, 2],
-            }) as any,
-            marginTop: v.interpolate({
-              inputRange: [0, 1],
-              outputRange: [20, 22],
-            }) as any,
-            marginBottom: v.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, -2],
-            }) as any,
-          },
-        ]}
-      >
-        <Text style={styles.saveBtnText}>{text}</Text>
-      </Animated.View>
-    </Pressable>
+      <Pressable onPress={onPress} onPressIn={pressIn} onPressOut={pressOut}>
+        <Animated.View
+            style={[
+              styles.saveBtn,
+              {
+                borderBottomWidth: v.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [4, 2],
+                }) as any,
+                borderRightWidth: v.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [4, 2],
+                }) as any,
+                marginTop: v.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 22],
+                }) as any,
+                marginBottom: v.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -2],
+                }) as any,
+              },
+            ]}
+        >
+          <Text style={styles.saveBtnText}>{text}</Text>
+        </Animated.View>
+      </Pressable>
   );
 }
 

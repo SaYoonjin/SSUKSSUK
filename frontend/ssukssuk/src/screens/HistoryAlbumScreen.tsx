@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,13 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  Modal,
+  Dimensions,
+  PanResponder,
 } from 'react-native';
 import client from '../api';
+
+const { height: SCREEN_H } = Dimensions.get('window');
 
 const BG_COLOR = '#EDEDE9';
 const BORDER = '#300e08';
@@ -30,6 +35,7 @@ type DisplayPhoto = {
   id: string;
   imgUri: string;
   dateLabel: string;
+  rawCapturedAt: string;
   tapeStyle: {
     rotate: string;
     translateX: number;
@@ -38,32 +44,31 @@ type DisplayPhoto = {
 };
 
 function formatDotDate(dateStr: string) {
-  // 2026-01-30T14:08:41 -> 2026.01.30
   if (!dateStr) return '';
   return dateStr.split('T')[0].replace(/-/g, '.');
 }
 
 const PixelTape = ({ style, width }: any) => (
-  <View style={[styles.tapeContainer, { width: width || '65%' }, style]}>
-    <View style={styles.tapeBody}>
-      <View style={styles.endCapLeft} />
-      <View style={styles.endCapRight} />
+    <View style={[styles.tapeContainer, { width: width || '65%' }, style]}>
+      <View style={styles.tapeBody}>
+        <View style={styles.endCapLeft} />
+        <View style={styles.endCapRight} />
 
-      <View style={[styles.zigzagCut, { left: -6 }]}>
-        {[...Array(3)].map((_, i) => (
-          <View key={`l-${i}`} style={styles.cutPiece} />
-        ))}
-      </View>
+        <View style={[styles.zigzagCut, { left: -6 }]}>
+          {[...Array(3)].map((_, i) => (
+              <View key={`l-${i}`} style={styles.cutPiece} />
+          ))}
+        </View>
 
-      <View style={styles.tapeHighlight} />
+        <View style={styles.tapeHighlight} />
 
-      <View style={[styles.zigzagCut, { right: -6 }]}>
-        {[...Array(3)].map((_, i) => (
-          <View key={`r-${i}`} style={styles.cutPiece} />
-        ))}
+        <View style={[styles.zigzagCut, { right: -6 }]}>
+          {[...Array(3)].map((_, i) => (
+              <View key={`r-${i}`} style={styles.cutPiece} />
+          ))}
+        </View>
       </View>
     </View>
-  </View>
 );
 
 export default function HistoryAlbumScreen({ navigation }: any) {
@@ -71,42 +76,67 @@ export default function HistoryAlbumScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [periodText, setPeriodText] = useState('');
 
+  // ✅ Viewer
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
+
+  const currentPhoto = photoData[viewerIndex];
+
+  const clampIndex = (idx: number) => {
+    if (idx < 0) return 0;
+    if (idx > photoData.length - 1) return photoData.length - 1;
+    return idx;
+  };
+
+  const goPrev = () => setViewerIndex(prev => clampIndex(prev - 1));
+  const goNext = () => setViewerIndex(prev => clampIndex(prev + 1));
+
+  // ✅ 모달 좌우 스와이프
+  const panResponder = useMemo(() => {
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => {
+        const dx = Math.abs(g.dx);
+        const dy = Math.abs(g.dy);
+        return dx > 12 && dx > dy;
+      },
+      onPanResponderRelease: (_, g) => {
+        const TH = 60;
+        if (g.dx > TH) goPrev();
+        else if (g.dx < -TH) goNext();
+      },
+    });
+  }, [photoData.length]);
+
   useEffect(() => {
     const fetchMainPlantImages = async () => {
       try {
-        // 1. 전체 식물 목록 조회 및 메인 식물 탐색
         const plantsRes = await client.get('/plants');
         const plants = plantsRes.data?.data || [];
         const mainPlant = plants.find((p: any) => p.is_main);
 
         if (!mainPlant) {
-          // 메인 식물이 없는 경우 로딩 종료
           setLoading(false);
           return;
         }
 
-        // 2. 메인 식물 ID로 이미지 조회
         const targetId = mainPlant.plant_id;
         const res = await client.get(`/history/plants/${targetId}/images`);
 
         if (res.data.success && res.data.data.images) {
           const images: PlantImage[] = res.data.data.images;
 
-          // 최신순 정렬
           images.sort(
-            (a, b) =>
-              new Date(b.capturedAt).getTime() -
-              new Date(a.capturedAt).getTime(),
+              (a, b) =>
+                  new Date(b.capturedAt).getTime() -
+                  new Date(a.capturedAt).getTime(),
           );
 
-          // 전체 기간 텍스트 설정
           if (images.length > 0) {
             const start = formatDotDate(images[images.length - 1].capturedAt);
             const end = formatDotDate(images[0].capturedAt);
             setPeriodText(`${start} - ${end}`);
           }
 
-          // UI 데이터로 변환
           const displayList: DisplayPhoto[] = images.flatMap(item => {
             const dateLabel = formatDotDate(item.capturedAt);
 
@@ -116,13 +146,14 @@ export default function HistoryAlbumScreen({ navigation }: any) {
               width: `${50 + Math.random() * 8}%`,
             });
 
-            const result = [];
+            const result: DisplayPhoto[] = [];
 
             if (item.imageUrlTop) {
               result.push({
                 id: `${item.imageId}_top`,
                 imgUri: item.imageUrlTop,
                 dateLabel: `${dateLabel} (Top)`,
+                rawCapturedAt: item.capturedAt,
                 tapeStyle: getTapeStyle(),
               });
             }
@@ -132,6 +163,7 @@ export default function HistoryAlbumScreen({ navigation }: any) {
                 id: `${item.imageId}_side`,
                 imgUri: item.imageUrlSide,
                 dateLabel: `${dateLabel} (Side)`,
+                rawCapturedAt: item.capturedAt,
                 tapeStyle: getTapeStyle(),
               });
             }
@@ -152,86 +184,133 @@ export default function HistoryAlbumScreen({ navigation }: any) {
   }, []);
 
   return (
-    <SafeAreaView style={styles.root}>
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          hitSlop={10}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backChevron}>‹</Text>
-        </Pressable>
-        <Text style={styles.title}>생장 앨범</Text>
-      </View>
+      <SafeAreaView style={styles.root}>
+        {/* ✅ 헤더: 풀폭 + 아래로만 그림자 */}
+        {/* ✅ 헤더(그림자 없음) + 아래만 그림자 바 */}
+        <View style={styles.headerWrap}>
+          <View style={styles.headerRow}>
+            <Pressable
+                onPress={() => navigation.goBack()}
+                hitSlop={10}
+                style={styles.backBtn}
+            >
+              <Text style={styles.backChevron}>‹</Text>
+            </Pressable>
+            <Text style={styles.title}>생장 앨범</Text>
+          </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.periodBar}>
-          <Text style={styles.periodText}>{periodText || '기록 없음'}</Text>
+          {/* ✅ 아래만 ‘그림자 느낌’ (2줄) */}
+          <View style={styles.headerBottomShadow}>
+            <View style={styles.headerShadowDark} />
+            <View style={styles.headerShadowLight} />
+          </View>
         </View>
-
-        {loading ? (
-          <View style={{ padding: 20 }}>
-            <ActivityIndicator size="large" color="#2E5A35" />
+        <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.periodBar}>
+            <Text style={styles.periodText}>{periodText || '기록 없음'}</Text>
           </View>
-        ) : (
-          <View style={styles.grid}>
-            {photoData.length > 0 ? (
-              photoData.map(item => (
-                <View key={item.id} style={styles.cardContainer}>
-                  <PixelTape
-                    width={item.tapeStyle.width}
-                    style={{
-                      transform: [
-                        { rotate: item.tapeStyle.rotate },
-                        { translateX: item.tapeStyle.translateX },
-                      ],
-                      marginBottom: -12,
-                      zIndex: 10,
-                    }}
-                  />
 
-                  <View style={styles.card}>
-                    <View style={styles.photoFrame}>
-                      <Image
-                        source={{ uri: item.imgUri }}
-                        style={styles.photo}
-                        resizeMode="cover"
-                      />
-                    </View>
-
-                    <View style={styles.captionWrapper}>
-                      <View style={styles.captionLine} />
-                      <View style={styles.captionLabel}>
-                        <Text style={styles.caption}>{item.dateLabel}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <View
-                style={{ width: '100%', alignItems: 'center', marginTop: 50 }}
-              >
-                <Text
-                  style={{
-                    fontFamily: 'NeoDunggeunmoPro-Regular',
-                    color: '#888',
-                    fontSize: 16,
-                  }}
-                >
-                  저장된 사진이 없습니다.
-                </Text>
+          {loading ? (
+              <View style={{ padding: 20 }}>
+                <ActivityIndicator size="large" color="#2E5A35" />
               </View>
-            )}
-          </View>
-        )}
+          ) : (
+              <View style={styles.grid}>
+                {photoData.length > 0 ? (
+                    photoData.map((item, index) => (
+                        <View key={item.id} style={styles.cardContainer}>
+                          <PixelTape
+                              width={item.tapeStyle.width}
+                              style={{
+                                transform: [
+                                  { rotate: item.tapeStyle.rotate },
+                                  { translateX: item.tapeStyle.translateX },
+                                ],
+                                marginBottom: -12,
+                                zIndex: 10,
+                              }}
+                          />
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </SafeAreaView>
+                          <View style={styles.card}>
+                            <View style={styles.photoFrame}>
+                              <Pressable
+                                  onPress={() => {
+                                    setViewerIndex(index);
+                                    setViewerOpen(true);
+                                  }}
+                              >
+                                <Image
+                                    source={{ uri: item.imgUri }}
+                                    style={styles.photo}
+                                    resizeMode="cover"
+                                />
+                              </Pressable>
+                            </View>
+
+                            <View style={styles.captionWrapper}>
+                              <View style={styles.captionLine} />
+                              <View style={styles.captionLabel}>
+                                <Text style={styles.caption}>{item.dateLabel}</Text>
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                    ))
+                ) : (
+                    <View
+                        style={{ width: '100%', alignItems: 'center', marginTop: 50 }}
+                    >
+                      <Text style={styles.emptyText}>저장된 사진이 없습니다.</Text>
+                    </View>
+                )}
+              </View>
+          )}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+
+        {/* ✅ 심플 모달: 검은 반투명 + 사진 + X + 날짜 */}
+        <Modal
+            visible={viewerOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setViewerOpen(false)}
+        >
+          <Pressable
+              style={styles.viewerBackdrop}
+              onPress={() => setViewerOpen(false)}
+          >
+            <Pressable style={styles.viewerInner} onPress={() => {}}>
+              <Pressable
+                  onPress={() => setViewerOpen(false)}
+                  hitSlop={12}
+                  style={styles.viewerCloseBtn}
+              >
+                <Text style={styles.viewerCloseText}>✕</Text>
+              </Pressable>
+
+              <View style={styles.viewerImageWrap} {...panResponder.panHandlers}>
+                {currentPhoto ? (
+                    <Image
+                        source={{ uri: currentPhoto.imgUri }}
+                        style={styles.viewerImage}
+                        resizeMode="contain"
+                    />
+                ) : null}
+              </View>
+
+              {!!currentPhoto?.dateLabel && (
+                  <View style={styles.viewerDatePill}>
+                    <Text style={styles.viewerDateText}>{currentPhoto.dateLabel}</Text>
+                  </View>
+              )}
+            </Pressable>
+          </Pressable>
+        </Modal>
+      </SafeAreaView>
   );
 }
 
@@ -239,14 +318,40 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: BG_COLOR,
-    paddingHorizontal: 20,
     paddingTop: 45,
   },
-  header: {
+
+  headerWrap: {
+    backgroundColor: BG_COLOR,
+  },
+
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 26,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    backgroundColor: BG_COLOR,
+
+    // ❌ 여기서 shadow/elevation 전부 제거
+    // shadowColor: ...
+    // elevation: ...
   },
+
+  headerBottomShadow: {
+    height: 8,
+    backgroundColor: BG_COLOR,
+  },
+
+  headerShadowDark: {
+    height: 2,
+    backgroundColor: 'rgba(0,0,0,0.18)',  // 아래 어두운 선
+  },
+
+  headerShadowLight: {
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.55)', // 그 밑에 밝은 선
+  },
+
   backBtn: { paddingRight: 10 },
   backChevron: {
     fontFamily: 'NeoDunggeunmoPro-Regular',
@@ -258,7 +363,12 @@ const styles = StyleSheet.create({
     fontSize: 34,
     color: 'rgba(36,46,19,0.9)',
   },
-  content: { paddingTop: 8 },
+
+  // ✅ content에만 좌우 패딩 적용
+  content: {
+    paddingTop: 8,
+    paddingHorizontal: 20,
+  },
 
   periodBar: {
     backgroundColor: '#dedfde',
@@ -363,6 +473,7 @@ const styles = StyleSheet.create({
     borderColor: BORDER,
     backgroundColor: 'rgba(36,46,19,0.9)',
     marginBottom: 10,
+    overflow: 'hidden',
   },
   photo: {
     width: '100%',
@@ -390,5 +501,72 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(36,46,19,0.9)',
     letterSpacing: 0.5,
+  },
+
+  emptyText: {
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+    color: '#888',
+    fontSize: 16,
+  },
+
+  // =========================
+  // ✅ Viewer Modal (심플)
+  // =========================
+  viewerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  viewerInner: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  viewerCloseBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 8,
+    zIndex: 30,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  viewerCloseText: {
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+    fontSize: 22,
+    color: '#fff',
+  },
+
+  viewerImageWrap: {
+    width: '100%',
+    height: SCREEN_H * 0.72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+  viewerDatePill: {
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  viewerDateText: {
+    fontFamily: 'NeoDunggeunmoPro-Regular',
+    fontSize: 16,
+    color: '#fff',
+    opacity: 0.92,
   },
 });
