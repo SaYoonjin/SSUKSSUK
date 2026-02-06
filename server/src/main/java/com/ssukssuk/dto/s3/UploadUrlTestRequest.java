@@ -22,8 +22,7 @@ public class UploadUrlTestRequest {
     @JsonProperty("date")
     private String date;
 
-    @NotBlank
-    @Pattern(regexp = "0600|1800", message = "slot must be '0600' or '1800'")
+    @Pattern(regexp = "\\d{4}", message = "slot must be 4-digit time format (e.g., '1840')")
     private String slot;
 
     @JsonProperty("expires_in_sec")

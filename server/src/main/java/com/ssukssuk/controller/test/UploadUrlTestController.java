@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
@@ -21,6 +22,7 @@ public class UploadUrlTestController {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm");
 
     private final UploadUrlPublishService uploadUrlPublishService;
     private final UploadUrlScheduler uploadUrlScheduler;
@@ -33,13 +35,17 @@ public class UploadUrlTestController {
                 ? LocalDate.parse(request.getDate(), DATE_FORMAT)
                 : LocalDate.now(KST);
 
+        String slot = (request.getSlot() != null)
+                ? request.getSlot()
+                : LocalTime.now(KST).format(TIME_FORMAT);
+
         boolean publish = (request.getPublish() != null) ? request.getPublish() : true;
 
         UploadUrlPayload payload = uploadUrlPublishService.publishAndReturn(
                 request.getSerialNum(),
                 request.getPlantId(),
                 date,
-                request.getSlot(),
+                slot,
                 request.getExpiresInSec(),
                 publish
         );
@@ -48,14 +54,11 @@ public class UploadUrlTestController {
     }
 
     @PostMapping("/batch")
-    public ResponseEntity<?> triggerBatch(@RequestParam String slot) {
-        if (!slot.equals("0600") && !slot.equals("1800")) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail("INVALID_SLOT", "slot must be '0600' or '1800'"));
-        }
+    public ResponseEntity<?> triggerBatch(@RequestParam(required = false) String slot) {
+        String resolvedSlot = (slot != null) ? slot : LocalTime.now(KST).format(TIME_FORMAT);
 
-        uploadUrlScheduler.publishToAllConnectedPlants(slot);
+        uploadUrlScheduler.publishToAllConnectedPlants(resolvedSlot);
 
-        return ResponseEntity.ok(ApiResponse.ok("Batch triggered for slot=" + slot));
+        return ResponseEntity.ok(ApiResponse.ok("Batch triggered for slot=" + resolvedSlot));
     }
 }

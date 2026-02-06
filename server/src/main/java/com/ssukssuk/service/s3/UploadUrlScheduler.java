@@ -8,7 +8,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Slf4j
@@ -17,6 +19,7 @@ import java.util.List;
 public class UploadUrlScheduler {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm");
 
     private final UserPlantRepository userPlantRepository;
     private final UploadUrlPublishService uploadUrlPublishService;
@@ -24,14 +27,16 @@ public class UploadUrlScheduler {
     // === 운영용 스케줄러 (6시, 18시) ===
      @Scheduled(cron = "0 0 6 * * *", zone = "Asia/Seoul")
      public void scheduleMorning() {
-         log.info("[UploadUrlScheduler] Morning batch started (06:00 KST)");
-         publishToAllConnectedPlants("0600");
+         String slot = LocalTime.now(KST).format(TIME_FORMAT);
+         log.info("[UploadUrlScheduler] Morning batch started (slot={})", slot);
+         publishToAllConnectedPlants(slot);
      }
 
      @Scheduled(cron = "0 0 18 * * *", zone = "Asia/Seoul")
      public void scheduleEvening() {
-         log.info("[UploadUrlScheduler] Evening batch started (18:00 KST)");
-         publishToAllConnectedPlants("1800");
+         String slot = LocalTime.now(KST).format(TIME_FORMAT);
+         log.info("[UploadUrlScheduler] Evening batch started (slot={})", slot);
+         publishToAllConnectedPlants(slot);
      }
 
     // === 테스트용 스케줄러 (5분마다) ===
