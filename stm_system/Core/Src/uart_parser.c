@@ -137,6 +137,26 @@ void handle_packet(uint8_t type, uint8_t subtype,
         // 이미 anomaly로 선언된 것만 recovery 대상
         auto_recovery_request(g_active_anomaly_mask);
     }
+    else if (type == TYPE_CMD && subtype == CMD_CLOSE) {
+
+        // 1. 액추에이터 안전 종료
+        HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(NUTRI_PUMP_GPIO_Port, NUTRI_PUMP_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+
+        // 2. AUTO RECOVERY FSM 강제 종료
+        auto_recovery_force_stop();
+
+        // 3. 센서 FSM 컨텍스트 리셋
+        // (다음 READY 때 다시 정상 시작)
+        sensor_reset_fsm();
+
+        // 4. READY 해제
+        stm_ready = false;
+
+        return;
+    }
+
 
     // [테스트용] 펌프 두개 작동&중지 테스트용임 이거 실제 사용하지 않음
     else if(type==TYPE_CMD && subtype == CMD_PUMP_WATER) {

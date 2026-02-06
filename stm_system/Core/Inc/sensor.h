@@ -27,5 +27,6 @@ void sensor_read_all(void);
 void sensor_check_threshold(void);
 void sensor_suspend_check(bool suspend);
 void sensor_force_initial_check_request(void);
+void sensor_reset_fsm(void);
 
 #endif

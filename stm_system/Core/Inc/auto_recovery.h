@@ -11,5 +11,6 @@
 void auto_recovery_request(uint8_t sensor_mask);
 void auto_recovery_fsm(void);
 bool auto_recovery_is_active(void);
+void auto_recovery_force_stop(void);
 
 #endif

@@ -68,7 +68,7 @@ static bool ec_ema_init = false;
 // 초기 anomaly 제어
 // =======================
 static uint8_t sensor_warmup_cnt = 0;
-static bool init_anomaly_checked = false;
+//static bool init_anomaly_checked = false;
 
 // =======================
 // 내부 유틸
@@ -250,3 +250,34 @@ void sensor_check_threshold(void)
         }
     }
 }
+
+void sensor_reset_fsm(void)
+{
+    // FSM 상태 초기화
+    water_state = SENSOR_NORMAL;
+    ec_state    = SENSOR_NORMAL;
+
+    // anomaly 마스크 초기화
+    g_active_anomaly_mask = 0;
+
+    // 필터 상태 초기화
+    water_ma_idx  = 0;
+    water_ma_init = false;
+    for (int i = 0; i < WATER_MA_SIZE; i++) {
+        water_ma_buf[i] = 0.0f;
+    }
+
+    ec_ema = 0.0f;
+    ec_ema_init = false;
+
+    // warmup 초기화
+    sensor_warmup_cnt = 0;
+
+    // 다음 sensor_check_threshold에서
+    // 초기 anomaly 1회 검사하도록 예약
+    sensor_force_initial_check = true;
+
+    // suspend 해제
+    sensor_check_suspended = false;
+}
+

@@ -27,7 +27,6 @@ static bool ar_active = false;
 
 static void auto_recovery_start_if_needed(void);
 
-// auto_recovery.c 상단 (include 아래)
 static inline void pump_water_on(void)
 {
     HAL_GPIO_WritePin(WATER_PUMP_GPIO_Port, WATER_PUMP_Pin, GPIO_PIN_RESET);
@@ -223,4 +222,18 @@ void auto_recovery_fsm(void)
             auto_recovery_finish();
             break;
     }
+}
+
+void auto_recovery_force_stop(void)
+{
+    pump_water_off();
+    pump_nutri_off();
+
+    ar_state = AR_IDLE;
+    ar_active = false;
+    pending_recovery_mask = 0;
+    running_recovery_mask = 0;
+    ar_ec_retry = 0;
+
+    sensor_suspend_check(false);
 }

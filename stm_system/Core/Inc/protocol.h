@@ -26,6 +26,7 @@
 #define CMD_PING            0x0C
 #define CMD_PONG            0x0D
 #define CMD_AUTO_RECOVERY	0x0E
+#define CMD_CLOSE 0x0F
 
 // DATA SUBTYPE
 #define DATA_SENSOR         0x01
