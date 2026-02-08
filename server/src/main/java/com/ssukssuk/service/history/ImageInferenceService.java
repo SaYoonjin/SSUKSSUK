@@ -138,7 +138,7 @@ public class ImageInferenceService {
                 .anomaly(request.getAnomaly())
                 .confidence(request.getConfidence())
                 .symptomEnum(request.getSymptomEnum())
-                .inferenceAt(now)
+                .inferenceAt(hasTop ? measuredAt1 : measuredAt2)
                 .build();
 
         imageInferenceRepository.save(inference);
