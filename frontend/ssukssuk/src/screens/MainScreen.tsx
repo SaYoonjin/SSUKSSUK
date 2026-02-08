@@ -24,8 +24,9 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
-import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+
 
 import client from '../api';
 
@@ -367,8 +368,9 @@ function SensorBar({ data }: { data: SensorBarData }) {
 
 export default function MainScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
 
-  // ✅ 에뮬에서 insets.top=0로 잡혀도 StatusBar 높이만큼은 확보
+    // ✅ 에뮬에서 insets.top=0로 잡혀도 StatusBar 높이만큼은 확보
   const topPad = Math.max(insets.top, StatusBar.currentHeight ?? 0);
 
   const [useDayBg, setUseDayBg] = useState(() => isDayTime(new Date()));
@@ -1100,14 +1102,18 @@ export default function MainScreen() {
               </Pressable>
               <Pressable onPress={() => handleToggle(false)} style={styles.togglePiece}>
                 <Text style={[styles.togglePieceText, !isAutoMode && styles.textActive]}>
-                  MANU
+                  MANUAL
                 </Text>
               </Pressable>
             </View>
 
             {hasPlant ? (
                 <>
-                  <View style={[styles.plantNameWrap, { top: 14 }]} pointerEvents="none">
+                    <Pressable
+                        style={[styles.plantNameWrap, { top: 14 }]}
+                        onPress={() => navigation.navigate('Plant', { screen: 'PlantHome' })}
+                    >
+
                     <Text
                         style={[styles.plantNameText, { fontSize: plantNameFontSize }]}
                         numberOfLines={1}
@@ -1134,7 +1140,7 @@ export default function MainScreen() {
                         </View>
                       </View>
                     </View>
-                  </View>
+                    </Pressable>
 
                   <Pressable
                       style={[styles.signTouchArea, { left: '3%', top: '24%' }]}
@@ -1217,67 +1223,73 @@ export default function MainScreen() {
               statusBarTranslucent
           >
             <Animated.View style={[styles.modalOverlay, { opacity: modalOpacity }]}>
+              {/* ✅ 배경 클릭 시 닫기: 얘만 터치 먹게 */}
               <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
-              <Animated.View
-                  onStartShouldSetResponder={() => true}
-                  style={{ transform: [{ scale: modalScale }] }}
-              >
-                <PixelBox style={styles.modalContent} innerStyle={styles.modalInner}>
-                  <View style={styles.modalHeaderCustom}>
-                    <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
-                    <Pressable style={styles.closeBtn} onPress={closeModal}>
-                      <Text style={styles.closeBtnText}>X</Text>
-                    </Pressable>
-                  </View>
 
-                  <ScrollView
-                      style={[
-                        styles.modalScroll,
-                        modalTitle === '오늘의 알림' && styles.modalScrollLimit4,
-                      ]}
-                      contentContainerStyle={styles.modalScrollContent}
-                      showsVerticalScrollIndicator={false}
-                  >
-                    {modalBodyItems.length > 0 ? (
-                        modalBodyItems.map((item, idx) => (
-                            <View key={idx} style={styles.notifCard}>
-                              <View style={styles.notifRow}>
-                                {modalType === 'list' && (
-                                    <Text style={styles.tagBadgeText}>
-                                      [{getTagFromMessage(item.message)}]
-                                    </Text>
-                                )}
+              {/* ✅ 여기는 responder 강탈 금지 (ScrollView가 먹어야 함) */}
+              <Animated.View style={[styles.modalCardWrap, { transform: [{ scale: modalScale }] }]}>
+                {/* ✅ 카드 영역 터치가 배경으로 새는 거 방지용 (닫히지 않게만) */}
+                <Pressable onPress={() => {}} style={styles.modalCardTouch}>
+                  <PixelBox style={styles.modalContent} innerStyle={styles.modalInner}>
+                    <View style={styles.modalHeaderCustom}>
+                      <Text style={styles.modalHeaderTextCustom}>{modalTitle}</Text>
+                      <Pressable style={styles.closeBtn} onPress={closeModal}>
+                        <Text style={styles.closeBtnText}>X</Text>
+                      </Pressable>
+                    </View>
 
-                                {modalType === 'sign' && item.sensor ? (
-                                    renderHighlightedGuide(
-                                        item.message,
-                                        getGuideKeywords(
-                                            item.sensor.kind,
-                                            item.sensor.current,
-                                            item.sensor.ideal_min,
-                                            item.sensor.ideal_max,
-                                        ),
-                                    )
-                                ) : (
-                                    <Text style={styles.notifMessage}>{item.message}</Text>
+                    <ScrollView
+                        style={[
+                          styles.modalScroll,
+                          modalTitle === '오늘의 알림' && styles.modalScrollLimit4,
+                        ]}
+                        contentContainerStyle={styles.modalScrollContent}
+                        showsVerticalScrollIndicator={false}
+                        nestedScrollEnabled
+                        keyboardShouldPersistTaps="handled"
+                    >
+                      {modalBodyItems.length > 0 ? (
+                          modalBodyItems.map((item, idx) => (
+                              <View key={idx} style={styles.notifCard}>
+                                <View style={styles.notifRow}>
+                                  {modalType === 'list' && (
+                                      <Text style={styles.tagBadgeText}>
+                                        [{getTagFromMessage(item.message)}]
+                                      </Text>
+                                  )}
+
+                                  {modalType === 'sign' && item.sensor ? (
+                                      renderHighlightedGuide(
+                                          item.message,
+                                          getGuideKeywords(
+                                              item.sensor.kind,
+                                              item.sensor.current,
+                                              item.sensor.ideal_min,
+                                              item.sensor.ideal_max,
+                                          ),
+                                      )
+                                  ) : (
+                                      <Text style={styles.notifMessage}>{item.message}</Text>
+                                  )}
+                                </View>
+
+                                {modalType === 'sign' && item.sensor && <SensorBar data={item.sensor} />}
+
+                                {item.createdAt && (
+                                    <Text style={styles.notifTime}>{formatTimeHHmm(item.createdAt)}</Text>
                                 )}
                               </View>
-
-                              {modalType === 'sign' && item.sensor && <SensorBar data={item.sensor} />}
-
-                              {item.createdAt && (
-                                  <Text style={styles.notifTime}>{formatTimeHHmm(item.createdAt)}</Text>
-                              )}
-                            </View>
-                        ))
-                    ) : (
-                        <Text style={styles.emptyText}>데이터가 없습니다.</Text>
-                    )}
-                  </ScrollView>
-                </PixelBox>
+                          ))
+                      ) : (
+                          <Text style={styles.emptyText}>데이터가 없습니다.</Text>
+                      )}
+                    </ScrollView>
+                  </PixelBox>
+                </Pressable>
               </Animated.View>
             </Animated.View>
           </Modal>
+
         </View>
       </SafeAreaView>
   );
@@ -1869,4 +1881,14 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
+  modalCardWrap: {
+    // 가운데 정렬은 modalOverlay가 이미 해줌
+    // responder 뺏지 않게 그냥 래퍼만 둠
+  },
+
+  modalCardTouch: {
+    // 카드 안 눌러도 되는 “터치 차단막”
+    // 배경 닫기 Pressable로 이벤트가 새는 걸 방지
+  },
+
 });
