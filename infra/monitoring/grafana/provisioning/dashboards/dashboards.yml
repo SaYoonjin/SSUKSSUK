@@ -1,0 +1,25 @@
+# ===========================================
+# Grafana Dashboard Provisioning
+# ===========================================
+#
+# Community dashboards to import via Grafana UI:
+#   - Node Exporter Full:  ID 1860
+#   - Docker / cAdvisor:   ID 193
+#   - MySQL Overview:      ID 7362
+#   - Redis Dashboard:     ID 763
+#   - Spring Boot:         ID 19004
+#   - Nginx:               ID 12708
+
+apiVersion: 1
+
+providers:
+  - name: 'default'
+    orgId: 1
+    folder: 'SSUKSSUK'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/dashboards
+      foldersFromFilesStructure: false

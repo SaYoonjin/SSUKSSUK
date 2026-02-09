@@ -1,0 +1,120 @@
+# ===========================================
+# Prometheus Alert Rules
+# ===========================================
+
+groups:
+  - name: infrastructure
+    rules:
+      - alert: HighCpuUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 85% for more than 5 minutes (current: {{ $value | printf \"%.1f\" }}%)"
+
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 90% for more than 5 minutes (current: {{ $value | printf \"%.1f\" }}%)"
+
+      - alert: DiskSpaceLow
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space running low"
+          description: "Root filesystem usage is above 85% (current: {{ $value | printf \"%.1f\" }}%)"
+
+      - alert: DiskSpaceCritical
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space critically low"
+          description: "Root filesystem usage is above 95% (current: {{ $value | printf \"%.1f\" }}%)"
+
+  - name: containers
+    rules:
+      - alert: ContainerHighCpu
+        expr: sum(rate(container_cpu_usage_seconds_total{name=~"backend|mysql|redis|mosquitto|nginx"}[5m])) by (name) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high CPU"
+          description: "Container {{ $labels.name }} CPU usage above 80% for 5m (current: {{ $value | printf \"%.1f\" }}%)"
+
+      - alert: ContainerHighMemory
+        expr: container_memory_usage_bytes{name=~"backend|mysql|redis|mosquitto|nginx"} / container_spec_memory_limit_bytes{name=~"backend|mysql|redis|mosquitto|nginx"} * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high memory"
+          description: "Container {{ $labels.name }} memory usage above 90%"
+
+  - name: application
+    rules:
+      - alert: SpringBootDown
+        expr: up{job="spring-boot"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Spring Boot application is down"
+          description: "The backend application has been unreachable for more than 1 minute"
+
+      - alert: HighHttpErrorRate
+        expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m])) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP 5xx error rate"
+          description: "More than 5% of HTTP requests are returning 5xx errors"
+
+  - name: database
+    rules:
+      - alert: MysqlDown
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL is down"
+          description: "MySQL has been unreachable for more than 1 minute"
+
+      - alert: MysqlTooManyConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL too many connections"
+          description: "MySQL connection usage is above 80% (current: {{ $value | printf \"%.0f\" }}%)"
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been unreachable for more than 1 minute"
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage above 80%"
+          description: "Redis memory usage is above 80%"
