@@ -120,8 +120,10 @@ services:
     container_name: mysql-exporter
     restart: unless-stopped
     environment:
-      - DATA_SOURCE_NAME=exporter:${MYSQL_EXPORTER_PASSWORD:-exporter}@(mysql:3306)/
+      - MYSQLD_EXPORTER_PASSWORD=${MYSQL_EXPORTER_PASSWORD:-root}
     command:
+      - '--mysqld.username=exporter'
+      - '--mysqld.address=mysql:3306'
       - '--collect.global_status'
       - '--collect.info_schema.innodb_metrics'
       - '--collect.info_schema.processlist'
