@@ -2,6 +2,23 @@
 # Git Ignore
 # ===========================================
 
+# =========================
+# SSUKSSUK Linguist 설정
+# =========================
+
+# 임베디드 / 브로커 C 코드 제외
+EM/** linguist-vendored
+exec/** linguist-vendored
+infra/** linguist-vendored
+
+# Mosquitto 관련 설정 파일 제외
+*.conf linguist-vendored
+
+# Docker / CI 설정 제외
+docker-compose.yml linguist-vendored
+Jenkinsfile.* linguist-vendored
+
+
 # Environment files (IMPORTANT: Never commit .env)
 .env
 *.env.local
