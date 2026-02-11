@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "561198990977",
+    "project_id": "ssukssuk-f61a6",
+    "storage_bucket": "ssukssuk-f61a6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:561198990977:android:8f2d8d51e1a35702092f80",
+        "android_client_info": {
+          "package_name": "com.ssukssuk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCd-kUtR799eJ-yRy4uh_GnrAvTSbvTI8E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
