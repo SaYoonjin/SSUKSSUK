@@ -1,138 +1,286 @@
-# **🌱 SSUKSSUK (쑥쑥)**
+# SSUKSSUK - IoT 스마트 식물 재배 모니터링 시스템
 
-일상이 바빠도 초록은 멈추지 않도록
-AI · IoT 기반 반려식물 자동 관리 서비스
+<!-- 홈 화면 스크린샷 -->
+<img width="696" height="1514" alt="image" src="https://github.com/user-attachments/assets/14997ca4-73c2-4b92-9419-51a6a4fd6777" />
 
-# **서비스 소개 및 개요**
+## 프로젝트 개요
 
-SSUKSSUK은 식물 재배 경험이 부족하거나 관리에 어려움을 느끼는 사용자를 위해
-AI와 IoT 기술을 활용하여 식물의 상태를 자동으로 관리하고 시각적으로 성장 과정을 제공하는 스마트 반려식물 서비스입니다.
+| 항목 | 내용 |
+|------|------|
+| 플랫폼 | Android (React Native) + IoT (Jetson Nano + STM32) |
+| 장르 | IoT 기반 스마트 식물 재배 자동화 |
+| 개발 환경 | Spring Boot, React Native, Python, C (STM32), Docker |
+| 팀 구성 | 6인 |
+| 개발 기간 | 2026.01 ~ 2026.02 |
 
-기존 스마트 화분 서비스는 단순한 알림이나 수동적인 관리 기능에 머무르는 경우가 많아
-실질적인 관리 부담을 줄이기 어렵다는 한계가 있었습니다.
-SSUKSSUK은 이러한 문제를 해결하기 위해 센서 기반 자동 제어, AI 이미지 분석,
-캐릭터 기반 성장 시각화를 결합한 차별화된 식물 관리 경험을 제공합니다.
+SSUKSSUK은 센서로 식물의 상태를 실시간 모니터링하고, 물/영양분 공급을 자동화하며, AI 기반 식물 건강 분석까지 수행하는 스마트 식물 재배 시스템입니다.
 
+---
 
-# **기획 배경**
+## 주요 구현 기능
 
-식물 재배의 높은 진입 장벽
+### 실시간 센서 모니터링
+- 온도, 습도, 수위, EC(영양 농도) 센서 데이터 실시간 수집
+- SSE(Server-Sent Events) 기반 실시간 대시보드 갱신
+- 센서 이상치 감지 시 Push 알림 발송 (Firebase FCM)
 
-관리 방법에 대한 정보 부족
+### AUTO/MANUAL 모드 제어
+- **AUTO 모드**: 수위/영양 농도 이상 감지 시 펌프 자동 작동 및 복구
+- **MANUAL 모드**: 사용자가 직접 제어
+- STM32 펌웨어 레벨의 상태 머신 기반 자동 복구 로직
 
-물, 영양분, 온습도 관리의 어려움
+### 듀얼 카메라 촬영 및 성장 추적
+- 상단 카메라(높이 측정) + 측면 카메라(폭 측정)
+- 14일간 성장 기록 앨범
+- 센서 히스토리 그래프 시각화
 
-단순 알림 위주의 기능
+### AI 식물 건강 분석
+- YOLO 세그멘테이션 모델로 식물 상태 판별
+- 정상, 아픔, 과습, 고온 스트레스, 저온 스트레스 5단계 분류
+- TensorRT/ONNX/PyTorch 모델 지원
 
-식물 상태를 직관적으로 이해하기 어려움
+### 디바이스 관리
+- 시리얼 번호 기반 디바이스 등록(Claim) / 해제(Unclaim)
+- 식물-디바이스 바인딩 관리
+- LED 조명 스케줄링 (종별 최적 광량 설정)
 
-➡️ “더 스마트하고, 기르기 쉬운 화분은 없을까?”
-이 질문에서 **SSUKSSUK** 프로젝트가 시작되었습니다 
+### 식물 관리
+- 식물 종(Species)별 환경 파라미터 관리
+- 복수 식물 등록 및 메인 식물 전환
+- 종별 최적 환경 범위 기반 이상 판단
 
-# **주요 기능**
-## 🌿 1. AI 기반 식물 상태 진단
+### 인프라 및 모니터링
+- Docker Compose 기반 컨테이너 오케스트레이션
+- Jenkins CI/CD 파이프라인 (자동 빌드, 배포, 롤백)
+- Prometheus + Grafana + Loki 기반 모니터링 스택
+- 12개 알림 규칙 (CPU, 메모리, 디스크, 컨테이너, DB, 애플리케이션)
 
-카메라로 촬영한 식물 이미지를 분석
+---
 
-잎 상태 및 성장 단계를 AI로 판단
+## 시스템 아키텍처
 
-이상 징후(잎 변색 등) 감지 시 사용자 알림 제공
+```
+  [React Native App]
+        │
+        │ HTTPS / SSE
+        ▼
+  ┌──────────┐     ┌──────────┐     ┌──────────┐
+  │  Nginx   │────>│ Backend  │────>│  MySQL   │
+  │ :80/443  │     │ (Spring  │     │  :3306   │
+  └──────────┘     │  Boot)   │     └──────────┘
+                   │  :8080   │────>┌──────────┐
+                   └────┬─────┘     │  Redis   │
+                        │           │  :6379   │
+                   MQTT │           └──────────┘
+                        ▼
+                   ┌──────────┐
+                   │Mosquitto │
+                   │  :1883   │
+                   └────┬─────┘
+                        │ MQTT (WebSocket)
+                        ▼
+                   ┌──────────┐     ┌──────────┐
+                   │  Jetson  │────>│  STM32   │
+                   │  Nano    │UART │  (센서/  │
+                   │ (Python) │     │ 액추에이터)│
+                   └──────────┘     └──────────┘
+                   듀얼 카메라        온습도, 수위,
+                   YOLO 추론         EC, 펌프, LED
+```
 
-## 💧 2. 수위 · 영양분 자동 제어
+---
 
-수위 및 영양 농도 센서를 통해 실시간 상태 측정
+## 기술 스택
 
-이상치 감지 시 자동으로 물/영양분 조절
+### Backend
+| 기술 | 버전 | 용도 |
+|------|------|------|
+| Spring Boot | 3.5.7 | REST API 서버 |
+| Java | 17 (Temurin) | 서버 언어 |
+| Gradle | 8.5 | 빌드 도구 |
+| Spring Security + JWT | - | 인증/인가 |
+| Spring Data JPA | - | ORM |
+| Spring Integration MQTT | - | MQTT 통신 |
+| Micrometer + Actuator | - | 메트릭 수집 |
+| AWS SDK v2 | 2.41.16 | S3 이미지 저장 |
+| Firebase Admin SDK | 9.3.0 | Push 알림 |
 
-사용자의 개입 없이도 안정적인 재배 환경 유지
+### Frontend
+| 기술 | 버전 | 용도 |
+|------|------|------|
+| React Native | 0.83.1 | 모바일 앱 프레임워크 |
+| React | 19.2.0 | UI 라이브러리 |
+| TypeScript | 5.8.3 | 타입 안전성 |
+| Hermes | - | JS 엔진 |
+| React Native Firebase | 23.8.4 | Push 알림 |
 
-## 📊 3. 센서 데이터 기반 환경 관리
+### Embedded
+| 기술 | 용도 |
+|------|------|
+| Python 3.8+ (Jetson Nano) | 센서 데이터 수집, 카메라, MQTT, AI 추론 |
+| C (STM32F1) | 하드웨어 센서/액추에이터 제어 |
+| YOLO Segmentation | 식물 건강 분석 |
+| paho-mqtt | MQTT 클라이언트 |
+| UART | Jetson-STM32 시리얼 통신 |
 
-온도, 습도, 수위, 영양 농도 실시간 수집
+### 인프라
+| 기술 | 버전 | 용도 |
+|------|------|------|
+| Docker Compose | 3.8 | 컨테이너 오케스트레이션 |
+| Nginx | 1.25-alpine | 리버스 프록시 / SSL |
+| MySQL | 8.0 | 데이터베이스 |
+| Redis | 7-alpine | 캐시 |
+| Eclipse Mosquitto | 2 | MQTT 브로커 |
+| Jenkins | LTS JDK17 | CI/CD |
+| Let's Encrypt (Certbot) | - | SSL 인증서 |
 
-데이터 기반 식물 상태 판단
+### 모니터링
+| 기술 | 용도 |
+|------|------|
+| Prometheus | 메트릭 수집/저장 |
+| Grafana | 대시보드 시각화 |
+| Loki + Promtail | 로그 수집/검색 |
+| Alertmanager | 알림 관리 |
+| node-exporter | 호스트 메트릭 |
+| cAdvisor | 컨테이너 메트릭 |
+| mysql-exporter | DB 메트릭 |
+| redis-exporter | 캐시 메트릭 |
+| nginx-exporter | 웹서버 메트릭 |
 
-이상 상황 발생 시 푸시 알림 제공
+---
 
-## 🎮 4. 캐릭터를 통한 성장 시각화
+## 실행 방법
 
-식물의 상태에 따라 앱 내 캐릭터 변화
+### 사전 요구사항
+- Docker & Docker Compose
+- Git
 
-성장/이상/회복 상태를 직관적으로 표현
+### 1. 소스 클론
 
-사용자와 식물 간 정서적 교감 강화
+```bash
+git clone https://lab.ssafy.com/s14-webmobile3-sub1/S14P11A103.git
+cd S14P11A103
+```
 
-## 🕒 5. 성장 히스토리 관리
+### 2. 환경변수 설정
 
-일정 기간 동안의 식물 사진 및 상태 기록
+```bash
+cp .env.example .env
+vi .env  # 실제 값 입력
+```
 
-성장 변화 추적 및 이상 발생 이력 확인
+### 3. Firebase 설정
 
-데이터 기반 재배 경험 제공
+```bash
+mkdir -p /home/ubuntu/secrets
+# firebase-service-account.json 파일을 /home/ubuntu/secrets/ 에 배치
+```
 
-서울_1반_A103_최종발표
+### 4. SSL 인증서 발급 (최초 1회)
 
-# 🏗️ 시스템 구성 개요
+```bash
+docker compose up -d nginx
+docker compose run --rm certbot certonly \
+  --webroot -w /var/www/certbot \
+  -d i14a103.p.ssafy.io
+```
 
-## IoT 디바이스
+### 5. 전체 서비스 기동
 
-센서 데이터 수집 (수위, 온습도, 영양 농도)
+```bash
+docker compose up -d
+```
 
-자동 제어 수행
+### 6. 모니터링 스택 기동
 
-## 서버
+```bash
+# MySQL exporter 유저 생성
+docker exec -it mysql mysql -u root -p -e "
+CREATE USER 'exporter'@'%' IDENTIFIED BY '<비밀번호>';
+GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'exporter'@'%';
+FLUSH PRIVILEGES;
+"
 
-센서 데이터 수신 및 저장
+# 모니터링 시작
+docker compose -f docker-compose.monitoring.yml up -d
+```
 
-AI 분석 결과 처리
+### 7. Frontend 빌드 (Android APK)
 
-사용자 및 식물 상태 관리
+```bash
+cd frontend/ssukssuk
+npm install
+cd android
+./gradlew assembleRelease
+# 결과: android/app/build/outputs/apk/release/app-release.apk
+```
 
-## 모바일 앱
+### 8. 접속 정보
 
-실시간 상태 확인
+| 서비스 | URL |
+|--------|-----|
+| API | `https://i14a103.p.ssafy.io/api/` |
+| Jenkins | `https://i14a103.p.ssafy.io/jenkins/` |
+| Grafana | `https://i14a103.p.ssafy.io/grafana/` |
 
-알림 수신
+> 상세 배포 가이드는 [exec/포팅_메뉴얼.md](exec/포팅_메뉴얼.md)를 참고하세요.
+> 모니터링 상세 가이드는 [exec/모니터링_가이드.md](exec/모니터링_가이드.md)를 참고하세요.
 
-캐릭터 기반 UI 제공
+---
 
-# 기술 스택
-**Backend**
+## 프로젝트 구조
 
-Java 17
+```
+S14P11A103/
+├── server/                          # Backend (Spring Boot)
+│   ├── src/main/java/com/ssukssuk/
+│   │   ├── domain/                  # 도메인별 컨트롤러, 서비스, 레포지토리
+│   │   ├── global/                  # 공통 설정, 보안, 예외 처리
+│   │   └── SsukssukApplication.java
+│   ├── build.gradle
+│   └── Dockerfile
+│
+├── frontend/ssukssuk/               # Frontend (React Native)
+│   ├── src/
+│   │   ├── screens/                 # 화면 컴포넌트
+│   │   ├── components/              # 공통 UI 컴포넌트
+│   │   ├── services/                # API 통신
+│   │   └── navigation/              # 네비게이션 설정
+│   └── android/                     # Android 네이티브 설정
+│
+├── EM/                              # Embedded Module
+│   ├── jetson_app/                  # Jetson Nano (Python)
+│   │   ├── main.py                  # 메인 실행 파일
+│   │   ├── mqtt_client.py           # MQTT 통신
+│   │   ├── camera.py                # 듀얼 카메라 제어
+│   │   └── inference.py             # YOLO 식물 건강 분석
+│   └── stm_system/                  # STM32 펌웨어 (C)
+│       └── Core/Src/
+│           ├── main.c               # 메인 루프
+│           ├── sensor.c             # 센서 읽기 및 필터링
+│           └── auto_recovery.c      # 자동 복구 상태 머신
+│
+├── infra/                           # 인프라 설정
+│   ├── nginx/conf.d/                # Nginx 리버스 프록시
+│   ├── mosquitto/config/            # MQTT 브로커
+│   └── monitoring/                  # Prometheus, Loki, Grafana 등
+│
+├── docker-compose.yml               # 앱 서비스
+├── docker-compose.monitoring.yml    # 모니터링 서비스
+├── Jenkinsfile.ci                   # CI 파이프라인
+├── Jenkinsfile.cd                   # CD 파이프라인
+└── exec/                            # 포팅 메뉴얼, DB 덤프 등
+```
 
-Spring Boot
+---
 
-Spring Data JPA
+## Contributors
 
-MySQL
-
-JWT 기반 인증
-
-**IoT · Communication**
-MQTT (디바이스 ↔ 서버 통신)
-센서 데이터 실시간 처리
-자동 제어 메시지 송수신
-
-**AI**
-식물 이미지 분석 모델
-잎 상태 및 성장 단계 판별
-
-**Mobile / Client**
-모바일 앱 기반 사용자 인터페이스
-캐릭터 상태 시각화 UI
-
-**Infra**
-Linux Server
-Docker
-GitLab / GitHub
-
-# 🌱 기대 효과
-
-식물 관리 부담 감소
-
-초보자도 쉽게 식물 재배 가능
-
-데이터 기반 스마트 재배 경험 제공
-
-사용자와 식물 간 정서적 연결 강화
+| 이름 | 역할 |
+|------|------|
+| 윤승혁 | 팀장 |
+| 박수민 | 팀원 |
+| 문하윤 | 팀원 |
+| 현광수 | 팀원 |
+| 사윤진 | 팀원 |
+| 양다희 | 팀원 |
