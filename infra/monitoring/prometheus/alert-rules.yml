@@ -81,6 +81,26 @@ groups:
           summary: "High HTTP 5xx error rate"
           description: "More than 5% of HTTP requests are returning 5xx errors"
 
+  - name: mqtt
+    rules:
+      - alert: MosquittoDown
+        expr: up{job="mosquitto"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Mosquitto MQTT broker is down"
+          description: "Mosquitto exporter has been unreachable for more than 1 minute"
+
+      - alert: MosquittoHighConnectedClients
+        expr: mosquitto_clients_connected > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mosquitto high client count"
+          description: "Mosquitto has more than 50 connected clients (current: {{ $value }})"
+
   - name: database
     rules:
       - alert: MysqlDown

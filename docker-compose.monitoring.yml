@@ -163,6 +163,20 @@ services:
       - app-network
 
   # ===========================================
+  # Mosquitto Exporter - MQTT Broker Metrics
+  # ===========================================
+  mosquitto-exporter:
+    image: sapcc/mosquitto-exporter:0.8.0
+    container_name: mosquitto-exporter
+    restart: unless-stopped
+    environment:
+      - MQTT_BROKER=tcp://mosquitto:1883
+    expose:
+      - "9234"
+    networks:
+      - app-network
+
+  # ===========================================
   # Loki - Log Aggregation
   # ===========================================
   loki:
