@@ -1,3 +1,6 @@
-EM/* linguist-vendored
-exec/* linguist-vendored
-infra/* linguist-vendored
+EM/** linguist-vendored
+exec/** linguist-vendored
+infra/** linguist-vendored
+
+*.c linguist-vendored
+*.h linguist-vendored
