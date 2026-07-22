@@ -119,16 +119,13 @@ public class UserService {
         }
 
         // DB 확인
-        RefreshToken savedToken = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
+        int revokedCount = refreshTokenRepository.revokeIfActive(refreshToken);
 
-        if (savedToken.isRevoked()) {
+        if (revokedCount != 1) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
         // 기존 토큰 폐기
-        savedToken.revoke();
-
         Long userId = jwtTokenProvider.getUserId(refreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));

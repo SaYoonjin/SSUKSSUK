@@ -65,7 +65,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveBearerToken(request);
         log.debug("[JwtFilter] token present={}", token != null);
 
-        if (token != null && tokenProvider.validate(token)) {
+        if (token != null
+                && tokenProvider.validate(token)
+                && "ACCESS".equals(tokenProvider.getTokenType(token))) {
             Long userId = tokenProvider.getUserId(token);
 
             if (userRepository.isWithdrawn(userId)) {
